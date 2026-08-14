@@ -8,8 +8,8 @@
 |----|--------|------------------|
 | #5 | feature/1-project-foundation | approved |
 | #6 | feature/2-health-check | approved |
-|    | feature/3-category-seed |  |
-|    | feature/4-category-list |  |
+| #7 | feature/3-category-seed | approved |
+| #8 | feature/4-category-list | approved |
 
 ### ISSUE 1 Set up the TokTickIT project foundation.
 Reviewer comment I received: Reviewed and tested Feature 1. Everything works as expected, and I didn't find any issues. Approved! ✅
@@ -49,4 +49,40 @@ pls review it again 🥺
 
 My comment: Sorry,after i review and check it again, i saw it and realized it my mistaken then you can commit it. Good work yiipunn
 
-### ISSUE 3 
+### ISSUE 3 categories
+Reviewer comment I received: Checked the implementation and test results. Everything works as expected and the required categories are returned correctly. Looks good mak ka!
+How I responded: Thank you so much
+
+## Pull Requests I reviewed for my partner
+My comment: After I review it
+Category model - good
+creates the Category table correctly - good
+Seed inserts - good
+Seed uses upsert, safe to run multiple times without duplicates - good
+No credentials committed - good
+look good to me , Good job
+Partner's response: Thanks buddy!
+
+### ISSUE 4 check-system-ui
+Reviewer comment I received: Checked frontend connection to health and categories APIs ✅
+Checked loading state ✅
+Checked online/offline states ✅
+Checked UI tests ✅
+npm test passed ✅
+Success and failure cases work as expected ✅
+
+Everything looks good and matches the requirements. Approved!
+
+Merge dai loeyyyy
+How I responded: Thank you kubbbbbb
+
+## Pull Requests I reviewed for my partner
+My comment: Review
+GET /api/categories reads from PostgreSQL via Prisma that ordered by id pass
+have supertest verifies status, names, and id ordering pass
+React renders categories from the real API response pass
+Loading state and error state both show pass
+Vitest covers success and error UI states pass
+No credentials commit pass
+Look good to me good work
+Partner's response: Thank you!
