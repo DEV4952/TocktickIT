@@ -26,3 +26,14 @@ Test Files  2 passed (2)
 Tests       7 passed (7)
 ```
 
+API-1 & API-2
+![alt text](image1.png)
+
+UI-1
+![alt text](image2.png)
+
+UI-2
+![alt text](image3.png)
+
+UI-3
+![alt text](image4.png)
