@@ -22,4 +22,3 @@ export async function checkSystem() {
     const categories = await categoriesResponse.json();
     return { online: true, categories };
 }
-
