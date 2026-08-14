@@ -31,21 +31,31 @@ export default function App() {
       </h1>
 
       <button className="btn btn-success" onClick={handleCheck} disabled={state === "loading"}>
-        {state === "loading" ? "Loading…" : "Check System"}
+        {state === "loading" ? (
+          <>
+            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            Loading...
+          </>
+        ) : (
+          "Check System"
+        )}
       </button>
 
-      {state === "loading" && <p className="mt-3 mb-0">Checking system...</p>}
+      {state === "loading" && <p className="mt-3 mb-0 text-muted">Loading...</p>}
       {state === "success" && (
         <div className="mt-3">
           <p className="mb-2">System Status: Online</p>
           {categories.length > 0 && (
-            <ul className="list-group">
-              {categories.map((category) => (
-                <li key={category.id} className="list-group-item">
-                  {category.name}
-                </li>
-              ))}
-            </ul>
+            <>
+              <p className="mb-2 fw-bold">Supported Request Categories</p>
+              <ol className="list-group list-group-numbered">
+                {categories.map((category) => (
+                  <li key={category.id} className="list-group-item">
+                    {category.name}
+                  </li>
+                ))}
+              </ol>
+            </>
           )}
         </div>
       )}

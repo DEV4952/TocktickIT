@@ -8,6 +8,7 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 describe("App", () => {
+    // WORKED EXAMPLE — provided for you.
     it("renders the TokTickIT heading", () => {
         render(_jsx(App, {}));
         expect(screen.getByText(/TokTickIT/i)).toBeInTheDocument();
@@ -49,4 +50,3 @@ describe("App", () => {
         expect(await screen.findByText(/Unable to load request categories./i)).toBeInTheDocument();
     });
 });
-
