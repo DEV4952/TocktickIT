@@ -1,19 +1,26 @@
 import { useState } from "react";
-import { checkSystem } from "./api.js";
+import { checkSystem, Category } from "./api.js";
 
 type UiState = "idle" | "loading" | "success" | "error";
 
 export default function App() {
   const [state, setState] = useState<UiState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [categories, setCategories] = useState<Category[]>([]);
 
   async function handleCheck() {
     setState("loading");
+    setErrorMessage("");
 
     try {
-      await checkSystem();
+      const result = await checkSystem();
+      setCategories(result.categories);
       setState("success");
-    } catch {
+    } catch (err) {
       setState("error");
+      setErrorMessage(
+        err instanceof Error ? err.message : "Unable to connect to TokTickIT API"
+      );
     }
   }
 
@@ -28,13 +35,27 @@ export default function App() {
       </button>
 
       {state === "loading" && <p className="mt-3 mb-0">Checking system...</p>}
-      {state === "success" && <p className="mt-3 mb-0">System Status: Online</p>}
+      {state === "success" && (
+        <div className="mt-3">
+          <p className="mb-2">System Status: Online</p>
+          {categories.length > 0 && (
+            <ul className="list-group">
+              {categories.map((category) => (
+                <li key={category.id} className="list-group-item">
+                  {category.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       {state === "error" && (
         <div className="mt-3 text-danger">
           <p className="mb-1">System Status: Offline</p>
-          <p className="mb-0">Unable to connect to TokTickIT API</p>
+          <p className="mb-0">{errorMessage || "Unable to connect to TokTickIT API"}</p>
         </div>
       )}
     </div>
   );
 }
+
