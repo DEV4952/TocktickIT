@@ -155,3 +155,5 @@ npm test
 |---|---|---|---|
 | `GET` | `/api/health` | Health check endpoint | `200 OK` (`{ status: "ok", service: "TokTickIT API" }`) |
 | `GET` | `/api/categories` | List all supported IT request categories | `200 OK` (`[ { "id": 1, "name": "..." } ]`) |
+
+also this is part of CPE 334
