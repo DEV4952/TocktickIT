@@ -31,6 +31,25 @@ export async function checkSystem(): Promise<SystemStatus> {
 }
 
 /**
+ * Fetch all categories for ticket classification.
+ */
+export async function fetchCategories(): Promise<Category[]> {
+  let res: Response;
+  try {
+    res = await fetch("/api/categories");
+  } catch {
+    throw new Error("Unable to load request categories. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    throw new Error("Failed to load request categories.");
+  }
+
+  const data: Category[] = await res.json();
+  return data;
+}
+
+/**
  * Fetch all active Development Requesters for the switcher / selector.
  */
 export async function fetchActiveRequesters(): Promise<Requester[]> {
