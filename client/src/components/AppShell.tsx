@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { useRequester } from "../context/RequesterContext.js";
+import { CreateTicketScreen } from "./CreateTicketScreen.js";
 
 export function AppShell() {
   const { currentRequester, changeRequester } = useRequester();
+  const [activeTab, setActiveTab] = useState<"workspace" | "new-ticket">("workspace");
 
   if (!currentRequester) return null;
 
@@ -18,6 +20,26 @@ export function AppShell() {
               Lab 2
             </span>
           </span>
+
+          {/* Navigation Links */}
+          <div className="d-flex align-items-center gap-2 ms-4 d-none d-md-flex">
+            <button
+              type="button"
+              className={`btn btn-sm ${activeTab === "workspace" ? "btn-success text-white fw-semibold" : "btn-light text-muted"}`}
+              onClick={() => setActiveTab("workspace")}
+              data-testid="nav-workspace-tab"
+            >
+              📋 My Tickets
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${activeTab === "new-ticket" ? "btn-success text-white fw-semibold" : "btn-light text-muted"}`}
+              onClick={() => setActiveTab("new-ticket")}
+              data-testid="nav-new-ticket-tab"
+            >
+              ➕ New Ticket
+            </button>
+          </div>
 
           <div className="d-flex align-items-center gap-3 ms-auto">
             {/* Requester Identity Pill */}
@@ -48,8 +70,8 @@ export function AppShell() {
                   {currentRequester.department}
                 </div>
               </div>
-              <span className="badge bg-success-subtle text-success border border-success-subtle ms-1">
-                Active
+              <span className={`badge ${currentRequester.isActive ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle"} ms-1`}>
+                {currentRequester.isActive ? "Active" : "Suspended"}
               </span>
             </div>
 
@@ -101,51 +123,78 @@ export function AppShell() {
                 </li>
                 <li className="list-group-item px-0 d-flex justify-content-between">
                   <span className="text-muted">Status:</span>
-                  <span className="badge bg-success">Active Persona</span>
+                  <span className={`badge ${currentRequester.isActive ? "bg-success" : "bg-danger"}`}>
+                    {currentRequester.isActive ? "Active Persona" : "Suspended"}
+                  </span>
                 </li>
                 <li className="list-group-item px-0 d-flex justify-content-between">
                   <span className="text-muted">Requester ID:</span>
                   <code>{currentRequester.id}</code>
                 </li>
               </ul>
-              <button
-                type="button"
-                className="btn btn-outline-success btn-sm w-100 mt-auto"
-                onClick={changeRequester}
-                data-testid="profile-card-switch-btn"
-              >
-                Switch Persona
-              </button>
+
+              <div className="d-grid gap-2 mt-auto">
+                <button
+                  type="button"
+                  className="btn btn-zen btn-sm"
+                  onClick={() => setActiveTab("new-ticket")}
+                  disabled={!currentRequester.isActive}
+                  data-testid="create-ticket-cta-btn"
+                >
+                  ➕ Submit New Ticket
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={changeRequester}
+                  data-testid="profile-card-switch-btn"
+                >
+                  Switch Persona
+                </button>
+              </div>
             </div>
           </div>
 
           <div className="col-12 col-md-8">
-            <div className="card zen-card p-4 h-100" data-testid="requester-workspace-card">
-              <div className="d-flex align-items-center justify-content-between mb-3">
-                <h5 className="fw-bold mb-0 d-flex align-items-center gap-2">
-                  <span>📋</span> Requester Workspace
-                </h5>
-                <span className="badge bg-primary-subtle text-primary border border-primary-subtle" data-testid="context-badge">
-                  Context: {currentRequester.name}
-                </span>
-              </div>
-              <div className="zen-banner-info p-3 mb-4">
-                <p className="mb-1 small">
-                  <strong>Simulated Requester Session:</strong> All ticket operations in subsequent Lab 2 issues will be executed under <code>x-requester-id: {currentRequester.id}</code>.
-                </p>
-                <p className="mb-0 small text-muted">
-                  Switching requesters dynamically updates the active context and reloads requester-specific datasets.
-                </p>
-              </div>
+            {activeTab === "new-ticket" ? (
+              <CreateTicketScreen onCancel={() => setActiveTab("workspace")} />
+            ) : (
+              <div className="card zen-card p-4 h-100" data-testid="requester-workspace-card">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <h5 className="fw-bold mb-0 d-flex align-items-center gap-2">
+                    <span>📋</span> Requester Workspace
+                  </h5>
+                  <span className="badge bg-primary-subtle text-primary border border-primary-subtle" data-testid="context-badge">
+                    Context: {currentRequester.name}
+                  </span>
+                </div>
+                <div className="zen-banner-info p-3 mb-4">
+                  <p className="mb-1 small">
+                    <strong>Simulated Requester Session:</strong> All ticket operations are executed under <code>x-requester-id: {currentRequester.id}</code>.
+                  </p>
+                  <p className="mb-0 small text-muted">
+                    Switching requesters dynamically updates the active context and reloads requester-specific datasets.
+                  </p>
+                </div>
 
-              <div className="border rounded-3 p-4 text-center bg-white">
-                <div className="display-6 text-muted mb-2">🎫</div>
-                <h6 className="fw-semibold">Ready for Ticket Management</h6>
-                <p className="text-muted small mb-0">
-                  Tickets logged by {currentRequester.name} will appear here once ticket creation and listing are implemented.
-                </p>
+                <div className="border rounded-3 p-4 text-center bg-white my-auto">
+                  <div className="display-6 text-muted mb-2">🎫</div>
+                  <h6 className="fw-semibold">Ready for Ticket Management</h6>
+                  <p className="text-muted small mb-3">
+                    Submit support tickets with classification, priority, description, and diagnostic attachments.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-zen btn-sm px-3"
+                    onClick={() => setActiveTab("new-ticket")}
+                    disabled={!currentRequester.isActive}
+                    data-testid="workspace-submit-btn"
+                  >
+                    ➕ Submit Your First Ticket
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </main>
@@ -153,3 +202,4 @@ export function AppShell() {
   );
 }
 export default AppShell;
+

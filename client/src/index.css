@@ -85,3 +85,68 @@ body {
   color: var(--zen-green-800);
   border: 1px solid var(--zen-green-200);
 }
+
+/* Priority Selector Segmented Controls */
+.priority-btn-group .btn-check:checked + .btn-outline-secondary {
+  background-color: #6c757d;
+  color: #ffffff;
+}
+
+.priority-btn-group .btn-check:checked + .btn-outline-info {
+  background-color: #0dcaf0;
+  color: #000000;
+}
+
+.priority-btn-group .btn-check:checked + .btn-outline-warning {
+  background-color: #ffc107;
+  color: #000000;
+}
+
+.priority-btn-group .btn-check:checked + .btn-outline-danger {
+  background-color: #dc3545;
+  color: #ffffff;
+}
+
+/* Attachment Area */
+.attachment-dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: 8px;
+  background-color: #fbfcfd;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.attachment-dropzone:hover {
+  border-color: var(--color-primary);
+  background-color: var(--zen-green-50);
+}
+
+.attachment-chip {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+/* Character Counter */
+.char-counter {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* Success Card & Ticket Pill */
+.ticket-badge-lg {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+}
+
