@@ -20,86 +20,8 @@ datasource db {
 // TODO(Issue 3): add the Category model below.
 // ---------------------------------------------------------------------------
 
-enum TicketStatus {
-  OPEN
-  IN_PROGRESS
-  RESOLVED
-  CLOSED
-}
-
-enum TicketPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
 model Category {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   createdAt DateTime @default(now())
-  tickets   Ticket[]
-
-  @@map("categories")
-}
-
-model User {
-  id         Int      @id @default(autoincrement())
-  email      String   @unique
-  name       String
-  department String
-  avatarUrl  String?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  tickets    Ticket[]
-
-  @@map("users")
-}
-
-model Ticket {
-  id            Int            @id @default(autoincrement())
-  ticketNumber  String         @unique
-  title         String         @db.VarChar(150)
-  description   String         @db.Text
-  relatedSystem String?
-  status        TicketStatus   @default(OPEN)
-  priority      TicketPriority @default(MEDIUM)
-
-  categoryId    Int
-  category      Category       @relation(fields: [categoryId], references: [id])
-
-  requesterId   Int
-  requester     User           @relation(fields: [requesterId], references: [id])
-
-  attachments   Attachment[]
-
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  @@index([requesterId])
-  @@index([status])
-  @@index([priority])
-  @@index([categoryId])
-  @@map("tickets")
-}
-
-model Attachment {
-  id        Int       @id @default(autoincrement())
-  fileName  String
-  fileSize  Int
-  fileType  String
-  fileUrl   String
-  isDeleted Boolean   @default(false)
-  deletedAt DateTime?
-
-  ticketId  Int?
-  ticket    Ticket?   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  @@index([ticketId])
-  @@index([isDeleted])
-  @@map("attachments")
 }
