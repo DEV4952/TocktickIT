@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useRequester } from "../context/RequesterContext.js";
 import { CreateTicketScreen } from "./CreateTicketScreen.js";
+import { MyTicketsScreen } from "./MyTicketsScreen.js";
 
 export function AppShell() {
   const { currentRequester, changeRequester } = useRequester();
@@ -13,9 +14,13 @@ export function AppShell() {
       {/* Global Navigation Bar */}
       <nav className="navbar navbar-expand-lg app-navbar px-3 py-2 shadow-sm" aria-label="Main Navigation">
         <div className="container-fluid">
-          <span className="navbar-brand fw-bold d-flex align-items-center gap-2">
-            <span className="badge bg-success p-2 fs-6">🎫</span>
-            <span>TokTickIT</span>
+          <span
+            className="navbar-brand fw-bold d-flex align-items-center gap-2 cursor-pointer text-dark"
+            onClick={() => setActiveTab("workspace")}
+            role="button"
+          >
+            <span className="badge bg-success text-white px-2 py-1 fs-6 font-monospace">TT</span>
+            <span className="text-dark">TokTickIT</span>
             <span className="badge bg-light text-success border border-success-subtle small fw-normal ms-1">
               Lab 2
             </span>
@@ -25,19 +30,19 @@ export function AppShell() {
           <div className="d-flex align-items-center gap-2 ms-4 d-none d-md-flex">
             <button
               type="button"
-              className={`btn btn-sm ${activeTab === "workspace" ? "btn-success text-white fw-semibold" : "btn-light text-muted"}`}
+              className={`btn btn-sm ${activeTab === "workspace" ? "btn-zen text-white fw-semibold" : "btn-light text-muted"}`}
               onClick={() => setActiveTab("workspace")}
               data-testid="nav-workspace-tab"
             >
-              📋 My Tickets
+              My Tickets
             </button>
             <button
               type="button"
-              className={`btn btn-sm ${activeTab === "new-ticket" ? "btn-success text-white fw-semibold" : "btn-light text-muted"}`}
+              className={`btn btn-sm ${activeTab === "new-ticket" ? "btn-zen text-white fw-semibold" : "btn-light text-muted"}`}
               onClick={() => setActiveTab("new-ticket")}
               data-testid="nav-new-ticket-tab"
             >
-              ➕ New Ticket
+              New Ticket
             </button>
           </div>
 
@@ -70,7 +75,7 @@ export function AppShell() {
                   {currentRequester.department}
                 </div>
               </div>
-              <span className={`badge ${currentRequester.isActive ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle"} ms-1`}>
+              <span className={`badge ${currentRequester.isActive ? "badge-status-open" : "badge-priority-urgent"} ms-1`}>
                 {currentRequester.isActive ? "Active" : "Suspended"}
               </span>
             </div>
@@ -93,8 +98,8 @@ export function AppShell() {
         <div className="row g-4">
           <div className="col-12 col-md-4">
             <div className="card zen-card p-4 h-100" data-testid="requester-profile-card">
-              <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
-                <span>👤</span> Active Requester
+              <h5 className="fw-bold mb-3 text-dark">
+                Active Requester
               </h5>
               <div className="d-flex align-items-center gap-3 mb-3">
                 {currentRequester.avatarUrl ? (
@@ -123,7 +128,7 @@ export function AppShell() {
                 </li>
                 <li className="list-group-item px-0 d-flex justify-content-between">
                   <span className="text-muted">Status:</span>
-                  <span className={`badge ${currentRequester.isActive ? "bg-success" : "bg-danger"}`}>
+                  <span className={`badge ${currentRequester.isActive ? "badge-status-open" : "badge-priority-urgent"}`}>
                     {currentRequester.isActive ? "Active Persona" : "Suspended"}
                   </span>
                 </li>
@@ -141,7 +146,7 @@ export function AppShell() {
                   disabled={!currentRequester.isActive}
                   data-testid="create-ticket-cta-btn"
                 >
-                  ➕ Submit New Ticket
+                  Submit New Ticket
                 </button>
                 <button
                   type="button"
@@ -155,45 +160,11 @@ export function AppShell() {
             </div>
           </div>
 
-          <div className="col-12 col-md-8">
+          <div className="col-12 col-md-8" data-testid="requester-workspace-card">
             {activeTab === "new-ticket" ? (
               <CreateTicketScreen onCancel={() => setActiveTab("workspace")} />
             ) : (
-              <div className="card zen-card p-4 h-100" data-testid="requester-workspace-card">
-                <div className="d-flex align-items-center justify-content-between mb-3">
-                  <h5 className="fw-bold mb-0 d-flex align-items-center gap-2">
-                    <span>📋</span> Requester Workspace
-                  </h5>
-                  <span className="badge bg-primary-subtle text-primary border border-primary-subtle" data-testid="context-badge">
-                    Context: {currentRequester.name}
-                  </span>
-                </div>
-                <div className="zen-banner-info p-3 mb-4">
-                  <p className="mb-1 small">
-                    <strong>Simulated Requester Session:</strong> All ticket operations are executed under <code>x-requester-id: {currentRequester.id}</code>.
-                  </p>
-                  <p className="mb-0 small text-muted">
-                    Switching requesters dynamically updates the active context and reloads requester-specific datasets.
-                  </p>
-                </div>
-
-                <div className="border rounded-3 p-4 text-center bg-white my-auto">
-                  <div className="display-6 text-muted mb-2">🎫</div>
-                  <h6 className="fw-semibold">Ready for Ticket Management</h6>
-                  <p className="text-muted small mb-3">
-                    Submit support tickets with classification, priority, description, and diagnostic attachments.
-                  </p>
-                  <button
-                    type="button"
-                    className="btn btn-zen btn-sm px-3"
-                    onClick={() => setActiveTab("new-ticket")}
-                    disabled={!currentRequester.isActive}
-                    data-testid="workspace-submit-btn"
-                  >
-                    ➕ Submit Your First Ticket
-                  </button>
-                </div>
-              </div>
+              <MyTicketsScreen onNavigateToNewTicket={() => setActiveTab("new-ticket")} />
             )}
           </div>
         </div>
@@ -202,4 +173,5 @@ export function AppShell() {
   );
 }
 export default AppShell;
+
 

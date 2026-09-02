@@ -359,4 +359,323 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Issue 6 — Query Paginated Tickets (My Tickets)
+// GET /api/tickets
+// ---------------------------------------------------------------------------
+const VALID_STATUSES = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
+const VALID_SORT_FIELDS = ["createdAt", "updatedAt", "priority", "ticketNumber", "title"] as const;
+const VALID_SORT_ORDERS = ["asc", "desc"] as const;
+const ALLOWED_PAGE_LIMITS = [5, 10, 20, 50];
+
+app.get("/api/tickets", async (req: Request, res: Response) => {
+  try {
+    // 1. Authenticate Requester Context
+    const headerValue = req.headers["x-requester-id"];
+    if (!headerValue) {
+      return res.status(401).json({
+        error: "UNAUTHORIZED",
+        message: "Missing x-requester-id header",
+      });
+    }
+
+    const requesterId = parseInt(Array.isArray(headerValue) ? headerValue[0] : headerValue, 10);
+    if (isNaN(requesterId) || requesterId <= 0) {
+      return res.status(400).json({
+        error: "BAD_REQUEST",
+        message: "Invalid x-requester-id header",
+      });
+    }
+
+    const prisma = getPrisma();
+    const user = await prisma.user.findUnique({
+      where: { id: requesterId },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "Requester does not exist",
+      });
+    }
+
+    // 2. Parse & Validate Query Parameters
+    const rawPage = req.query.page ? parseInt(String(req.query.page), 10) : 1;
+    const page = !isNaN(rawPage) && rawPage >= 1 ? rawPage : 1;
+
+    const rawLimit = req.query.limit ? parseInt(String(req.query.limit), 10) : 10;
+    const limit = !isNaN(rawLimit) ? rawLimit : 10;
+    if (req.query.limit && !ALLOWED_PAGE_LIMITS.includes(limit)) {
+      return res.status(400).json({
+        error: "BAD_REQUEST",
+        message: "Invalid limit parameter. Allowed values: 5, 10, 20, 50",
+      });
+    }
+
+    const search = typeof req.query.search === "string" ? req.query.search.trim() : undefined;
+    
+    // Status filter
+    let statusFilter: (typeof VALID_STATUSES)[number] | undefined = undefined;
+    if (req.query.status && req.query.status !== "ALL") {
+      const statusUpper = String(req.query.status).toUpperCase();
+      if (!VALID_STATUSES.includes(statusUpper as any)) {
+        return res.status(400).json({
+          error: "BAD_REQUEST",
+          message: "Invalid status parameter. Allowed values: OPEN, IN_PROGRESS, RESOLVED, CLOSED, ALL",
+        });
+      }
+      statusFilter = statusUpper as (typeof VALID_STATUSES)[number];
+    }
+
+    // Priority filter
+    let priorityFilter: (typeof VALID_PRIORITIES)[number] | undefined = undefined;
+    if (req.query.priority && req.query.priority !== "ALL") {
+      const priorityUpper = String(req.query.priority).toUpperCase();
+      if (!VALID_PRIORITIES.includes(priorityUpper as any)) {
+        return res.status(400).json({
+          error: "BAD_REQUEST",
+          message: "Invalid priority parameter. Allowed values: LOW, MEDIUM, HIGH, URGENT, ALL",
+        });
+      }
+      priorityFilter = priorityUpper as (typeof VALID_PRIORITIES)[number];
+    }
+
+    // Category filter
+    let categoryIdFilter: number | undefined = undefined;
+    if (req.query.categoryId && req.query.categoryId !== "ALL") {
+      const catIdParsed = parseInt(String(req.query.categoryId), 10);
+      if (isNaN(catIdParsed) || catIdParsed <= 0) {
+        return res.status(400).json({
+          error: "BAD_REQUEST",
+          message: "Invalid categoryId parameter. Must be a valid positive integer",
+        });
+      }
+      categoryIdFilter = catIdParsed;
+    }
+
+    // Sort parameters
+    const rawSortBy = req.query.sortBy ? String(req.query.sortBy) : "createdAt";
+    if (!VALID_SORT_FIELDS.includes(rawSortBy as any)) {
+      return res.status(400).json({
+        error: "BAD_REQUEST",
+        message: `Invalid sortBy parameter. Allowed values: ${VALID_SORT_FIELDS.join(", ")}`,
+      });
+    }
+    const sortBy = rawSortBy;
+
+    const rawSortOrder = req.query.sortOrder ? String(req.query.sortOrder).toLowerCase() : "desc";
+    if (!VALID_SORT_ORDERS.includes(rawSortOrder as any)) {
+      return res.status(400).json({
+        error: "BAD_REQUEST",
+        message: "Invalid sortOrder parameter. Allowed values: asc, desc",
+      });
+    }
+    const sortOrder = rawSortOrder as (typeof VALID_SORT_ORDERS)[number];
+
+    // 3. Build Prisma Where Clause with STRICT OWNERSHIP ENFORCEMENT
+    const whereClause: any = {
+      requesterId: user.id, // Strictly scoped to active requester!
+    };
+
+    if (statusFilter) {
+      whereClause.status = statusFilter;
+    }
+
+    if (priorityFilter) {
+      whereClause.priority = priorityFilter;
+    }
+
+    if (categoryIdFilter) {
+      whereClause.categoryId = categoryIdFilter;
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { ticketNumber: { contains: search, mode: "insensitive" } },
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { relatedSystem: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    // 4. Query DB for matching tickets, pagination, and overall requester metrics
+    const [total, tickets, statusMetrics] = await Promise.all([
+      // Count matching filtered tickets
+      prisma.ticket.count({ where: whereClause }),
+      // Fetch paginated tickets
+      prisma.ticket.findMany({
+        where: whereClause,
+        include: {
+          category: {
+            select: { id: true, name: true },
+          },
+          attachments: {
+            where: { isDeleted: false },
+            select: { id: true },
+          },
+        },
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      // Aggregate metrics for this requester across all statuses
+      prisma.ticket.groupBy({
+        by: ["status"],
+        where: { requesterId: user.id },
+        _count: { status: true },
+      }),
+    ]);
+
+    // Format metrics
+    let totalAllTickets = 0;
+    let openCount = 0;
+    let inProgressCount = 0;
+    let resolvedCount = 0;
+    let closedCount = 0;
+
+    for (const group of statusMetrics) {
+      const count = group._count.status;
+      totalAllTickets += count;
+      if (group.status === "OPEN") openCount = count;
+      else if (group.status === "IN_PROGRESS") inProgressCount = count;
+      else if (group.status === "RESOLVED") resolvedCount = count;
+      else if (group.status === "CLOSED") closedCount = count;
+    }
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    // Transform tickets response
+    const transformedData = tickets.map((t) => ({
+      id: t.id,
+      ticketNumber: t.ticketNumber,
+      title: t.title,
+      description: t.description,
+      relatedSystem: t.relatedSystem,
+      status: t.status,
+      priority: t.priority,
+      categoryId: t.categoryId,
+      category: t.category,
+      requesterId: t.requesterId,
+      attachmentCount: t.attachments.length,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+    }));
+
+    return res.status(200).json({
+      data: transformedData,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+      metrics: {
+        total: totalAllTickets,
+        open: openCount,
+        inProgress: inProgressCount,
+        resolved: resolvedCount,
+        closed: closedCount,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to fetch tickets:", error);
+    return res.status(500).json({
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Failed to fetch tickets",
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Issue 6 — Single Ticket Detail
+// GET /api/tickets/:id
+// ---------------------------------------------------------------------------
+app.get("/api/tickets/:id", async (req: Request, res: Response) => {
+  try {
+    // 1. Authenticate Requester Context
+    const headerValue = req.headers["x-requester-id"];
+    if (!headerValue) {
+      return res.status(401).json({
+        error: "UNAUTHORIZED",
+        message: "Missing x-requester-id header",
+      });
+    }
+
+    const requesterId = parseInt(Array.isArray(headerValue) ? headerValue[0] : headerValue, 10);
+    if (isNaN(requesterId) || requesterId <= 0) {
+      return res.status(400).json({
+        error: "BAD_REQUEST",
+        message: "Invalid x-requester-id header",
+      });
+    }
+
+    const prisma = getPrisma();
+    const idParam = req.params.id;
+
+    // Support lookup by integer ID or TicketNumber (e.g. TIC-20260901-0001)
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId
+      ? { id: parseInt(idParam, 10), requesterId }
+      : { ticketNumber: idParam, requesterId };
+
+    const ticket = await prisma.ticket.findFirst({
+      where: whereQuery,
+      include: {
+        category: {
+          select: { id: true, name: true },
+        },
+        requester: {
+          select: { id: true, name: true, email: true, department: true, avatarUrl: true },
+        },
+        attachments: {
+          where: { isDeleted: false },
+          select: {
+            id: true,
+            fileName: true,
+            fileSize: true,
+            fileType: true,
+            fileUrl: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    // Enforce Ownership & Existence
+    if (!ticket) {
+      return res.status(404).json({
+        error: "NOT_FOUND",
+        message: "Ticket not found or you do not have permission to view it.",
+      });
+    }
+
+    return res.status(200).json({
+      id: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: ticket.title,
+      description: ticket.description,
+      relatedSystem: ticket.relatedSystem,
+      status: ticket.status,
+      priority: ticket.priority,
+      categoryId: ticket.categoryId,
+      category: ticket.category,
+      requesterId: ticket.requesterId,
+      requester: ticket.requester,
+      attachments: ticket.attachments,
+      createdAt: ticket.createdAt.toISOString(),
+      updatedAt: ticket.updatedAt.toISOString(),
+    });
+  } catch (error) {
+    console.error("Failed to fetch ticket detail:", error);
+    return res.status(500).json({
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Failed to fetch ticket detail",
+    });
+  }
+});
+
 export default app;
