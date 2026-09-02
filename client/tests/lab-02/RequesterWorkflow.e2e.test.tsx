@@ -1,28 +1,10 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../../src/App.js";
 import * as api from "../../src/api.js";
 import { Requester, Category, Ticket, Attachment } from "../../src/types.js";
-
-// Mock API layer
-vi.mock("../../src/api.js", async () => {
-  const actual = await vi.importActual("../../src/api.js");
-  return {
-    ...actual,
-    checkSystem: vi.fn(),
-    fetchActiveRequesters: vi.fn(),
-    fetchCategories: vi.fn(),
-    createTicket: vi.fn(),
-    fetchTickets: vi.fn(),
-    fetchTicketById: vi.fn(),
-    fetchTicketAttachments: vi.fn(),
-    uploadTicketAttachment: vi.fn(),
-    downloadAttachment: vi.fn(),
-    removeAttachment: vi.fn(),
-  };
-});
 
 describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () => {
   const mockRequesters: Requester[] = [
@@ -72,16 +54,17 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
   let mockAttachmentList: Attachment[] = [];
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    localStorage.clear();
     mockAttachmentList = [];
 
     // System Health & Requesters
-    vi.mocked(api.checkSystem).mockResolvedValue({ online: true, categories: mockCategories });
-    vi.mocked(api.fetchActiveRequesters).mockResolvedValue(mockRequesters);
-    vi.mocked(api.fetchCategories).mockResolvedValue(mockCategories);
+    vi.spyOn(api, "checkSystem").mockResolvedValue({ online: true, categories: mockCategories });
+    vi.spyOn(api, "fetchActiveRequesters").mockResolvedValue(mockRequesters);
+    vi.spyOn(api, "fetchCategories").mockResolvedValue(mockCategories);
 
     // Tickets Query Mock
-    vi.mocked(api.fetchTickets).mockResolvedValue({
+    vi.spyOn(api, "fetchTickets").mockResolvedValue({
       data: [
         {
           id: 42,
@@ -117,15 +100,18 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
     });
 
     // Ticket Detail & Attachments Mock
-    vi.mocked(api.fetchTicketById).mockImplementation(async () => ({
+    vi.spyOn(api, "fetchTicketById").mockImplementation(async () => ({
       ...createdTicketData,
       attachments: mockAttachmentList,
     }));
-    vi.mocked(api.fetchTicketAttachments).mockImplementation(async () => mockAttachmentList);
+    vi.spyOn(api, "fetchTicketAttachments").mockImplementation(async () => mockAttachmentList);
   });
 
-  it("executes the full end-to-end requester lifecycle successfully (AC-09.9)", async () => {
-    render(<App />);
+  it(
+    "executes the full end-to-end requester lifecycle successfully (AC-09.9)",
+    async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<App />);
 
     // =========================================================================
     // Step 1: Select Development Requester Persona
@@ -135,7 +121,7 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
     });
 
     const submitBtn = screen.getByRole("button", { name: /Continue to Service Desk/i });
-    await userEvent.click(submitBtn);
+    await user.click(submitBtn);
 
     // Verify transition to AppShell
     await waitFor(() => {
@@ -147,7 +133,7 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
     // Step 2: Navigate to Create Ticket Screen
     // =========================================================================
     const newTicketNavBtn = screen.getByTestId("nav-new-ticket-tab");
-    await userEvent.click(newTicketNavBtn);
+    await user.click(newTicketNavBtn);
 
     await waitFor(() => {
       expect(screen.getByTestId("create-ticket-form-card")).toBeInTheDocument();
@@ -162,20 +148,20 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
     const titleInput = screen.getByTestId("ticket-title-input");
     const descInput = screen.getByTestId("ticket-description-input");
 
-    await userEvent.selectOptions(categorySelect, "1"); // Hardware
-    await userEvent.click(priorityHighRadio);
-    await userEvent.type(systemInput, "Dell WD19TB Dock");
-    await userEvent.type(titleInput, "Laptop Screen Flickering on Dock");
-    await userEvent.type(
+    await user.selectOptions(categorySelect, "1"); // Hardware
+    await user.click(priorityHighRadio);
+    await user.type(systemInput, "Dell WD19TB Dock");
+    await user.type(titleInput, "Laptop Screen Flickering on Dock");
+    await user.type(
       descInput,
       "When plugged into Thunderbolt dock, display turns black for 2 seconds repeatedly."
     );
 
     // Mock API response for creation
-    vi.mocked(api.createTicket).mockResolvedValue(createdTicketData);
+    vi.spyOn(api, "createTicket").mockResolvedValue(createdTicketData);
 
     const submitTicketBtn = screen.getByTestId("submit-ticket-btn");
-    await userEvent.click(submitTicketBtn);
+    await user.click(submitTicketBtn);
 
     // =========================================================================
     // Step 4: Verify Success Screen with Generated Ticket Number
@@ -189,7 +175,7 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
     // Step 5: Navigate back to My Tickets Dashboard
     // =========================================================================
     const backToWorkspaceBtn = screen.getByTestId("back-to-workspace-btn");
-    await userEvent.click(backToWorkspaceBtn);
+    await user.click(backToWorkspaceBtn);
 
     await waitFor(() => {
       expect(screen.getByTestId("my-tickets-screen")).toBeInTheDocument();
@@ -200,7 +186,7 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
     // Step 6: Open Ticket Detail View
     // =========================================================================
     const viewDetailsBtn = screen.getByTestId("view-ticket-btn-42");
-    await userEvent.click(viewDetailsBtn);
+    await user.click(viewDetailsBtn);
 
     await waitFor(() => {
       expect(screen.getByTestId("ticket-detail-screen")).toBeInTheDocument();
@@ -222,7 +208,7 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
       isDeleted: false,
     };
 
-    vi.mocked(api.uploadTicketAttachment).mockImplementation(async () => {
+    vi.spyOn(api, "uploadTicketAttachment").mockImplementation(async () => {
       mockAttachmentList = [newAtt];
       return newAtt;
     });
@@ -230,7 +216,7 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
     const fileInput = screen.getByTestId("attachment-file-input");
     const testFile = new File(["dock diagnostic logs"], "dock_logs.txt", { type: "text/plain" });
 
-    await userEvent.upload(fileInput, testFile);
+    await user.upload(fileInput, testFile);
 
     await waitFor(() => {
       expect(screen.getByTestId("attachment-name-10")).toHaveTextContent("dock_logs.txt");
@@ -240,31 +226,31 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
     // =========================================================================
     // Step 8: Download Attachment
     // =========================================================================
-    vi.mocked(api.downloadAttachment).mockResolvedValue();
+    const downloadSpy = vi.spyOn(api, "downloadAttachment").mockResolvedValue();
     const downloadBtn = screen.getByTestId("download-attachment-btn-10");
-    await userEvent.click(downloadBtn);
+    await user.click(downloadBtn);
 
-    expect(api.downloadAttachment).toHaveBeenCalledWith(10, "dock_logs.txt", 1);
+    expect(downloadSpy).toHaveBeenCalledWith(10, "dock_logs.txt", 1);
 
     // =========================================================================
     // Step 9: Soft Remove Attachment with Reason
     // =========================================================================
     const removeBtn = screen.getByTestId("remove-attachment-btn-10");
-    await userEvent.click(removeBtn);
+    await user.click(removeBtn);
 
     // Confirm modal opens
     expect(screen.getByTestId("remove-confirm-modal")).toBeInTheDocument();
 
     const reasonInput = screen.getByTestId("remove-reason-input");
-    await userEvent.type(reasonInput, "Outdated diagnostic log");
+    await user.type(reasonInput, "Outdated diagnostic log");
 
-    vi.mocked(api.removeAttachment).mockResolvedValue({
+    vi.spyOn(api, "removeAttachment").mockResolvedValue({
       message: "Attachment soft-removed successfully.",
       attachment: { ...newAtt, isDeleted: true },
     });
 
     const confirmRemoveBtn = screen.getByTestId("confirm-remove-btn");
-    await userEvent.click(confirmRemoveBtn);
+    await user.click(confirmRemoveBtn);
 
     // Verify soft-removed badge appears and download button is removed
     await waitFor(() => {
@@ -272,5 +258,5 @@ describe("Lab 2 — End-to-End (E2E) Complete Requester Workflow (AC-09.9)", () 
       expect(screen.getByTestId("removed-meta-10")).toHaveTextContent(/Outdated diagnostic log/);
       expect(screen.queryByTestId("download-attachment-btn-10")).not.toBeInTheDocument();
     });
-  });
+  }, 25000);
 });

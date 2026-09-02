@@ -8,18 +8,6 @@ import { RequesterContext } from "../../src/context/RequesterContext.js";
 import * as api from "../../src/api.js";
 import { Requester, Ticket, Attachment } from "../../src/types.js";
 
-// Mock API layer
-vi.mock("../../src/api.js", async () => {
-  const actual = await vi.importActual("../../src/api.js");
-  return {
-    ...actual,
-    fetchTickets: vi.fn(),
-    fetchTicketById: vi.fn(),
-    fetchTicketAttachments: vi.fn(),
-    fetchCategories: vi.fn(),
-  };
-});
-
 describe("Lab 2 — Responsive UI & Layout Tests (AC-08.10 & AC-09.8)", () => {
   const mockRequester: Requester = {
     id: 1,
@@ -54,9 +42,9 @@ describe("Lab 2 — Responsive UI & Layout Tests (AC-08.10 & AC-09.8)", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(api.fetchCategories).mockResolvedValue([{ id: 4, name: "Network" }]);
-    vi.mocked(api.fetchTickets).mockResolvedValue({
+    vi.restoreAllMocks();
+    vi.spyOn(api, "fetchCategories").mockResolvedValue([{ id: 4, name: "Network" }]);
+    vi.spyOn(api, "fetchTickets").mockResolvedValue({
       data: [
         {
           id: 101,
@@ -83,8 +71,8 @@ describe("Lab 2 — Responsive UI & Layout Tests (AC-08.10 & AC-09.8)", () => {
       },
       metrics: { total: 1, open: 1, inProgress: 0, resolved: 0, closed: 0 },
     });
-    vi.mocked(api.fetchTicketById).mockResolvedValue(mockTicket);
-    vi.mocked(api.fetchTicketAttachments).mockResolvedValue([]);
+    vi.spyOn(api, "fetchTicketById").mockResolvedValue(mockTicket);
+    vi.spyOn(api, "fetchTicketAttachments").mockResolvedValue([]);
   });
 
   const renderAppShell = () =>
