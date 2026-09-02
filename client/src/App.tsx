@@ -13,10 +13,12 @@ function AppContent() {
   return <AppShell />;
 }
 
-export default function App() {
+export function App() {
   return (
     <RequesterProvider>
       <AppContent />
     </RequesterProvider>
   );
 }
+
+export default App;

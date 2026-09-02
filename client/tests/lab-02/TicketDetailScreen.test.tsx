@@ -7,19 +7,6 @@ import { RequesterContext } from "../../src/context/RequesterContext.js";
 import * as api from "../../src/api.js";
 import { Requester, Ticket, Attachment } from "../../src/types.js";
 
-// Mock API functions
-vi.mock("../../src/api.js", async () => {
-  const actual = await vi.importActual("../../src/api.js");
-  return {
-    ...actual,
-    fetchTicketById: vi.fn(),
-    fetchTicketAttachments: vi.fn(),
-    uploadTicketAttachment: vi.fn(),
-    downloadAttachment: vi.fn(),
-    removeAttachment: vi.fn(),
-  };
-});
-
 describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
   const mockRequester: Requester = {
     id: 1,
@@ -97,15 +84,15 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   // ---------------------------------------------------------------------------
   // 1. Loading & Detail Rendering (AC-08.1)
   // ---------------------------------------------------------------------------
   it("AC-08.1: renders loading state initially and then displays full read-only ticket information", async () => {
-    vi.mocked(api.fetchTicketById).mockResolvedValue(mockTicket);
-    vi.mocked(api.fetchTicketAttachments).mockResolvedValue(mockAttachments);
+    vi.spyOn(api, "fetchTicketById").mockResolvedValue(mockTicket);
+    vi.spyOn(api, "fetchTicketAttachments").mockResolvedValue(mockAttachments);
 
     renderWithContext("TIC-20260901-0001");
 
@@ -138,7 +125,7 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
   // 2. Unauthorized & Not Found Access (AC-08.2 & AC-08.9)
   // ---------------------------------------------------------------------------
   it("AC-08.2: displays unauthorized access error when requester does not own ticket", async () => {
-    vi.mocked(api.fetchTicketById).mockRejectedValue(
+    vi.spyOn(api, "fetchTicketById").mockRejectedValue(
       new Error("Ticket not found or you do not have permission to view it.")
     );
 
@@ -153,7 +140,7 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
   });
 
   it("AC-08.9: displays not found state when ticket does not exist", async () => {
-    vi.mocked(api.fetchTicketById).mockRejectedValue(new Error("Ticket not found."));
+    vi.spyOn(api, "fetchTicketById").mockRejectedValue(new Error("Ticket not found."));
 
     renderWithContext("TIC-NONEXISTENT");
 
@@ -168,8 +155,8 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
   // 3. Attachments Display & Empty State (AC-08.3 & AC-08.4)
   // ---------------------------------------------------------------------------
   it("AC-08.3 & AC-08.8: renders active and soft-removed attachments properly", async () => {
-    vi.mocked(api.fetchTicketById).mockResolvedValue(mockTicket);
-    vi.mocked(api.fetchTicketAttachments).mockResolvedValue(mockAttachments);
+    vi.spyOn(api, "fetchTicketById").mockResolvedValue(mockTicket);
+    vi.spyOn(api, "fetchTicketAttachments").mockResolvedValue(mockAttachments);
 
     renderWithContext();
 
@@ -192,8 +179,8 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
 
   it("AC-08.4: renders empty state when ticket has no attachments", async () => {
     const emptyTicket = { ...mockTicket, attachments: [] };
-    vi.mocked(api.fetchTicketById).mockResolvedValue(emptyTicket);
-    vi.mocked(api.fetchTicketAttachments).mockResolvedValue([]);
+    vi.spyOn(api, "fetchTicketById").mockResolvedValue(emptyTicket);
+    vi.spyOn(api, "fetchTicketAttachments").mockResolvedValue([]);
 
     renderWithContext();
 
@@ -209,11 +196,11 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
   // 4. Upload Attachment (AC-08.5)
   // ---------------------------------------------------------------------------
   it("AC-08.5: uploads valid attachment and updates attachment list", async () => {
-    vi.mocked(api.fetchTicketById).mockResolvedValue(mockTicket);
-    vi.mocked(api.fetchTicketAttachments)
+    vi.spyOn(api, "fetchTicketById").mockResolvedValue(mockTicket);
+    vi.spyOn(api, "fetchTicketAttachments")
       .mockResolvedValueOnce([mockAttachments[0]])
       .mockResolvedValueOnce([...mockAttachments]);
-    vi.mocked(api.uploadTicketAttachment).mockResolvedValue({
+    const uploadSpy = vi.spyOn(api, "uploadTicketAttachment").mockResolvedValue({
       id: 2,
       fileName: "screenshot.png",
       fileSize: 50000,
@@ -233,7 +220,7 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
     await userEvent.upload(fileInput, file);
 
     await waitFor(() => {
-      expect(api.uploadTicketAttachment).toHaveBeenCalledWith(
+      expect(uploadSpy).toHaveBeenCalledWith(
         "TIC-20260901-0001",
         expect.any(File),
         1
@@ -242,8 +229,8 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
   });
 
   it("AC-08.5: validates file size > 5MB and unsupported file format", async () => {
-    vi.mocked(api.fetchTicketById).mockResolvedValue(mockTicket);
-    vi.mocked(api.fetchTicketAttachments).mockResolvedValue([]);
+    vi.spyOn(api, "fetchTicketById").mockResolvedValue(mockTicket);
+    vi.spyOn(api, "fetchTicketAttachments").mockResolvedValue([]);
 
     renderWithContext();
 
@@ -275,9 +262,9 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
   // 5. Download Attachment (AC-08.6)
   // ---------------------------------------------------------------------------
   it("AC-08.6: triggers download for active attachment", async () => {
-    vi.mocked(api.fetchTicketById).mockResolvedValue(mockTicket);
-    vi.mocked(api.fetchTicketAttachments).mockResolvedValue([mockAttachments[0]]);
-    vi.mocked(api.downloadAttachment).mockResolvedValue();
+    vi.spyOn(api, "fetchTicketById").mockResolvedValue(mockTicket);
+    vi.spyOn(api, "fetchTicketAttachments").mockResolvedValue([mockAttachments[0]]);
+    const downloadSpy = vi.spyOn(api, "downloadAttachment").mockResolvedValue();
 
     renderWithContext();
 
@@ -287,16 +274,16 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
 
     await userEvent.click(screen.getByTestId("download-attachment-btn-1"));
 
-    expect(api.downloadAttachment).toHaveBeenCalledWith(1, "vpn_log.txt", 1);
+    expect(downloadSpy).toHaveBeenCalledWith(1, "vpn_log.txt", 1);
   });
 
   // ---------------------------------------------------------------------------
   // 6. Remove Attachment with Reason (AC-08.7)
   // ---------------------------------------------------------------------------
   it("AC-08.7: opens confirmation modal and soft-removes attachment with reason", async () => {
-    vi.mocked(api.fetchTicketById).mockResolvedValue(mockTicket);
-    vi.mocked(api.fetchTicketAttachments).mockResolvedValue([mockAttachments[0]]);
-    vi.mocked(api.removeAttachment).mockResolvedValue({
+    vi.spyOn(api, "fetchTicketById").mockResolvedValue(mockTicket);
+    vi.spyOn(api, "fetchTicketAttachments").mockResolvedValue([mockAttachments[0]]);
+    const removeSpy = vi.spyOn(api, "removeAttachment").mockResolvedValue({
       message: "Attachment soft-removed successfully.",
       attachment: { ...mockAttachments[0], isDeleted: true },
     });
@@ -322,7 +309,7 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
     await userEvent.click(screen.getByTestId("confirm-remove-btn"));
 
     await waitFor(() => {
-      expect(api.removeAttachment).toHaveBeenCalledWith(1, 1, "Outdated error log");
+      expect(removeSpy).toHaveBeenCalledWith(1, 1, "Outdated error log");
     });
   });
 
@@ -331,8 +318,8 @@ describe("Lab 2 — TicketDetailScreen Component (Issue #8)", () => {
   // ---------------------------------------------------------------------------
   it("navigates back to My Tickets when clicking back button", async () => {
     const handleBack = vi.fn();
-    vi.mocked(api.fetchTicketById).mockResolvedValue(mockTicket);
-    vi.mocked(api.fetchTicketAttachments).mockResolvedValue(mockAttachments);
+    vi.spyOn(api, "fetchTicketById").mockResolvedValue(mockTicket);
+    vi.spyOn(api, "fetchTicketAttachments").mockResolvedValue(mockAttachments);
 
     renderWithContext("TIC-20260901-0001", handleBack);
 
