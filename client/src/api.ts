@@ -151,3 +151,85 @@ export async function createTicket(
 
   return await res.json();
 }
+
+/**
+ * Fetch paginated tickets for the active requester with optional filters, search, and sorting.
+ */
+export async function fetchTickets(
+  requesterId: number,
+  options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    priority?: string;
+    categoryId?: number | string;
+    sortBy?: string;
+    sortOrder?: string;
+  } = {}
+) {
+  const queryParams = new URLSearchParams();
+  if (options.page) queryParams.set("page", String(options.page));
+  if (options.limit) queryParams.set("limit", String(options.limit));
+  if (options.search && options.search.trim()) queryParams.set("search", options.search.trim());
+  if (options.status && options.status !== "ALL") queryParams.set("status", options.status);
+  if (options.priority && options.priority !== "ALL") queryParams.set("priority", options.priority);
+  if (options.categoryId && options.categoryId !== "ALL") queryParams.set("categoryId", String(options.categoryId));
+  if (options.sortBy) queryParams.set("sortBy", options.sortBy);
+  if (options.sortOrder) queryParams.set("sortOrder", options.sortOrder);
+
+  const url = `/api/tickets${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: {
+        "x-requester-id": String(requesterId),
+      },
+    });
+  } catch {
+    throw new Error("Unable to load tickets. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load tickets.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore parse error
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Fetch full ticket details for a single ticket by numeric ID or Ticket Number.
+ */
+export async function fetchTicketById(ticketIdOrNumber: number | string, requesterId: number) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}`, {
+      headers: {
+        "x-requester-id": String(requesterId),
+      },
+    });
+  } catch {
+    throw new Error("Unable to load ticket details. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Ticket not found or you do not have permission to view it.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore parse error
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+

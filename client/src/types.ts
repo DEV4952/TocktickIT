@@ -58,6 +58,56 @@ export interface CreateTicketRequest {
   }>;
 }
 
+export interface TicketSummary {
+  id: number;
+  ticketNumber: string;
+  title: string;
+  description: string;
+  relatedSystem?: string | null;
+  status: TicketStatus;
+  priority: TicketPriority;
+  categoryId: number;
+  category: { id: number; name: string };
+  requesterId: number;
+  attachmentCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaginationMetadata {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface TicketMetrics {
+  total: number;
+  open: number;
+  inProgress: number;
+  resolved: number;
+  closed: number;
+}
+
+export interface PaginatedTicketsResponse {
+  data: TicketSummary[];
+  pagination: PaginationMetadata;
+  metrics: TicketMetrics;
+}
+
+export interface TicketQueryOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  priority?: string;
+  categoryId?: number | string;
+  sortBy?: "createdAt" | "updatedAt" | "priority" | "ticketNumber" | "title";
+  sortOrder?: "asc" | "desc";
+}
+
 export interface SystemStatus {
   online: boolean;
   categories: Category[];

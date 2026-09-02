@@ -28,8 +28,8 @@ export function RequesterSelectScreen() {
     <div className="container py-5 d-flex justify-content-center align-items-center" style={{ minHeight: "85vh" }}>
       <div className="w-100" style={{ maxWidth: 540 }}>
         <div className="text-center mb-4">
-          <div className="d-inline-flex align-items-center justify-content-center bg-success text-white rounded-circle mb-3" style={{ width: 56, height: 56, fontSize: 24 }}>
-            🎫
+          <div className="d-inline-flex align-items-center justify-content-center bg-success text-white rounded-circle mb-3 font-monospace fw-bold" style={{ width: 52, height: 52, fontSize: 20 }}>
+            TT
           </div>
           <h1 className="h3 fw-bold mb-1">
             TokTickIT <span className="text-success">Service Desk</span>
@@ -40,7 +40,6 @@ export function RequesterSelectScreen() {
         <div className="card zen-card p-4">
           {/* Lab 2 Testing Notice Banner */}
           <div className="zen-banner-info p-3 mb-4 d-flex align-items-start gap-2" role="region" aria-label="Lab 2 Notice">
-            <span className="fs-5" aria-hidden="true">💡</span>
             <div className="small">
               <strong>Lab 2 Testing Environment:</strong> Select a Development Requester persona to simulate support requests. Real authentication is introduced in Lab 3.
             </div>
@@ -119,7 +118,7 @@ export function RequesterSelectScreen() {
                   className="btn btn-zen btn-lg"
                   disabled={!selectedId}
                 >
-                  Continue to Service Desk →
+                  Continue to Service Desk
                 </button>
               </div>
             </form>

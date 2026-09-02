@@ -234,10 +234,10 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
       <div className="card zen-card p-4 p-md-5" data-testid="ticket-success-screen">
         <div className="text-center mb-4">
           <div
-            className="d-inline-flex align-items-center justify-content-center bg-success text-white rounded-circle mb-3"
-            style={{ width: 64, height: 64, fontSize: 32 }}
+            className="d-inline-flex align-items-center justify-content-center bg-success text-white rounded-circle mb-3 fw-bold font-monospace"
+            style={{ width: 56, height: 56, fontSize: 24 }}
           >
-            ✓
+            OK
           </div>
           <h2 className="h4 fw-bold text-success mb-1" data-testid="success-heading">Ticket Created Successfully!</h2>
           <p className="text-muted small">
@@ -255,9 +255,9 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
             </div>
             <div>
               <span className={`badge ${
-                createdTicket.priority === "URGENT" ? "bg-danger" :
-                createdTicket.priority === "HIGH" ? "bg-warning text-dark" :
-                createdTicket.priority === "LOW" ? "bg-secondary" : "bg-info text-dark"
+                createdTicket.priority === "URGENT" ? "badge-priority-urgent" :
+                createdTicket.priority === "HIGH" ? "badge-priority-high" :
+                createdTicket.priority === "LOW" ? "badge-priority-low" : "badge-priority-medium"
               } px-3 py-2 fs-6`}>
                 {createdTicket.priority} Priority
               </span>
@@ -319,8 +319,8 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
     <div className="card zen-card p-4" data-testid="create-ticket-form-card">
       <div className="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
         <div>
-          <h4 className="fw-bold mb-1 d-flex align-items-center gap-2">
-            <span>🎫</span> Submit New IT Ticket
+          <h4 className="fw-bold mb-1 text-dark">
+            Submit New IT Ticket
           </h4>
           <p className="text-muted small mb-0">
             Fill in the issue details below to report an incident or request IT assistance.
@@ -333,7 +333,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
             onClick={onCancel}
             data-testid="cancel-header-btn"
           >
-            ← Back
+            Back
           </button>
         )}
       </div>
@@ -341,7 +341,6 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
       {/* Inactive Requester Account Banner */}
       {!currentRequester.isActive && (
         <div className="alert alert-danger d-flex align-items-center gap-2 mb-4" role="alert" data-testid="inactive-requester-alert">
-          <span className="fs-5">⚠️</span>
           <div>
             <strong>Account Inactive:</strong> Your user profile ({currentRequester.name}) is currently suspended/inactive. You cannot submit new tickets.
           </div>
@@ -619,7 +618,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
             <div className="d-flex flex-wrap gap-2 mt-2" data-testid="attachments-list">
               {attachments.map((file, idx) => (
                 <div key={idx} className="attachment-chip" data-testid={`attachment-item-${idx}`}>
-                  <span>📎</span>
+                  <span className="badge bg-light text-muted border small">File</span>
                   <span className="fw-medium text-truncate" style={{ maxWidth: 200 }}>
                     {file.name}
                   </span>
@@ -628,13 +627,13 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                   </span>
                   <button
                     type="button"
-                    className="btn btn-sm btn-link text-danger p-0 ms-1"
+                    className="btn btn-sm btn-link text-danger p-0 ms-1 text-decoration-none"
                     onClick={() => handleRemoveAttachment(idx)}
                     disabled={isSubmitting}
                     aria-label={`Remove ${file.name}`}
                     data-testid={`remove-attachment-btn-${idx}`}
                   >
-                    ✕
+                    Remove
                   </button>
                 </div>
               ))}
@@ -667,7 +666,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                 <span>Creating Ticket...</span>
               </>
             ) : (
-              <span>Submit Ticket →</span>
+              <span>Submit Ticket</span>
             )}
           </button>
         </div>
