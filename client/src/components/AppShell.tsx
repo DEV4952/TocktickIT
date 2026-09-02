@@ -2,12 +2,24 @@ import React, { useState } from "react";
 import { useRequester } from "../context/RequesterContext.js";
 import { CreateTicketScreen } from "./CreateTicketScreen.js";
 import { MyTicketsScreen } from "./MyTicketsScreen.js";
+import { TicketDetailScreen } from "./TicketDetailScreen.js";
 
 export function AppShell() {
   const { currentRequester, changeRequester } = useRequester();
   const [activeTab, setActiveTab] = useState<"workspace" | "new-ticket">("workspace");
+  const [selectedTicketId, setSelectedTicketId] = useState<string | number | null>(null);
 
   if (!currentRequester) return null;
+
+  const handleNavigateWorkspace = () => {
+    setSelectedTicketId(null);
+    setActiveTab("workspace");
+  };
+
+  const handleNavigateNewTicket = () => {
+    setSelectedTicketId(null);
+    setActiveTab("new-ticket");
+  };
 
   return (
     <div className="min-vh-100 d-flex flex-column bg-light" data-testid="app-shell">
@@ -16,7 +28,7 @@ export function AppShell() {
         <div className="container-fluid">
           <span
             className="navbar-brand fw-bold d-flex align-items-center gap-2 cursor-pointer text-dark"
-            onClick={() => setActiveTab("workspace")}
+            onClick={handleNavigateWorkspace}
             role="button"
           >
             <span className="badge bg-success text-white px-2 py-1 fs-6 font-monospace">TT</span>
@@ -30,8 +42,8 @@ export function AppShell() {
           <div className="d-flex align-items-center gap-2 ms-4 d-none d-md-flex">
             <button
               type="button"
-              className={`btn btn-sm ${activeTab === "workspace" ? "btn-zen text-white fw-semibold" : "btn-light text-muted"}`}
-              onClick={() => setActiveTab("workspace")}
+              className={`btn btn-sm ${activeTab === "workspace" && selectedTicketId === null ? "btn-zen text-white fw-semibold" : "btn-light text-muted"}`}
+              onClick={handleNavigateWorkspace}
               data-testid="nav-workspace-tab"
             >
               My Tickets
@@ -39,7 +51,7 @@ export function AppShell() {
             <button
               type="button"
               className={`btn btn-sm ${activeTab === "new-ticket" ? "btn-zen text-white fw-semibold" : "btn-light text-muted"}`}
-              onClick={() => setActiveTab("new-ticket")}
+              onClick={handleNavigateNewTicket}
               data-testid="nav-new-ticket-tab"
             >
               New Ticket
@@ -142,7 +154,7 @@ export function AppShell() {
                 <button
                   type="button"
                   className="btn btn-zen btn-sm"
-                  onClick={() => setActiveTab("new-ticket")}
+                  onClick={handleNavigateNewTicket}
                   disabled={!currentRequester.isActive}
                   data-testid="create-ticket-cta-btn"
                 >
@@ -161,10 +173,18 @@ export function AppShell() {
           </div>
 
           <div className="col-12 col-md-8" data-testid="requester-workspace-card">
-            {activeTab === "new-ticket" ? (
-              <CreateTicketScreen onCancel={() => setActiveTab("workspace")} />
+            {selectedTicketId !== null ? (
+              <TicketDetailScreen
+                ticketIdOrNumber={selectedTicketId}
+                onBack={() => setSelectedTicketId(null)}
+              />
+            ) : activeTab === "new-ticket" ? (
+              <CreateTicketScreen onCancel={handleNavigateWorkspace} />
             ) : (
-              <MyTicketsScreen onNavigateToNewTicket={() => setActiveTab("new-ticket")} />
+              <MyTicketsScreen
+                onNavigateToNewTicket={handleNavigateNewTicket}
+                onViewTicket={(id) => setSelectedTicketId(id)}
+              />
             )}
           </div>
         </div>
@@ -173,5 +193,6 @@ export function AppShell() {
   );
 }
 export default AppShell;
+
 
 
