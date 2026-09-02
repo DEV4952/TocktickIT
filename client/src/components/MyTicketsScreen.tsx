@@ -6,9 +6,10 @@ import { TicketDetailModal } from "./TicketDetailModal.js";
 
 interface MyTicketsScreenProps {
   onNavigateToNewTicket: () => void;
+  onViewTicket?: (ticketIdOrNumber: string | number) => void;
 }
 
-export function MyTicketsScreen({ onNavigateToNewTicket }: MyTicketsScreenProps) {
+export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicketsScreenProps) {
   const { currentRequester } = useRequester();
 
   // Data States
@@ -448,7 +449,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket }: MyTicketsScreenProps)
                   {tickets.map((t) => (
                     <tr
                       key={t.id}
-                      onClick={() => setSelectedTicketId(t.ticketNumber)}
+                      onClick={() => (onViewTicket ? onViewTicket(t.ticketNumber) : setSelectedTicketId(t.ticketNumber))}
                       className="cursor-pointer"
                       data-testid={`ticket-row-${t.id}`}
                     >
@@ -482,7 +483,11 @@ export function MyTicketsScreen({ onNavigateToNewTicket }: MyTicketsScreenProps)
                           className="btn btn-outline-success btn-sm py-0 px-2"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedTicketId(t.ticketNumber);
+                            if (onViewTicket) {
+                              onViewTicket(t.ticketNumber);
+                            } else {
+                              setSelectedTicketId(t.ticketNumber);
+                            }
                           }}
                           data-testid={`view-ticket-btn-${t.id}`}
                         >
@@ -501,7 +506,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket }: MyTicketsScreenProps)
                 <div
                   key={t.id}
                   className="card p-3 border rounded-3 bg-light cursor-pointer shadow-sm"
-                  onClick={() => setSelectedTicketId(t.ticketNumber)}
+                  onClick={() => (onViewTicket ? onViewTicket(t.ticketNumber) : setSelectedTicketId(t.ticketNumber))}
                   data-testid={`ticket-mobile-card-${t.id}`}
                 >
                   <div className="d-flex justify-content-between align-items-start mb-2">

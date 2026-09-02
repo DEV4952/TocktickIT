@@ -23,6 +23,9 @@ export interface Attachment {
   fileSize: number;
   fileType: string;
   fileUrl: string;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  removalReason?: string | null;
   createdAt: string;
 }
 

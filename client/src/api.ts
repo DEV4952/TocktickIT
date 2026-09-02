@@ -233,3 +233,140 @@ export async function fetchTicketById(ticketIdOrNumber: number | string, request
   return await res.json();
 }
 
+/**
+ * Fetch all attachments (including soft-removed metadata) for a single ticket.
+ */
+export async function fetchTicketAttachments(ticketIdOrNumber: number | string, requesterId: number) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/attachments`, {
+      headers: {
+        "x-requester-id": String(requesterId),
+      },
+    });
+  } catch {
+    throw new Error("Unable to load ticket attachments. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load ticket attachments.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Upload an attachment to an existing ticket.
+ */
+export async function uploadTicketAttachment(
+  ticketIdOrNumber: number | string,
+  file: File,
+  requesterId: number
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/attachments`, {
+      method: "POST",
+      headers: {
+        "x-requester-id": String(requesterId),
+      },
+      body: formData,
+    });
+  } catch {
+    throw new Error("Unable to upload attachment. Please check your network connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Unable to upload attachment. Please try again.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Download an active attachment file.
+ */
+export async function downloadAttachment(attachmentId: number, fileName: string, requesterId: number) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/attachments/${attachmentId}/download`, {
+      headers: {
+        "x-requester-id": String(requesterId),
+      },
+    });
+  } catch {
+    throw new Error("Unable to download attachment. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Unable to download attachment.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+/**
+ * Soft-remove an attachment from a ticket with optional reason.
+ */
+export async function removeAttachment(attachmentId: number, requesterId: number, reason?: string) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/attachments/${attachmentId}`, {
+      method: "DELETE",
+      headers: {
+        "x-requester-id": String(requesterId),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ reason }),
+    });
+  } catch {
+    throw new Error("Unable to remove attachment. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Unable to remove attachment.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+
