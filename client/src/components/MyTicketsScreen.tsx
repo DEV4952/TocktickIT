@@ -509,16 +509,16 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                   onClick={() => (onViewTicket ? onViewTicket(t.ticketNumber) : setSelectedTicketId(t.ticketNumber))}
                   data-testid={`ticket-mobile-card-${t.id}`}
                 >
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <code className="fw-bold text-dark">{t.ticketNumber}</code>
-                    <div className="d-flex gap-1">
+                  <div className="d-flex justify-content-between align-items-start mb-2 gap-2 flex-wrap">
+                    <code className="fw-bold text-dark text-break">{t.ticketNumber}</code>
+                    <div className="d-flex gap-1 flex-wrap">
                       {getPriorityBadge(t.priority)}
                       {getStatusBadge(t.status)}
                     </div>
                   </div>
-                  <h6 className="fw-semibold mb-1 text-dark">{t.title}</h6>
-                  <div className="d-flex justify-content-between align-items-center text-muted small mt-2">
-                    <span>{t.category?.name}</span>
+                  <h6 className="fw-semibold mb-1 text-dark text-break">{t.title}</h6>
+                  <div className="d-flex justify-content-between align-items-center text-muted small mt-2 flex-wrap gap-1">
+                    <span className="badge bg-white text-muted border text-truncate" style={{ maxWidth: 160 }}>{t.category?.name || "General"}</span>
                     <span>{new Date(t.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>

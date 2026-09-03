@@ -317,7 +317,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
   // ---------------------------------------------------------------------------
   return (
     <div className="card zen-card p-4" data-testid="create-ticket-form-card">
-      <div className="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+      <div className="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom flex-wrap gap-2">
         <div>
           <h4 className="fw-bold mb-1 text-dark">
             Submit New IT Ticket
@@ -362,15 +362,15 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
       )}
 
       {/* Requester Identity Bar */}
-      <div className="p-3 mb-4 rounded-3 bg-light border d-flex align-items-center justify-content-between" data-testid="requester-context-bar">
-        <div className="d-flex align-items-center gap-2">
+      <div className="p-3 mb-4 rounded-3 bg-light border d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2" data-testid="requester-context-bar">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
           <span className="text-muted small">Submitting as:</span>
-          <strong>{currentRequester.name}</strong>
+          <strong className="text-break">{currentRequester.name}</strong>
           <span className="badge bg-secondary-subtle text-secondary border small">
             {currentRequester.department}
           </span>
         </div>
-        <span className="text-muted small">{currentRequester.email}</span>
+        <span className="text-muted small text-break">{currentRequester.email}</span>
       </div>
 
       <form onSubmit={handleSubmit} noValidate data-testid="create-ticket-form">
