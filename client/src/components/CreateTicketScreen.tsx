@@ -120,9 +120,28 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
     e.target.value = ""; // reset file input
   };
 
-  // Remove Attachment
-  const handleRemoveAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  // Remove Attachment States
+  const [removingIndex, setRemovingIndex] = useState<number | null>(null);
+  const [removeReason, setRemoveReason] = useState("");
+
+  // Prompt Remove Modal
+  const handlePromptRemove = (index: number) => {
+    setRemovingIndex(index);
+    setRemoveReason("");
+  };
+
+  // Confirm Remove Attachment
+  const handleConfirmRemove = () => {
+    if (removingIndex !== null) {
+      setAttachments((prev) => prev.filter((_, i) => i !== removingIndex));
+      setRemovingIndex(null);
+      setRemoveReason("");
+    }
+  };
+
+  const handleCancelRemove = () => {
+    setRemovingIndex(null);
+    setRemoveReason("");
   };
 
   // Validate Form Client-Side
@@ -628,7 +647,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                   <button
                     type="button"
                     className="btn btn-sm btn-link text-danger p-0 ms-1 text-decoration-none"
-                    onClick={() => handleRemoveAttachment(idx)}
+                    onClick={() => handlePromptRemove(idx)}
                     disabled={isSubmitting}
                     aria-label={`Remove ${file.name}`}
                     data-testid={`remove-attachment-btn-${idx}`}
@@ -671,6 +690,73 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
           </button>
         </div>
       </form>
+
+      {/* Remove Attachment Confirmation Modal */}
+      {removingIndex !== null && attachments[removingIndex] && (
+        <div
+          className="modal fade show d-block"
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.65)" }}
+          data-testid="remove-confirm-modal"
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content shadow-lg border-0 rounded-3">
+              <div className="modal-header bg-light border-bottom px-4 py-3">
+                <h5 className="modal-title fw-bold text-dark">Remove Attachment?</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Close"
+                  onClick={handleCancelRemove}
+                />
+              </div>
+
+              <div className="modal-body p-4">
+                <p className="text-muted small mb-3">
+                  Are you sure you want to remove <strong>"{attachments[removingIndex].name}"</strong> from this ticket?
+                </p>
+
+                <div className="mb-3">
+                  <label htmlFor="create-remove-reason" className="form-label small fw-semibold text-muted">
+                    Removal Reason (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="create-remove-reason"
+                    className="form-control form-control-sm"
+                    placeholder="e.g. Attached wrong file, duplicate screenshot"
+                    value={removeReason}
+                    onChange={(e) => setRemoveReason(e.target.value)}
+                    data-testid="remove-reason-input"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer bg-light border-top px-4 py-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm px-3"
+                  onClick={handleCancelRemove}
+                  data-testid="cancel-remove-btn"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm px-3"
+                  onClick={handleConfirmRemove}
+                  data-testid="confirm-remove-btn"
+                >
+                  Remove Attachment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
