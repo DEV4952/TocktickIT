@@ -9,6 +9,10 @@ dist/
 build/
 # prisma
 server/prisma/*.db
+# uploads
+server/uploads/*
+!server/uploads/.gitkeep
+!server/uploads/attachments/.gitkeep
 # logs & OS
 *.log
 .DS_Store
