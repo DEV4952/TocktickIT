@@ -414,7 +414,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
 
         {/* Category & Priority Grid */}
         <div className="row g-3 mb-3">
-          <div className="col-12 col-md-6">
+          <div className="col-12 col-xl-6">
             <label htmlFor="ticket-category" className="form-label fw-semibold">
               Category <span className="text-danger">*</span>
             </label>
@@ -461,7 +461,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
             )}
           </div>
 
-          <div className="col-12 col-md-6">
+          <div className="col-12 col-xl-6">
             <label className="form-label fw-semibold">
               Requested Priority <span className="text-danger">*</span>
             </label>

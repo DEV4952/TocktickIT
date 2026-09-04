@@ -285,37 +285,37 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
         {/* Read-Only Ticket Information Grid */}
         <div className="row g-3 small" data-testid="ticket-info-grid">
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Ticket Number:</span>
-            <strong className="text-dark font-monospace" data-testid="ticket-info-number">
+            <strong className="text-dark font-monospace text-break" data-testid="ticket-info-number">
               {ticket.ticketNumber}
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Ticket Date:</span>
             <strong className="text-dark" data-testid="ticket-info-date">
               {new Date(ticket.createdAt).toLocaleDateString()}
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Requester:</span>
-            <strong className="text-dark" data-testid="ticket-info-requester">
+            <strong className="text-dark text-break" data-testid="ticket-info-requester">
               {ticket.requester?.name || currentRequester?.name} ({ticket.requester?.department || currentRequester?.department})
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Category:</span>
-            <strong className="text-dark" data-testid="ticket-info-category">
+            <strong className="text-dark text-break" data-testid="ticket-info-category">
               {ticket.category?.name || "General"}
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Related System:</span>
-            <strong className="text-dark" data-testid="ticket-info-system">
+            <strong className="text-dark text-break" data-testid="ticket-info-system">
               {ticket.relatedSystem || "None specified"}
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Requested Priority:</span>
             <strong className="text-dark" data-testid="ticket-info-priority">
               {ticket.priority}
