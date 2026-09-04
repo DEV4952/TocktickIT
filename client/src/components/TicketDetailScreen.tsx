@@ -33,6 +33,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   const [removeReason, setRemoveReason] = useState("");
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [removeSuccess, setRemoveSuccess] = useState<string | null>(null);
 
   // Load ticket & attachment data
   const loadData = useCallback(async () => {
@@ -166,6 +167,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
             : a
         )
       );
+      setRemoveSuccess(`Attachment "${removingAttachment.fileName}" was removed successfully.`);
       setRemovingAttachment(null);
       setRemoveReason("");
     } catch (err: any) {
@@ -255,8 +257,8 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
     <div className="d-flex flex-column gap-4" data-testid="ticket-detail-screen">
       {/* Header Navigation & Summary Slide */}
       <div className="zen-section-slide" data-testid="ticket-header-slide">
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center pb-3 mb-3 border-bottom gap-3">
-          <div className="d-flex align-items-center gap-3">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center pb-3 mb-3 border-bottom gap-3">
+          <div className="d-flex align-items-center gap-3 flex-wrap">
             <button
               type="button"
               className="btn btn-outline-secondary btn-sm rounded-pill px-3"
@@ -267,13 +269,13 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
             </button>
             <div>
               <span className="text-muted small d-block">Ticket Identifier</span>
-              <code className="fs-5 fw-bold text-dark" data-testid="header-ticket-number">
+              <code className="fs-5 fw-bold text-dark text-break" data-testid="header-ticket-number">
                 {ticket.ticketNumber}
               </code>
             </div>
           </div>
 
-          <div className="d-flex align-items-center gap-2">
+          <div className="d-flex align-items-center gap-2 flex-wrap">
             <span className={`badge ${getStatusBadgeClass(ticket.status)} px-3 py-2 fs-6`} data-testid="header-ticket-status">
               {ticket.status.replace("_", " ")}
             </span>
@@ -285,37 +287,37 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
         {/* Read-Only Ticket Information Grid */}
         <div className="row g-3 small" data-testid="ticket-info-grid">
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Ticket Number:</span>
-            <strong className="text-dark font-monospace" data-testid="ticket-info-number">
+            <strong className="text-dark font-monospace text-break" data-testid="ticket-info-number">
               {ticket.ticketNumber}
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Ticket Date:</span>
             <strong className="text-dark" data-testid="ticket-info-date">
               {new Date(ticket.createdAt).toLocaleDateString()}
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Requester:</span>
-            <strong className="text-dark" data-testid="ticket-info-requester">
+            <strong className="text-dark text-break" data-testid="ticket-info-requester">
               {ticket.requester?.name || currentRequester?.name} ({ticket.requester?.department || currentRequester?.department})
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Category:</span>
-            <strong className="text-dark" data-testid="ticket-info-category">
+            <strong className="text-dark text-break" data-testid="ticket-info-category">
               {ticket.category?.name || "General"}
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Related System:</span>
-            <strong className="text-dark" data-testid="ticket-info-system">
+            <strong className="text-dark text-break" data-testid="ticket-info-system">
               {ticket.relatedSystem || "None specified"}
             </strong>
           </div>
-          <div className="col-12 col-sm-6 col-md-4">
+          <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Requested Priority:</span>
             <strong className="text-dark" data-testid="ticket-info-priority">
               {ticket.priority}
@@ -392,6 +394,19 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           </div>
         )}
 
+        {/* Remove Success Alert */}
+        {removeSuccess && (
+          <div className="alert alert-success py-2 px-3 small mb-3 d-flex align-items-center justify-content-between" role="alert" data-testid="remove-success-alert">
+            <span>{removeSuccess}</span>
+            <button
+              type="button"
+              className="btn-close btn-close-sm"
+              aria-label="Close"
+              onClick={() => setRemoveSuccess(null)}
+            />
+          </div>
+        )}
+
         {isMaxAttachmentsReached && (
           <div className="alert alert-secondary py-2 px-3 small mb-3 text-muted" role="alert" data-testid="max-attachments-alert">
             Maximum of 5 active attachments reached.
@@ -416,14 +431,14 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
               return (
                 <div
                   key={att.id}
-                  className={`d-flex flex-column flex-sm-row justify-content-between align-items-sm-center p-3 border rounded-3 ${
+                  className={`d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center p-3 border rounded-3 ${
                     isRemoved ? "bg-light-subtle text-muted border-dashed" : "bg-white shadow-sm"
-                  } gap-2`}
+                  } gap-3`}
                   data-testid={`attachment-item-${att.id}`}
                 >
-                  <div>
+                  <div className="min-w-0 w-100">
                     <div className="d-flex align-items-center gap-2 flex-wrap">
-                      <span className="fw-semibold text-dark" data-testid={`attachment-name-${att.id}`}>
+                      <span className="fw-semibold text-dark text-break" data-testid={`attachment-name-${att.id}`}>
                         {att.fileName}
                       </span>
                       <span className="badge bg-light text-muted border small">
@@ -437,14 +452,14 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
                     </div>
 
                     {isRemoved && (
-                      <div className="text-muted small mt-1" data-testid={`removed-meta-${att.id}`}>
+                      <div className="text-muted small mt-1 text-break" data-testid={`removed-meta-${att.id}`}>
                         Removed: {att.deletedAt ? new Date(att.deletedAt).toLocaleDateString() : "Recently"}
                         {att.removalReason && ` • Reason: ${att.removalReason}`}
                       </div>
                     )}
                   </div>
 
-                  <div className="d-flex align-items-center gap-2 align-self-end align-self-sm-center">
+                  <div className="d-flex align-items-center gap-2 align-self-stretch align-self-sm-center justify-content-end">
                     {!isRemoved ? (
                       <>
                         <button

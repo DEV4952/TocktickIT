@@ -120,9 +120,32 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
     e.target.value = ""; // reset file input
   };
 
-  // Remove Attachment
-  const handleRemoveAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  // Remove Attachment States
+  const [removingIndex, setRemovingIndex] = useState<number | null>(null);
+  const [removeReason, setRemoveReason] = useState("");
+  const [attachmentSuccess, setAttachmentSuccess] = useState<string | null>(null);
+
+  // Prompt Remove Modal
+  const handlePromptRemove = (index: number) => {
+    setRemovingIndex(index);
+    setRemoveReason("");
+    setAttachmentSuccess(null);
+  };
+
+  // Confirm Remove Attachment
+  const handleConfirmRemove = () => {
+    if (removingIndex !== null) {
+      const removed = attachments[removingIndex];
+      setAttachments((prev) => prev.filter((_, i) => i !== removingIndex));
+      setRemovingIndex(null);
+      setRemoveReason("");
+      setAttachmentSuccess(`File "${removed.name}" was removed successfully.`);
+    }
+  };
+
+  const handleCancelRemove = () => {
+    setRemovingIndex(null);
+    setRemoveReason("");
   };
 
   // Validate Form Client-Side
@@ -317,7 +340,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
   // ---------------------------------------------------------------------------
   return (
     <div className="card zen-card p-4" data-testid="create-ticket-form-card">
-      <div className="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+      <div className="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom flex-wrap gap-2">
         <div>
           <h4 className="fw-bold mb-1 text-dark">
             Submit New IT Ticket
@@ -362,15 +385,15 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
       )}
 
       {/* Requester Identity Bar */}
-      <div className="p-3 mb-4 rounded-3 bg-light border d-flex align-items-center justify-content-between" data-testid="requester-context-bar">
-        <div className="d-flex align-items-center gap-2">
+      <div className="p-3 mb-4 rounded-3 bg-light border d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2" data-testid="requester-context-bar">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
           <span className="text-muted small">Submitting as:</span>
-          <strong>{currentRequester.name}</strong>
+          <strong className="text-break">{currentRequester.name}</strong>
           <span className="badge bg-secondary-subtle text-secondary border small">
             {currentRequester.department}
           </span>
         </div>
-        <span className="text-muted small">{currentRequester.email}</span>
+        <span className="text-muted small text-break">{currentRequester.email}</span>
       </div>
 
       <form onSubmit={handleSubmit} noValidate data-testid="create-ticket-form">
@@ -414,7 +437,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
 
         {/* Category & Priority Grid */}
         <div className="row g-3 mb-3">
-          <div className="col-12 col-md-6">
+          <div className="col-12 col-xl-6">
             <label htmlFor="ticket-category" className="form-label fw-semibold">
               Category <span className="text-danger">*</span>
             </label>
@@ -461,7 +484,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
             )}
           </div>
 
-          <div className="col-12 col-md-6">
+          <div className="col-12 col-xl-6">
             <label className="form-label fw-semibold">
               Requested Priority <span className="text-danger">*</span>
             </label>
@@ -593,6 +616,18 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
             </div>
           )}
 
+          {attachmentSuccess && (
+            <div className="alert alert-success py-2 px-3 small mb-2 d-flex align-items-center justify-content-between" data-testid="attachment-success-alert">
+              <span>{attachmentSuccess}</span>
+              <button
+                type="button"
+                className="btn-close btn-close-sm"
+                aria-label="Close"
+                onClick={() => setAttachmentSuccess(null)}
+              />
+            </div>
+          )}
+
           {attachments.length < MAX_ATTACHMENTS && (
             <div className="attachment-dropzone p-3 text-center mb-2 position-relative">
               <input
@@ -628,7 +663,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                   <button
                     type="button"
                     className="btn btn-sm btn-link text-danger p-0 ms-1 text-decoration-none"
-                    onClick={() => handleRemoveAttachment(idx)}
+                    onClick={() => handlePromptRemove(idx)}
                     disabled={isSubmitting}
                     aria-label={`Remove ${file.name}`}
                     data-testid={`remove-attachment-btn-${idx}`}
@@ -671,6 +706,73 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
           </button>
         </div>
       </form>
+
+      {/* Remove Attachment Confirmation Modal */}
+      {removingIndex !== null && attachments[removingIndex] && (
+        <div
+          className="modal fade show d-block"
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.65)" }}
+          data-testid="remove-confirm-modal"
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content shadow-lg border-0 rounded-3">
+              <div className="modal-header bg-light border-bottom px-4 py-3">
+                <h5 className="modal-title fw-bold text-dark">Remove Attachment?</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Close"
+                  onClick={handleCancelRemove}
+                />
+              </div>
+
+              <div className="modal-body p-4">
+                <p className="text-muted small mb-3">
+                  Are you sure you want to remove <strong>"{attachments[removingIndex].name}"</strong> from this ticket?
+                </p>
+
+                <div className="mb-3">
+                  <label htmlFor="create-remove-reason" className="form-label small fw-semibold text-muted">
+                    Removal Reason (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="create-remove-reason"
+                    className="form-control form-control-sm"
+                    placeholder="e.g. Attached wrong file, duplicate screenshot"
+                    value={removeReason}
+                    onChange={(e) => setRemoveReason(e.target.value)}
+                    data-testid="remove-reason-input"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer bg-light border-top px-4 py-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm px-3"
+                  onClick={handleCancelRemove}
+                  data-testid="cancel-remove-btn"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm px-3"
+                  onClick={handleConfirmRemove}
+                  data-testid="confirm-remove-btn"
+                >
+                  Remove Attachment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -136,7 +136,7 @@ describe("Lab 2 — CreateTicketScreen Component", () => {
     expect(screen.getByTestId("description-char-counter")).toHaveTextContent("37/2000");
   });
 
-  it("handles attachment file addition, validation, and removal", async () => {
+  it("handles attachment file addition, validation, and removal with confirmation reason modal", async () => {
     const user = userEvent.setup();
     renderWithRequester(<CreateTicketScreen />);
 
@@ -148,9 +148,19 @@ describe("Lab 2 — CreateTicketScreen Component", () => {
 
     expect(await screen.findByTestId("attachment-item-0")).toHaveTextContent("diagnostic-log.txt");
 
-    // 2. Remove file
+    // 2. Click Remove button -> Opens Confirmation Modal
     await user.click(screen.getByTestId("remove-attachment-btn-0"));
+    expect(await screen.findByTestId("remove-confirm-modal")).toBeInTheDocument();
+
+    // 3. Enter optional removal reason
+    const reasonInput = screen.getByTestId("remove-reason-input");
+    await user.type(reasonInput, "Wrong log file selected");
+
+    // 4. Confirm removal
+    await user.click(screen.getByTestId("confirm-remove-btn"));
+
     expect(screen.queryByTestId("attachment-item-0")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("remove-confirm-modal")).not.toBeInTheDocument();
   });
 
   it("rejects files exceeding 5MB size limit with inline alert", async () => {

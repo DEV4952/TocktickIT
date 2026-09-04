@@ -194,6 +194,12 @@ body {
 }
 
 /* Priority Selector Segmented Controls */
+.priority-btn-group .btn {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 .priority-btn-group .btn-check:checked + .btn-outline-secondary {
   background-color: #64748b;
   color: #ffffff;
@@ -259,4 +265,48 @@ body {
   background-color: #f1f5f9;
   border: 1px solid #cbd5e1;
   color: #0f172a;
+}
+
+/* Mobile & Tablet Responsiveness & Text Breaking Utilities */
+.text-break {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Tablet (iPad Mini, Air, Pro portrait: 768px - 991px) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .app-navbar {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .zen-card, .zen-section-slide {
+    padding: 1.25rem !important;
+  }
+  .zen-stat-card {
+    padding: 1rem 0.75rem !important;
+  }
+  .zen-stat-card .display-6 {
+    font-size: 1.75rem !important;
+  }
+  .table-responsive table {
+    min-width: 540px;
+  }
+}
+
+/* Mobile (<= 576px) */
+@media (max-width: 576px) {
+  .app-navbar {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .zen-card, .zen-section-slide {
+    padding: 1rem !important;
+  }
+  .zen-stat-card {
+    padding: 0.75rem 0.5rem !important;
+  }
+  .ticket-badge-lg {
+    font-size: 1rem;
+    padding: 6px 12px;
+  }
 }

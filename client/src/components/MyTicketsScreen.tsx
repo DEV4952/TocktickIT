@@ -175,8 +175,8 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
         </div>
 
         {/* Metrics Summary Cards */}
-        <div className="row g-3" data-testid="metrics-summary-bar">
-          <div className="col-6 col-md-3">
+        <div className="row g-2 g-md-3" data-testid="metrics-summary-bar">
+          <div className="col-6 col-xl-3">
             <div
               className={`zen-stat-card text-center ${status === "ALL" ? "active-stat" : ""}`}
               onClick={() => { setStatus("ALL"); setPage(1); }}
@@ -191,7 +191,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
               <span className="badge bg-light text-muted border small">All statuses</span>
             </div>
           </div>
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-xl-3">
             <div
               className={`zen-stat-card text-center ${status === "OPEN" ? "active-stat" : ""}`}
               onClick={() => { setStatus("OPEN"); setPage(1); }}
@@ -206,7 +206,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
               <span className="badge badge-status-open small">Awaiting Triage</span>
             </div>
           </div>
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-xl-3">
             <div
               className={`zen-stat-card text-center ${status === "IN_PROGRESS" ? "active-stat" : ""}`}
               onClick={() => { setStatus("IN_PROGRESS"); setPage(1); }}
@@ -221,7 +221,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
               <span className="badge badge-status-in-progress small">Under Review</span>
             </div>
           </div>
-          <div className="col-6 col-md-3">
+          <div className="col-6 col-xl-3">
             <div
               className={`zen-stat-card text-center ${status === "RESOLVED" ? "active-stat" : ""}`}
               onClick={() => { setStatus("RESOLVED"); setPage(1); }}
@@ -242,10 +242,10 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
       {/* ------------------------------------------------------------------ */}
       {/* SECTION 2 & 3: CONTROLS & TICKET LIST SLIDE                        */}
       {/* ------------------------------------------------------------------ */}
-      <div className="card zen-card p-4" data-testid="tickets-main-card">
+      <div className="card zen-card p-3 p-md-4" data-testid="tickets-main-card">
         {/* Search and Filters Toolbar */}
         <div className="row g-2 mb-4 align-items-center" data-testid="filter-toolbar">
-          <div className="col-12 col-md-4">
+          <div className="col-12 col-xl-4">
             <form onSubmit={handleSearchSubmit}>
               <div className="input-group">
                 <input
@@ -263,7 +263,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
             </form>
           </div>
 
-          <div className="col-6 col-md-2">
+          <div className="col-6 col-sm-6 col-md-6 col-xl-2">
             <select
               className="form-select"
               value={status}
@@ -279,7 +279,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
             </select>
           </div>
 
-          <div className="col-6 col-md-2">
+          <div className="col-6 col-sm-6 col-md-6 col-xl-2">
             <select
               className="form-select"
               value={priority}
@@ -295,7 +295,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
             </select>
           </div>
 
-          <div className="col-6 col-md-2">
+          <div className="col-6 col-sm-6 col-md-6 col-xl-2">
             <select
               className="form-select"
               value={categoryId}
@@ -312,7 +312,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
             </select>
           </div>
 
-          <div className="col-6 col-md-2">
+          <div className="col-6 col-sm-6 col-md-6 col-xl-2">
             <select
               className="form-select"
               value={`${sortBy}-${sortOrder}`}
@@ -509,16 +509,16 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                   onClick={() => (onViewTicket ? onViewTicket(t.ticketNumber) : setSelectedTicketId(t.ticketNumber))}
                   data-testid={`ticket-mobile-card-${t.id}`}
                 >
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <code className="fw-bold text-dark">{t.ticketNumber}</code>
-                    <div className="d-flex gap-1">
+                  <div className="d-flex justify-content-between align-items-start mb-2 gap-2 flex-wrap">
+                    <code className="fw-bold text-dark text-break">{t.ticketNumber}</code>
+                    <div className="d-flex gap-1 flex-wrap">
                       {getPriorityBadge(t.priority)}
                       {getStatusBadge(t.status)}
                     </div>
                   </div>
-                  <h6 className="fw-semibold mb-1 text-dark">{t.title}</h6>
-                  <div className="d-flex justify-content-between align-items-center text-muted small mt-2">
-                    <span>{t.category?.name}</span>
+                  <h6 className="fw-semibold mb-1 text-dark text-break">{t.title}</h6>
+                  <div className="d-flex justify-content-between align-items-center text-muted small mt-2 flex-wrap gap-1">
+                    <span className="badge bg-white text-muted border text-truncate" style={{ maxWidth: 160 }}>{t.category?.name || "General"}</span>
                     <span>{new Date(t.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
