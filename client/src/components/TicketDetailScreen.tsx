@@ -33,6 +33,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   const [removeReason, setRemoveReason] = useState("");
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [removeSuccess, setRemoveSuccess] = useState<string | null>(null);
 
   // Load ticket & attachment data
   const loadData = useCallback(async () => {
@@ -166,6 +167,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
             : a
         )
       );
+      setRemoveSuccess(`Attachment "${removingAttachment.fileName}" was removed successfully.`);
       setRemovingAttachment(null);
       setRemoveReason("");
     } catch (err: any) {
@@ -389,6 +391,19 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
         {uploadError && (
           <div className="alert alert-danger py-2 px-3 small mb-3" role="alert" data-testid="upload-error-alert">
             {uploadError}
+          </div>
+        )}
+
+        {/* Remove Success Alert */}
+        {removeSuccess && (
+          <div className="alert alert-success py-2 px-3 small mb-3 d-flex align-items-center justify-content-between" role="alert" data-testid="remove-success-alert">
+            <span>{removeSuccess}</span>
+            <button
+              type="button"
+              className="btn-close btn-close-sm"
+              aria-label="Close"
+              onClick={() => setRemoveSuccess(null)}
+            />
           </div>
         )}
 

@@ -123,19 +123,23 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
   // Remove Attachment States
   const [removingIndex, setRemovingIndex] = useState<number | null>(null);
   const [removeReason, setRemoveReason] = useState("");
+  const [attachmentSuccess, setAttachmentSuccess] = useState<string | null>(null);
 
   // Prompt Remove Modal
   const handlePromptRemove = (index: number) => {
     setRemovingIndex(index);
     setRemoveReason("");
+    setAttachmentSuccess(null);
   };
 
   // Confirm Remove Attachment
   const handleConfirmRemove = () => {
     if (removingIndex !== null) {
+      const removed = attachments[removingIndex];
       setAttachments((prev) => prev.filter((_, i) => i !== removingIndex));
       setRemovingIndex(null);
       setRemoveReason("");
+      setAttachmentSuccess(`File "${removed.name}" was removed successfully.`);
     }
   };
 
@@ -609,6 +613,18 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
           {attachmentError && (
             <div className="alert alert-danger py-2 px-3 small mb-2" data-testid="attachment-error">
               {attachmentError}
+            </div>
+          )}
+
+          {attachmentSuccess && (
+            <div className="alert alert-success py-2 px-3 small mb-2 d-flex align-items-center justify-content-between" data-testid="attachment-success-alert">
+              <span>{attachmentSuccess}</span>
+              <button
+                type="button"
+                className="btn-close btn-close-sm"
+                aria-label="Close"
+                onClick={() => setAttachmentSuccess(null)}
+              />
             </div>
           )}
 

@@ -9,16 +9,17 @@ export function RequesterSelectScreen() {
 
   // Default to first active requester when list loads
   useEffect(() => {
-    if (requesters.length > 0 && !selectedId) {
+    if (requesters.length > 0 && (!selectedId || !requesters.some((r) => String(r.id) === selectedId))) {
       setSelectedId(String(requesters[0].id));
     }
   }, [requesters, selectedId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedId) return;
+    const idToUse = selectedId || (requesters.length > 0 ? String(requesters[0].id) : "");
+    if (!idToUse) return;
 
-    const chosen = requesters.find((r) => r.id === parseInt(selectedId, 10));
+    const chosen = requesters.find((r) => r.id === parseInt(idToUse, 10));
     if (chosen) {
       selectRequester(chosen);
     }
