@@ -3,7 +3,7 @@
 **Document Version:** 2.0.0  
 **Status:** Complete & Verified  
 **Target Sprint:** Lab 2 — Requester-Facing Ticketing MVP (Issue #9)  
-**Authors:** Sorawit Chaitong (@DEV4952), Phurithip Paisanworajit (@yiiipunn)  
+**Authors:** Sorawit Chaitong (@DEV4952) 
 
 ---
 
