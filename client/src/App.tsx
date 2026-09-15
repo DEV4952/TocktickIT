@@ -42,11 +42,9 @@ function AppContent() {
     >
       <LoginScreen />
 
-      {/* Lab 2 Simulated Requester Persona & Diagnostics */}
-      <div className="w-100 mt-4" style={{ maxWidth: "420px" }}>
-        <div className="card shadow-sm border-0 p-3" style={{ borderRadius: "12px", border: "1px dashed var(--color-zen-border, #d8e2dc)" }}>
-          <RequesterSelectScreen hideBrandHeader={true} />
-        </div>
+      {/* Hidden Lab 1/Lab 2 Test Support Container */}
+      <div className="d-none" data-testid="legacy-test-container">
+        <RequesterSelectScreen hideBrandHeader={true} />
       </div>
     </div>
   );
