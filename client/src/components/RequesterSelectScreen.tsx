@@ -3,7 +3,11 @@ import { useRequester } from "../context/RequesterContext.js";
 import { Requester } from "../types.js";
 import { SystemHealth } from "./SystemHealth.js";
 
-export function RequesterSelectScreen() {
+export interface RequesterSelectScreenProps {
+  hideBrandHeader?: boolean;
+}
+
+export function RequesterSelectScreen({ hideBrandHeader = false }: RequesterSelectScreenProps = {}) {
   const { requesters, isLoading, error, selectRequester, reloadRequesters } = useRequester();
   const [selectedId, setSelectedId] = useState<string>("");
 
@@ -26,19 +30,21 @@ export function RequesterSelectScreen() {
   };
 
   return (
-    <div className="container py-5 d-flex justify-content-center align-items-center" style={{ minHeight: "85vh" }}>
-      <div className="w-100" style={{ maxWidth: 540 }}>
-        <div className="text-center mb-4">
-          <div className="d-inline-flex align-items-center justify-content-center bg-success text-white rounded-circle mb-3 font-monospace fw-bold" style={{ width: 52, height: 52, fontSize: 20 }}>
-            TT
+    <div className={hideBrandHeader ? "w-100" : "container py-5 d-flex justify-content-center align-items-center"} style={hideBrandHeader ? {} : { minHeight: "85vh" }}>
+      <div className="w-100" style={hideBrandHeader ? {} : { maxWidth: 540 }}>
+        {!hideBrandHeader && (
+          <div className="text-center mb-4">
+            <div className="d-inline-flex align-items-center justify-content-center bg-success text-white rounded-circle mb-3 font-monospace fw-bold" style={{ width: 52, height: 52, fontSize: 20 }}>
+              TT
+            </div>
+            <h1 className="h3 fw-bold mb-1">
+              TokTickIT <span className="text-success">Service Desk</span>
+            </h1>
+            <p className="text-muted small">Requester-Facing Ticketing Portal</p>
           </div>
-          <h1 className="h3 fw-bold mb-1">
-            TokTickIT <span className="text-success">Service Desk</span>
-          </h1>
-          <p className="text-muted small">Requester-Facing Ticketing Portal</p>
-        </div>
+        )}
 
-        <div className="card zen-card p-4">
+        <div className={hideBrandHeader ? "" : "card zen-card p-4"}>
           {/* Lab 2 Testing Notice Banner */}
           <div className="zen-banner-info p-3 mb-4 d-flex align-items-start gap-2" role="region" aria-label="Lab 2 Notice">
             <div className="small">
@@ -117,7 +123,7 @@ export function RequesterSelectScreen() {
                 <button
                   type="submit"
                   className="btn btn-zen btn-lg"
-                  disabled={!selectedId}
+                  disabled={requesters.filter((r) => r.isActive).length === 0}
                 >
                   Continue to Service Desk
                 </button>

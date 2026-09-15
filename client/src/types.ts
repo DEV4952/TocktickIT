@@ -1,3 +1,25 @@
+export type Role = "REQUESTER" | "IT_STAFF" | "ADMINISTRATOR";
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  fullName?: string;
+  department?: string | null;
+  avatarUrl?: string | null;
+  role: Role;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AuthResponse {
+  token?: string;
+  user: User;
+  message?: string;
+}
+
 export interface Requester {
   id: number;
   name: string;
@@ -14,7 +36,15 @@ export interface Category {
   createdAt?: string;
 }
 
-export type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+export type TicketStatus =
+  | "NEW"
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_FOR_REQUESTER"
+  | "RESOLVED"
+  | "CLOSED"
+  | "REOPENED"
+  | "CANCELLED";
 export type TicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
 export interface Attachment {

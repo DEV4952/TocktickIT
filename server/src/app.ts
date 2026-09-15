@@ -1,9 +1,18 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
+import bcrypt from "bcryptjs";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { getPrisma } from "./prisma.js";
+import {
+  SESSION_COOKIE_NAME,
+  createSessionToken,
+  validatePasswordComplexity,
+  authenticateSession,
+  requireAuth,
+} from "./utils/auth.js";
 
 // Setup uploads directory
 const uploadsDir = path.join(process.cwd(), "uploads", "attachments");
@@ -45,9 +54,191 @@ const upload = multer({
 // Supertest can import `app` without opening a port. Do not merge these files.
 export const app = express();
 
-app.use(cors());          // already wired: lets the Vite dev server call this API
+app.use(cors({ origin: true, credentials: true })); // lets the Vite dev server call this API with cookies
+app.use(cookieParser());
 app.use(express.json());
+app.use(authenticateSession);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+// ---------------------------------------------------------------------------
+// Lab 3 Auth Endpoints
+// ---------------------------------------------------------------------------
+
+// POST /api/auth/login
+app.post("/api/auth/login", async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password || typeof email !== "string" || typeof password !== "string") {
+      return res.status(400).json({
+        error: "BAD_REQUEST",
+        message: "Email and password are required.",
+      });
+    }
+
+    const prisma = getPrisma();
+    const user = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: email.trim(),
+          mode: "insensitive",
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        error: "INVALID_CREDENTIALS",
+        message: "Invalid email address or password. Please try again.",
+      });
+    }
+
+    const passwordValid = bcrypt.compareSync(password, user.passwordHash);
+    if (!passwordValid) {
+      if (!user.isActive) {
+        return res.status(403).json({
+          error: "ACCOUNT_INACTIVE",
+          message: "This account has been deactivated. Please contact your administrator.",
+        });
+      }
+      return res.status(401).json({
+        error: "INVALID_CREDENTIALS",
+        message: "Invalid email address or password. Please try again.",
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        error: "ACCOUNT_INACTIVE",
+        message: "This account has been deactivated. Please contact your administrator.",
+      });
+    }
+
+    const token = createSessionToken(user);
+    res.cookie(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        fullName: user.name,
+        department: user.department,
+        role: user.role,
+        isActive: user.isActive,
+        mustChangePassword: user.mustChangePassword,
+      },
+      message: user.mustChangePassword
+        ? "Password change required before proceeding"
+        : "Login successful",
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "An unexpected error occurred during login." });
+  }
+});
+
+// POST /api/auth/logout
+app.post("/api/auth/logout", (_req: Request, res: Response) => {
+  res.clearCookie(SESSION_COOKIE_NAME);
+  return res.status(200).json({ message: "Logged out successfully" });
+});
+
+// GET /api/auth/me
+app.get("/api/auth/me", requireAuth, (req: Request, res: Response) => {
+  const user = req.user!;
+  return res.status(200).json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      fullName: user.name,
+      department: user.department,
+      role: user.role,
+      isActive: user.isActive,
+      mustChangePassword: user.mustChangePassword,
+    },
+  });
+});
+
+// POST /api/auth/change-password
+app.post("/api/auth/change-password", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        error: "BAD_REQUEST",
+        message: "Current password, new password, and confirm password are all required.",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        error: "BAD_REQUEST",
+        message: "New password and confirm password do not match.",
+      });
+    }
+
+    const prisma = getPrisma();
+    const dbUser = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+    });
+
+    if (!dbUser || !bcrypt.compareSync(currentPassword, dbUser.passwordHash)) {
+      return res.status(401).json({
+        error: "INVALID_CREDENTIALS",
+        message: "Current password is incorrect.",
+      });
+    }
+
+    const complexity = validatePasswordComplexity(newPassword);
+    if (!complexity.valid) {
+      return res.status(400).json({
+        error: "BAD_REQUEST",
+        message: complexity.reasons.join(" "),
+        details: complexity.reasons,
+      });
+    }
+
+    const newHash = bcrypt.hashSync(newPassword, 10);
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        passwordHash: newHash,
+        mustChangePassword: false,
+      },
+    });
+
+    const token = createSessionToken(updatedUser);
+    res.cookie(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      token,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        fullName: updatedUser.name,
+        department: updatedUser.department,
+        role: updatedUser.role,
+        isActive: updatedUser.isActive,
+        mustChangePassword: false,
+      },
+      message: "Password changed successfully. You may now access the system.",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "An error occurred while updating password." });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Issue 2 — API health check

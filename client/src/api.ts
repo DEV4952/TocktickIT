@@ -369,4 +369,97 @@ export async function removeAttachment(attachmentId: number, requesterId: number
   return await res.json();
 }
 
+/**
+ * Log in with email and password.
+ */
+export async function loginApi(email: string, password: string): Promise<any> {
+  let res: Response;
+  try {
+    res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new Error("Unable to reach server. Please check your network connection.");
+  }
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "Invalid email or password. Please try again.");
+  }
+
+  return data;
+}
+
+/**
+ * Log out current user session.
+ */
+export async function logoutApi(): Promise<void> {
+  try {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+    });
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Fetch current authenticated user.
+ */
+export async function getMeApi(token?: string | null): Promise<any> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch("/api/auth/me", { headers });
+  } catch {
+    throw new Error("Unable to check authentication status.");
+  }
+
+  if (!res.ok) {
+    throw new Error("Not authenticated");
+  }
+
+  return await res.json();
+}
+
+/**
+ * Change user password.
+ */
+export async function changePasswordApi(
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword: string,
+  token?: string | null
+): Promise<any> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch("/api/auth/change-password", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+    });
+  } catch {
+    throw new Error("Unable to reach server. Please check your network connection.");
+  }
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to update password.");
+  }
+
+  return data;
+}
+
+
 

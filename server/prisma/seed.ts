@@ -168,6 +168,7 @@ async function main() {
         avatarUrl: user.avatarUrl,
         isActive: user.isActive,
         mustChangePassword: user.mustChangePassword,
+        passwordHash: user.passwordHash,
       },
       create: user,
     });
