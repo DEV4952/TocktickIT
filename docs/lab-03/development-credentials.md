@@ -1,62 +1,63 @@
 # Lab 3 — Development Credentials Reference
 
-เอกสารรวบรวมบัญชีผู้ใช้งาน (Mock Users) และรหัสผ่านสำหรับการทดสอบระบบ TokTickIT ในสภาพแวดล้อม Development / Lab 3
+This document provides mock user accounts and authentication credentials for testing the TokTickIT system in the Lab 3 Development environment.
 
 ---
 
-## 🔑 ข้อมูลรหัสผ่านเริ่มต้น (Default Password)
-> ทุกบัญชีในระบบที่ถูกสร้างผ่าน Database Seed ใช้รหัสผ่านเริ่มต้นเหมือนกันคือ:  
+## 🔑 Default Authentication Credentials
+
+> All seeded test accounts in the system share the identical default initial password:  
 > **`Password123!`**
 
 ---
 
-## 👥 ตารางสรุปบัญชีผู้ใช้แยกตามบทบาท (Role)
+## 👥 User Accounts by Role & Status
 
-### 1. Requesters (ผู้ใช้งานทั่วไป / พนักงานแจ้งปัญหา)
+### 1. Requesters
 
-| Status | Name | Email | Password | Department | Note |
-|---|---|---|---|---|---|
-| 🟢 **Active** | Alex Rivera | `alex.rivera@toktick.it` | `Password123!` | Engineering | บัญชีผู้ใช้ทั่วไป |
-| 🟢 **Active** | Samantha Chen | `samantha.chen@toktick.it` | `Password123!` | Marketing | บัญชีผู้ใช้ทั่วไป |
-| 🟢 **Active** | Marcus Vance | `marcus.vance@toktick.it` | `Password123!` | Finance | บัญชีผู้ใช้ทั่วไป |
-| 🟢 **Active** | Elena Rostova | `elena.rostova@toktick.it` | `Password123!` | Design | บัญชีผู้ใช้ทั่วไป |
-| 🟢 **Active** | Emily Davis | `emily.davis@toktick.it` | `Password123!` | Human Resources | ⚠️ **First Login** (`mustChangePassword: true`) — เมื่อ Login แล้วจะถูกบังคับให้เปลี่ยนรหัสผ่านทันที |
-| 🔴 **Inactive** | Jordan Taylor | `jordan.taylor@toktick.it` | `Password123!` | Operations | ⛔ **Inactive Account** — ระบบจะปฏิเสธการ Login ด้วย HTTP 403 Forbidden |
-
----
-
-### 2. IT Staff (เจ้าหน้าที่ฝ่ายไอที / ผู้รับเรื่อง)
-
-| Status | Name | Email | Password | Department | Note |
-|---|---|---|---|---|---|
-| 🟢 **Active** | Michael Brown | `michael.brown@toktick.it` | `Password123!` | IT Support | เจ้าหน้าที่ IT ประจำคิว |
-| 🟢 **Active** | Sarah Johnson | `sarah.johnson@toktick.it` | `Password123!` | IT Operations | เจ้าหน้าที่ IT ประจำคิว |
-| 🟢 **Active** | David Lee | `david.lee@toktick.it` | `Password123!` | Network Operations | เจ้าหน้าที่ IT ประจำคิว |
-| 🔴 **Inactive** | Kevin Patel | `kevin.patel@toktick.it` | `Password123!` | IT Support | ⛔ **Inactive Account** — ระบบจะปฏิเสธการ Login ด้วย HTTP 403 Forbidden |
+| Status | Name | Email | Department | Notes |
+|---|---|---|---|---|
+| 🟢 **Active** | Alex Rivera | `alex.rivera@toktick.it` | Engineering | Standard Requester account |
+| 🟢 **Active** | Samantha Chen | `samantha.chen@toktick.it` | Marketing | Standard Requester account |
+| 🟢 **Active** | Marcus Vance | `marcus.vance@toktick.it` | Finance | Standard Requester account |
+| 🟢 **Active** | Elena Rostova | `elena.rostova@toktick.it` | Design | Standard Requester account |
+| 🟢 **Active** | Emily Davis | `emily.davis@toktick.it` | Human Resources | ⚠️ **First Login** (`mustChangePassword: true`) — Mandatory password change prompt on login |
+| 🔴 **Inactive** | Jordan Taylor | `jordan.taylor@toktick.it` | Operations | ⛔ **Suspended Account** — Login rejected with HTTP 403 Forbidden |
 
 ---
 
-### 3. Administrators (ผู้ดูแลระบบ)
+### 2. IT Staff
 
-| Status | Name | Email | Password | Department | Note |
-|---|---|---|---|---|---|
-| 🟢 **Active** | John Smith | `john.smith@toktick.it` | `Password123!` | System Administration | ผู้ดูแลระบบทั่วไป |
-| 🟢 **Active** | Super Administrator | `admin@toktick.it` | `Password123!` | IT Governance | บัญชีผู้ดูแลระบบหลัก |
-| 🔴 **Inactive** | *(None)* | - | - | - | - |
+| Status | Name | Email | Department | Notes |
+|---|---|---|---|---|
+| 🟢 **Active** | Michael Brown | `michael.brown@toktick.it` | IT Support | Operational IT queue access |
+| 🟢 **Active** | Sarah Johnson | `sarah.johnson@toktick.it` | IT Operations | Operational IT queue access |
+| 🟢 **Active** | David Lee | `david.lee@toktick.it` | Network Operations | Operational IT queue access |
+| 🔴 **Inactive** | Kevin Patel | `kevin.patel@toktick.it` | IT Support | ⛔ **Suspended Account** — Login rejected with HTTP 403 Forbidden |
 
 ---
 
-## 🧪 สถานการณ์ทดสอบที่แนะนำ (Test Scenarios)
+### 3. Administrators
 
-1. **เข้าสู่ระบบปกติ (Standard Login)**:
-   - ใช้ `alex.rivera@toktick.it` / `Password123!` -> เข้าสู่ระบบหน้า **My Tickets**
-   - ใช้ `michael.brown@toktick.it` / `Password123!` -> เข้าสู่ระบบหน้า **My Queue**
-   - ใช้ `admin@toktick.it` / `Password123!` -> เข้าสู่ระบบในฐานะ **Administrator**
+| Status | Name | Email | Department | Notes |
+|---|---|---|---|---|
+| 🟢 **Active** | John Smith | `john.smith@toktick.it` | System Administration | System Administrator |
+| 🟢 **Active** | Super Administrator | `admin@toktick.it` | IT Governance | Primary Root Administrator |
+| 🔴 **Inactive** | *(None)* | - | - | - |
 
-2. **ทดสอบการบังคับเปลี่ยนรหัสผ่านครั้งแรก (Mandatory First-Login Password Change)**:
-   - ใช้ `emily.davis@toktick.it` / `Password123!`
-   - ระบบจะแสดงหน้าจอ **Change Password Required** และล็อคไม่ให้เข้าถึงฟังก์ชันอื่นจนกว่าจะเปลี่ยนรหัสผ่านสำเร็จ
+---
 
-3. **ทดสอบบัญชีที่ถูกระงับ (Inactive Account Rejection)**:
-   - ใช้ `jordan.taylor@toktick.it` หรือ `kevin.patel@toktick.it` พร้อมรหัส `Password123!`
-   - ระบบจะปฏิเสธการเข้าสู่ระบบและแสดงข้อความแจ้งเตือนสีแดงว่าบัญชีถูกระงับการใช้งาน
+## 🧪 Recommended Test Scenarios
+
+1. **Standard Authentication**:
+   - Log in with `alex.rivera@toktick.it` / `Password123!` -> Navigates to **My Tickets**.
+   - Log in with `michael.brown@toktick.it` / `Password123!` -> Navigates to **My Queue**.
+   - Log in with `admin@toktick.it` / `Password123!` -> Navigates to **Administrator Dashboard**.
+
+2. **Mandatory First-Login Password Change**:
+   - Log in with `emily.davis@toktick.it` / `Password123!`.
+   - The app renders the **Change Password Required** screen and locks business routes until password is updated.
+
+3. **Inactive / Suspended Account Rejection**:
+   - Attempt login with `jordan.taylor@toktick.it` or `kevin.patel@toktick.it` with `Password123!`.
+   - Authentication rejects with HTTP 403 Forbidden and displays an account suspension warning banner.
