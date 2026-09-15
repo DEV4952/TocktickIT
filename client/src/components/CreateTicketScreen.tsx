@@ -201,12 +201,12 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
     e.preventDefault();
     setApiError(null);
 
-    if (!currentRequester) {
-      setApiError("No active requester context found. Please select a persona.");
+    if (!activeUser) {
+      setApiError("No active user found. Please sign in.");
       return;
     }
 
-    if (!currentRequester.isActive) {
+    if (!activeUser.isActive) {
       setApiError("Your account is currently inactive. You cannot submit new tickets.");
       return;
     }
@@ -323,7 +323,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
             <div className="col-12 col-sm-6">
               <span className="text-muted d-block">Requester:</span>
               <strong className="d-block text-dark mt-1">
-                {currentRequester.name} ({currentRequester.department})
+                {activeUser.name} ({activeUser.department || "General"})
               </strong>
             </div>
           </div>
@@ -380,10 +380,10 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
       </div>
 
       {/* Inactive Requester Account Banner */}
-      {!currentRequester.isActive && (
+      {!activeUser.isActive && (
         <div className="alert alert-danger d-flex align-items-center gap-2 mb-4" role="alert" data-testid="inactive-requester-alert">
           <div>
-            <strong>Account Inactive:</strong> Your user profile ({currentRequester.name}) is currently suspended/inactive. You cannot submit new tickets.
+            <strong>Account Inactive:</strong> Your user profile ({activeUser.name}) is currently suspended/inactive. You cannot submit new tickets.
           </div>
         </div>
       )}
@@ -406,12 +406,12 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
       <div className="p-3 mb-4 rounded-3 bg-light border d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2" data-testid="requester-context-bar">
         <div className="d-flex align-items-center gap-2 flex-wrap">
           <span className="text-muted small">Submitting as:</span>
-          <strong className="text-break">{currentRequester.name}</strong>
+          <strong className="text-break">{activeUser.name}</strong>
           <span className="badge bg-secondary-subtle text-secondary border small">
-            {currentRequester.department}
+            {activeUser.department || "General"}
           </span>
         </div>
-        <span className="text-muted small text-break">{currentRequester.email}</span>
+        <span className="text-muted small text-break">{activeUser.email}</span>
       </div>
 
       <form onSubmit={handleSubmit} noValidate data-testid="create-ticket-form">
@@ -437,7 +437,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                 setFormErrors((prev) => ({ ...prev, title: "" }));
               }
             }}
-            disabled={!currentRequester.isActive || isSubmitting}
+            disabled={!activeUser.isActive || isSubmitting}
             maxLength={150}
             required
             autoFocus
@@ -483,7 +483,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                     setFormErrors((prev) => ({ ...prev, categoryId: "" }));
                   }
                 }}
-                disabled={!currentRequester.isActive || isSubmitting}
+                disabled={!activeUser.isActive || isSubmitting}
                 required
                 data-testid="ticket-category-select"
               >
@@ -515,7 +515,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                 autoComplete="off"
                 checked={priority === "LOW"}
                 onChange={() => setPriority("LOW")}
-                disabled={!currentRequester.isActive || isSubmitting}
+                disabled={!activeUser.isActive || isSubmitting}
               />
               <label className="btn btn-outline-secondary" htmlFor="priority-low">
                 Low
@@ -529,7 +529,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                 autoComplete="off"
                 checked={priority === "MEDIUM"}
                 onChange={() => setPriority("MEDIUM")}
-                disabled={!currentRequester.isActive || isSubmitting}
+                disabled={!activeUser.isActive || isSubmitting}
               />
               <label className="btn btn-outline-info" htmlFor="priority-medium">
                 Medium
@@ -543,7 +543,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                 autoComplete="off"
                 checked={priority === "HIGH"}
                 onChange={() => setPriority("HIGH")}
-                disabled={!currentRequester.isActive || isSubmitting}
+                disabled={!activeUser.isActive || isSubmitting}
               />
               <label className="btn btn-outline-warning" htmlFor="priority-high">
                 High
@@ -557,7 +557,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                 autoComplete="off"
                 checked={priority === "URGENT"}
                 onChange={() => setPriority("URGENT")}
-                disabled={!currentRequester.isActive || isSubmitting}
+                disabled={!activeUser.isActive || isSubmitting}
               />
               <label className="btn btn-outline-danger" htmlFor="priority-urgent">
                 Urgent
@@ -578,7 +578,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
             placeholder="e.g. Cisco AnyConnect, SAP, Jira, MacBook Pro 16"
             value={relatedSystem}
             onChange={(e) => setRelatedSystem(e.target.value)}
-            disabled={!currentRequester.isActive || isSubmitting}
+            disabled={!activeUser.isActive || isSubmitting}
             maxLength={100}
             data-testid="ticket-related-system-input"
           />
@@ -606,7 +606,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                 setFormErrors((prev) => ({ ...prev, description: "" }));
               }
             }}
-            disabled={!currentRequester.isActive || isSubmitting}
+            disabled={!activeUser.isActive || isSubmitting}
             maxLength={2000}
             required
             data-testid="ticket-description-input"
@@ -655,7 +655,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
                 onChange={handleFileChange}
                 multiple
                 accept=".png,.jpg,.jpeg,.webp,.pdf,.txt"
-                disabled={!currentRequester.isActive || isSubmitting}
+                disabled={!activeUser.isActive || isSubmitting}
                 data-testid="ticket-attachment-input"
               />
               <div className="small text-muted">
@@ -710,7 +710,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
           <button
             type="submit"
             className="btn btn-zen px-4 d-flex align-items-center gap-2"
-            disabled={!currentRequester.isActive || isSubmitting}
+            disabled={!activeUser.isActive || isSubmitting}
             data-testid="submit-ticket-btn"
           >
             {isSubmitting ? (

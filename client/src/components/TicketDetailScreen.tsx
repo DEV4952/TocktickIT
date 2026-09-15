@@ -320,7 +320,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Requester:</span>
             <strong className="text-dark text-break" data-testid="ticket-info-requester">
-              {ticket.requester?.name || currentRequester?.name} ({ticket.requester?.department || currentRequester?.department})
+              {ticket.requester?.name || activeUser?.name} ({ticket.requester?.department || activeUser?.department || "General"})
             </strong>
           </div>
           <div className="col-12 col-sm-6 col-xl-4">
