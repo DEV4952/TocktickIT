@@ -3,7 +3,7 @@
 **Document Version:** 1.0.0  
 **Status:** Approved for Implementation (Spec-DD Deliverable)  
 **Base URL:** `http://localhost:3000/api`  
-**Authors:** Sorawit Chaitong (@DEV4952), Phurithip Paisanworajit (@yiiipunn)  
+**Authors:** Sorawit Chaitong (@DEV4952) 
 **Target Sprint:** Lab 3 — Multi-Role Ticketing, IT Operations & Administration  
 
 ---

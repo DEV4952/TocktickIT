@@ -3,8 +3,7 @@
 **Document Version:** 1.0.0  
 **Status:** Approved for Implementation (Spec-DD Deliverable)  
 **Target Sprint:** Lab 3 — TokTickIT Users, Roles, IT Staff Ticketing, and Admin Screens  
-**Authors:** Sorawit Chaitong (@DEV4952), Phurithip Paisanworajit (@yiiipunn)  
-**Course:** CPE 334 Introduction to Software Engineering in the Age of AI Agents (Semester 1/2026)  
+**Authors:** Sorawit Chaitong (@DEV4952)
 
 ---
 
