@@ -160,23 +160,27 @@ export function AppShell() {
             {/* Profile Dropdown Menu */}
             {showProfileMenu && (
               <div
-                className="position-absolute end-0 bg-white shadow-lg rounded border py-1"
+                className="position-absolute end-0 bg-white shadow-lg rounded border py-1 text-dark"
                 style={{ top: "110%", minWidth: "180px", zIndex: 1050 }}
               >
                 <div className="px-3 py-2 border-bottom small text-muted">
-                  Signed in as <strong>{activeUser.email}</strong>
+                  Signed in as <strong className="text-dark d-block text-truncate" style={{ maxWidth: 220 }}>{activeUser.email}</strong>
                 </div>
                 <button
-                  className="dropdown-item px-3 py-2 small d-flex align-items-center gap-2"
+                  type="button"
+                  className="dropdown-item px-3 py-2 small d-flex align-items-center gap-2 text-dark"
                   onClick={() => {
                     setShowProfileMenu(false);
                     setActiveTab("change-password");
                   }}
+                  data-testid="nav-change-password-btn"
                 >
-                  🔒 Change Password
+                  <span>🔒</span>
+                  <span>Change Password</span>
                 </button>
                 {authUser ? (
                   <button
+                    type="button"
                     className="dropdown-item px-3 py-2 small text-danger d-flex align-items-center gap-2 border-top"
                     onClick={async () => {
                       setShowProfileMenu(false);
@@ -184,10 +188,12 @@ export function AppShell() {
                     }}
                     data-testid="logout-btn"
                   >
-                    🚪 Sign Out
+                    <span>🚪</span>
+                    <span>Sign Out</span>
                   </button>
                 ) : (
                   <button
+                    type="button"
                     className="dropdown-item px-3 py-2 small text-secondary d-flex align-items-center gap-2 border-top"
                     onClick={() => {
                       setShowProfileMenu(false);
@@ -195,7 +201,8 @@ export function AppShell() {
                     }}
                     data-testid="change-requester-btn"
                   >
-                    🔄 Switch Requester
+                    <span>🔄</span>
+                    <span>Switch Requester</span>
                   </button>
                 )}
               </div>

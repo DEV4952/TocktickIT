@@ -4,13 +4,31 @@ import { fetchTickets, fetchCategories } from "../api.js";
 import { TicketSummary, PaginationMetadata, TicketMetrics, Category } from "../types.js";
 import { TicketDetailModal } from "./TicketDetailModal.js";
 
+import { useAuth } from "../context/AuthContext.js";
+
 interface MyTicketsScreenProps {
   onNavigateToNewTicket: () => void;
   onViewTicket?: (ticketIdOrNumber: string | number) => void;
 }
 
 export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicketsScreenProps) {
-  const { currentRequester } = useRequester();
+  let authUser = null;
+  try {
+    const auth = useAuth();
+    authUser = auth?.user;
+  } catch {
+    // Fallback
+  }
+
+  let currentRequester = null;
+  try {
+    const reqCtx = useRequester();
+    currentRequester = reqCtx?.currentRequester;
+  } catch {
+    // Fallback
+  }
+
+  const activeUser = authUser || currentRequester;
 
   // Data States
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
@@ -70,11 +88,11 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
 
   // Fetch Tickets
   const loadTickets = useCallback(async () => {
-    if (!currentRequester) return;
+    if (!activeUser) return;
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetchTickets(currentRequester.id, {
+      const response = await fetchTickets(activeUser.id, {
         page,
         limit,
         search,
@@ -92,7 +110,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
     } finally {
       setIsLoading(false);
     }
-  }, [currentRequester, page, limit, search, status, priority, categoryId, sortBy, sortOrder]);
+  }, [activeUser, page, limit, search, status, priority, categoryId, sortBy, sortOrder]);
 
   // Load tickets on dependency change
   useEffect(() => {
@@ -140,10 +158,10 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
     }
   };
 
-  if (!currentRequester) {
+  if (!activeUser) {
     return (
       <div className="alert alert-warning" role="alert">
-        Please select a development requester persona.
+        Please sign in to view your tickets.
       </div>
     );
   }
@@ -160,14 +178,14 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
               My IT Tickets
             </h4>
             <p className="text-muted small mb-0">
-              Overview and tracking of service requests submitted under your persona.
+              Overview and tracking of service requests submitted under your account.
             </p>
           </div>
           <button
             type="button"
             className="btn btn-zen d-flex align-items-center gap-2"
             onClick={onNavigateToNewTicket}
-            disabled={!currentRequester.isActive}
+            disabled={!activeUser.isActive}
             data-testid="header-create-ticket-btn"
           >
             <span>Submit New Ticket</span>
@@ -422,7 +440,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                 type="button"
                 className="btn btn-zen btn-sm px-4"
                 onClick={onNavigateToNewTicket}
-                disabled={!currentRequester.isActive}
+                disabled={!activeUser.isActive}
                 data-testid="empty-create-ticket-btn"
               >
                 Submit Your First Ticket

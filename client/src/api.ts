@@ -105,6 +105,22 @@ export async function fetchCurrentRequester(requesterId: number): Promise<Reques
   return data;
 }
 
+function getAuthHeaders(customHeaders?: Record<string, string>, devRequesterId?: number): Record<string, string> {
+  const headers: Record<string, string> = { ...customHeaders };
+  try {
+    const token = localStorage.getItem("toktickit_auth_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  } catch {
+    // ignore
+  }
+  if (devRequesterId) {
+    headers["x-requester-id"] = String(devRequesterId);
+  }
+  return headers;
+}
+
 /**
  * Submit a new IT support ticket under the active requester's identity.
  */
@@ -122,16 +138,14 @@ export async function createTicket(
       fileUrl: string;
     }>;
   },
-  requesterId: number
+  requesterId?: number
 ) {
   let res: Response;
   try {
     res = await fetch("/api/tickets", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }, requesterId),
       body: JSON.stringify(ticketData),
     });
   } catch {
@@ -156,7 +170,7 @@ export async function createTicket(
  * Fetch paginated tickets for the active requester with optional filters, search, and sorting.
  */
 export async function fetchTickets(
-  requesterId: number,
+  requesterId?: number,
   options: {
     page?: number;
     limit?: number;
@@ -182,9 +196,8 @@ export async function fetchTickets(
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
     });
   } catch {
     throw new Error("Unable to load tickets. Please check your connection.");
@@ -207,13 +220,12 @@ export async function fetchTickets(
 /**
  * Fetch full ticket details for a single ticket by numeric ID or Ticket Number.
  */
-export async function fetchTicketById(ticketIdOrNumber: number | string, requesterId: number) {
+export async function fetchTicketById(ticketIdOrNumber: number | string, requesterId?: number) {
   let res: Response;
   try {
     res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}`, {
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
     });
   } catch {
     throw new Error("Unable to load ticket details. Please check your connection.");
@@ -236,13 +248,12 @@ export async function fetchTicketById(ticketIdOrNumber: number | string, request
 /**
  * Fetch all attachments (including soft-removed metadata) for a single ticket.
  */
-export async function fetchTicketAttachments(ticketIdOrNumber: number | string, requesterId: number) {
+export async function fetchTicketAttachments(ticketIdOrNumber: number | string, requesterId?: number) {
   let res: Response;
   try {
     res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/attachments`, {
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
     });
   } catch {
     throw new Error("Unable to load ticket attachments. Please check your connection.");
@@ -268,7 +279,7 @@ export async function fetchTicketAttachments(ticketIdOrNumber: number | string, 
 export async function uploadTicketAttachment(
   ticketIdOrNumber: number | string,
   file: File,
-  requesterId: number
+  requesterId?: number
 ) {
   const formData = new FormData();
   formData.append("file", file);
@@ -277,9 +288,8 @@ export async function uploadTicketAttachment(
   try {
     res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/attachments`, {
       method: "POST",
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
       body: formData,
     });
   } catch {
@@ -303,13 +313,12 @@ export async function uploadTicketAttachment(
 /**
  * Download an active attachment file.
  */
-export async function downloadAttachment(attachmentId: number, fileName: string, requesterId: number) {
+export async function downloadAttachment(attachmentId: number, fileName: string, requesterId?: number) {
   let res: Response;
   try {
     res = await fetch(`/api/attachments/${attachmentId}/download`, {
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
     });
   } catch {
     throw new Error("Unable to download attachment. Please check your connection.");
@@ -340,15 +349,13 @@ export async function downloadAttachment(attachmentId: number, fileName: string,
 /**
  * Soft-remove an attachment from a ticket with optional reason.
  */
-export async function removeAttachment(attachmentId: number, requesterId: number, reason?: string) {
+export async function removeAttachment(attachmentId: number, requesterId?: number, reason?: string) {
   let res: Response;
   try {
     res = await fetch(`/api/attachments/${attachmentId}`, {
       method: "DELETE",
-      headers: {
-        "x-requester-id": String(requesterId),
-        "Content-Type": "application/json",
-      },
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }, requesterId),
       body: JSON.stringify({ reason }),
     });
   } catch {

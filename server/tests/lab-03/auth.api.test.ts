@@ -8,8 +8,28 @@ describe("Lab 3 — Authentication & Session Management APIs (Issue #4)", () => 
   const prisma = getPrisma();
 
   beforeEach(async () => {
-    // Ensure emily.davis has initial password state
     const defaultHash = bcrypt.hashSync("Password123!", 10);
+
+    // Ensure alex.rivera has initial active password state
+    await prisma.user.upsert({
+      where: { email: "alex.rivera@toktick.it" },
+      update: {
+        passwordHash: defaultHash,
+        mustChangePassword: false,
+        isActive: true,
+      },
+      create: {
+        name: "Alex Rivera",
+        email: "alex.rivera@toktick.it",
+        department: "Engineering",
+        role: "REQUESTER",
+        isActive: true,
+        mustChangePassword: false,
+        passwordHash: defaultHash,
+      },
+    });
+
+    // Ensure emily.davis has initial password state
     await prisma.user.upsert({
       where: { email: "emily.davis@toktick.it" },
       update: {

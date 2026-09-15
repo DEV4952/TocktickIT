@@ -176,5 +176,49 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
       message: "Authentication required to access this resource.",
     });
   }
+  if (
+    req.user.mustChangePassword &&
+    !req.path.startsWith("/api/auth/change-password") &&
+    !req.path.startsWith("/api/auth/logout") &&
+    !req.path.startsWith("/api/auth/me")
+  ) {
+    return res.status(403).json({
+      error: "PASSWORD_CHANGE_REQUIRED",
+      message: "Password change required before accessing this resource.",
+    });
+  }
   next();
 }
+
+/**
+ * Require specific user role(s)
+ */
+export function requireRole(...allowedRoles: Array<"REQUESTER" | "IT_STAFF" | "ADMINISTRATOR">) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({
+        error: "UNAUTHORIZED",
+        message: "Authentication required to access this resource.",
+      });
+    }
+    if (
+      req.user.mustChangePassword &&
+      !req.path.startsWith("/api/auth/change-password") &&
+      !req.path.startsWith("/api/auth/logout") &&
+      !req.path.startsWith("/api/auth/me")
+    ) {
+      return res.status(403).json({
+        error: "PASSWORD_CHANGE_REQUIRED",
+        message: "Password change required before accessing this resource.",
+      });
+    }
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        error: "FORBIDDEN",
+        message: "You do not have permission to perform this action.",
+      });
+    }
+    next();
+  };
+}
+
