@@ -85,7 +85,9 @@ describe("Lab 3 — LoginScreen Component (UI-01)", () => {
     expect(mockLogin).toHaveBeenCalledWith("alex.rivera@toktick.it", "Password123!");
     expect(screen.getByText(/signing in\.\.\./i)).toBeInTheDocument();
 
-    resolveLogin({ user: { id: 1, email: "alex.rivera@toktick.it" } });
+    await waitFor(async () => {
+      resolveLogin({ user: { id: 1, email: "alex.rivera@toktick.it" } });
+    });
   });
 
   it("displays error banner when login API rejects", async () => {
