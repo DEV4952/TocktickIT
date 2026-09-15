@@ -158,10 +158,10 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
     }
   };
 
-  if (!currentRequester) {
+  if (!activeUser) {
     return (
       <div className="alert alert-warning" role="alert">
-        Please select a development requester persona.
+        Please sign in to view your tickets.
       </div>
     );
   }
@@ -178,14 +178,14 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
               My IT Tickets
             </h4>
             <p className="text-muted small mb-0">
-              Overview and tracking of service requests submitted under your persona.
+              Overview and tracking of service requests submitted under your account.
             </p>
           </div>
           <button
             type="button"
             className="btn btn-zen d-flex align-items-center gap-2"
             onClick={onNavigateToNewTicket}
-            disabled={!currentRequester.isActive}
+            disabled={!activeUser.isActive}
             data-testid="header-create-ticket-btn"
           >
             <span>Submit New Ticket</span>
@@ -440,7 +440,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                 type="button"
                 className="btn btn-zen btn-sm px-4"
                 onClick={onNavigateToNewTicket}
-                disabled={!currentRequester.isActive}
+                disabled={!activeUser.isActive}
                 data-testid="empty-create-ticket-btn"
               >
                 Submit Your First Ticket
