@@ -4,7 +4,7 @@
 **Status:** Approved for Implementation (Spec-DD Deliverable)  
 **Target Platform:** Web (Desktop 1440px+, Tablet 768px - 1023px, Mobile 375px - 767px)  
 **Design Theme:** Zen Green Design Language  
-**Authors:** Sorawit Chaitong (@DEV4952), Phurithip Paisanworajit (@yiiipunn)  
+**Authors:** Sorawit Chaitong (@DEV4952) 
 
 ---
 
