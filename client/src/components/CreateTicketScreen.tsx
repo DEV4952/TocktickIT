@@ -3,6 +3,8 @@ import { useRequester } from "../context/RequesterContext.js";
 import { fetchCategories, createTicket } from "../api.js";
 import { Category, Ticket, TicketPriority } from "../types.js";
 
+import { useAuth } from "../context/AuthContext.js";
+
 interface CreateTicketScreenProps {
   onCancel?: () => void;
   onSuccess?: (ticket: Ticket) => void;
@@ -21,7 +23,23 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_ATTACHMENTS = 3;
 
 export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenProps) {
-  const { currentRequester } = useRequester();
+  let authUser = null;
+  try {
+    const auth = useAuth();
+    authUser = auth?.user;
+  } catch {
+    // Fallback
+  }
+
+  let currentRequester = null;
+  try {
+    const reqCtx = useRequester();
+    currentRequester = reqCtx?.currentRequester;
+  } catch {
+    // Fallback
+  }
+
+  const activeUser = authUser || currentRequester;
 
   // Form Field States
   const [title, setTitle] = useState("");
@@ -215,7 +233,7 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
         })),
       };
 
-      const result = await createTicket(ticketPayload, currentRequester.id);
+      const result = await createTicket(ticketPayload, activeUser?.id);
       setCreatedTicket(result);
       if (onSuccess) {
         onSuccess(result);
@@ -241,10 +259,10 @@ export function CreateTicketScreen({ onCancel, onSuccess }: CreateTicketScreenPr
     setCreatedTicket(null);
   };
 
-  if (!currentRequester) {
+  if (!activeUser) {
     return (
       <div className="alert alert-warning" role="alert">
-        Please select a development requester persona first.
+        Please sign in to submit a ticket.
       </div>
     );
   }

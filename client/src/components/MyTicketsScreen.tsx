@@ -4,13 +4,31 @@ import { fetchTickets, fetchCategories } from "../api.js";
 import { TicketSummary, PaginationMetadata, TicketMetrics, Category } from "../types.js";
 import { TicketDetailModal } from "./TicketDetailModal.js";
 
+import { useAuth } from "../context/AuthContext.js";
+
 interface MyTicketsScreenProps {
   onNavigateToNewTicket: () => void;
   onViewTicket?: (ticketIdOrNumber: string | number) => void;
 }
 
 export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicketsScreenProps) {
-  const { currentRequester } = useRequester();
+  let authUser = null;
+  try {
+    const auth = useAuth();
+    authUser = auth?.user;
+  } catch {
+    // Fallback
+  }
+
+  let currentRequester = null;
+  try {
+    const reqCtx = useRequester();
+    currentRequester = reqCtx?.currentRequester;
+  } catch {
+    // Fallback
+  }
+
+  const activeUser = authUser || currentRequester;
 
   // Data States
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
@@ -70,11 +88,11 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
 
   // Fetch Tickets
   const loadTickets = useCallback(async () => {
-    if (!currentRequester) return;
+    if (!activeUser) return;
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetchTickets(currentRequester.id, {
+      const response = await fetchTickets(activeUser.id, {
         page,
         limit,
         search,
@@ -92,7 +110,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
     } finally {
       setIsLoading(false);
     }
-  }, [currentRequester, page, limit, search, status, priority, categoryId, sortBy, sortOrder]);
+  }, [activeUser, page, limit, search, status, priority, categoryId, sortBy, sortOrder]);
 
   // Load tickets on dependency change
   useEffect(() => {
