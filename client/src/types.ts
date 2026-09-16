@@ -154,3 +154,27 @@ export interface ApiError {
     issue: string;
   }>;
 }
+
+
+export interface StaffQueueCounts {
+  all: number;
+  unassigned: number;
+  myTickets: number;
+  inProgress: number;
+}
+
+export interface StaffTicketSummary extends Ticket {
+  summary?: string;
+  requestedPriority?: TicketPriority;
+}
+
+export interface StaffTicketQueueResponse {
+  data: StaffTicketSummary[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  counts: StaffQueueCounts;
+}

@@ -6,6 +6,11 @@ import {
   uploadTicketAttachment,
   downloadAttachment,
   removeAttachment,
+  claimTicketApi,
+  reassignTicketApi,
+  updateTicketPriorityApi,
+  updateTicketStatusApi,
+  fetchAssignableStaffApi,
 } from "../api.js";
 import { Ticket, Attachment } from "../types.js";
 
@@ -52,6 +57,104 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [removeSuccess, setRemoveSuccess] = useState<string | null>(null);
+
+  // Operational Triage State (Issue #6)
+  const isStaff = authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR";
+  const [assignees, setAssignees] = useState<any[]>([]);
+  const [triageLoading, setTriageLoading] = useState(false);
+  const [triageFeedback, setTriageFeedback] = useState<string | null>(null);
+  const [triageError, setTriageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isStaff) {
+      fetchAssignableStaffApi()
+        .then(setAssignees)
+        .catch(() => {});
+    }
+  }, [isStaff]);
+
+  const handleClaim = async () => {
+    if (!ticket) return;
+    setTriageLoading(true);
+    setTriageError(null);
+    setTriageFeedback(null);
+    try {
+      const res = await claimTicketApi(ticket.id);
+      setTicket((prev: any) => ({
+        ...prev,
+        ownerId: res.ticket.ownerId,
+        owner: res.ticket.owner,
+      }));
+      setTriageFeedback("Ticket successfully claimed!");
+      setTimeout(() => setTriageFeedback(null), 3000);
+    } catch (err: any) {
+      setTriageError(err.message || "Failed to claim ticket.");
+    } finally {
+      setTriageLoading(false);
+    }
+  };
+
+  const handleReassign = async (newOwnerIdStr: string) => {
+    if (!ticket) return;
+    const newOwnerId = newOwnerIdStr === "unassigned" ? null : parseInt(newOwnerIdStr, 10);
+    setTriageLoading(true);
+    setTriageError(null);
+    setTriageFeedback(null);
+    try {
+      const res = await reassignTicketApi(ticket.id, newOwnerId);
+      setTicket((prev: any) => ({
+        ...prev,
+        ownerId: res.ticket.ownerId,
+        owner: res.ticket.owner,
+      }));
+      setTriageFeedback("Ticket ownership successfully updated!");
+      setTimeout(() => setTriageFeedback(null), 3000);
+    } catch (err: any) {
+      setTriageError(err.message || "Failed to reassign ticket.");
+    } finally {
+      setTriageLoading(false);
+    }
+  };
+
+  const handlePriorityChange = async (newPriority: any) => {
+    if (!ticket) return;
+    setTriageLoading(true);
+    setTriageError(null);
+    setTriageFeedback(null);
+    try {
+      const res = await updateTicketPriorityApi(ticket.id, newPriority);
+      setTicket((prev: any) => ({
+        ...prev,
+        itPriority: res.ticket.itPriority,
+      }));
+      setTriageFeedback("IT Priority successfully updated!");
+      setTimeout(() => setTriageFeedback(null), 3000);
+    } catch (err: any) {
+      setTriageError(err.message || "Failed to update IT priority.");
+    } finally {
+      setTriageLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!ticket) return;
+    setTriageLoading(true);
+    setTriageError(null);
+    setTriageFeedback(null);
+    try {
+      const res = await updateTicketStatusApi(ticket.id, newStatus);
+      setTicket((prev: any) => ({
+        ...prev,
+        status: res.ticket.status,
+      }));
+      setTriageFeedback(`Status transitioned to ${newStatus}!`);
+      setTimeout(() => setTriageFeedback(null), 3000);
+    } catch (err: any) {
+      setTriageError(err.message || "Disallowed status transition.");
+    } finally {
+      setTriageLoading(false);
+    }
+  };
 
   // Load ticket & attachment data
   const loadData = useCallback(async () => {
@@ -343,6 +446,134 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           </div>
         </div>
       </div>
+
+      {/* Operational Triage Controls (IT Staff & Administrators) */}
+      {isStaff && (
+        <div className="card p-3 p-md-4 border-success bg-success-subtle shadow-sm rounded-3" data-testid="operational-triage-card">
+          <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h6 className="fw-bold text-success-emphasis mb-0 d-flex align-items-center gap-2">
+              <span>🛠️</span>
+              <span>IT Staff Operational Triage Controls</span>
+            </h6>
+            {ticket.ownerId !== authUser?.id && (
+              <button
+                type="button"
+                className="btn btn-success btn-sm px-3 fw-semibold shadow-sm"
+                onClick={handleClaim}
+                disabled={triageLoading}
+                data-testid="detail-claim-btn"
+              >
+                {triageLoading ? "Claiming..." : "👤 Claim This Ticket"}
+              </button>
+            )}
+          </div>
+
+          {triageFeedback && (
+            <div className="alert alert-success py-2 px-3 small mb-3">✓ {triageFeedback}</div>
+          )}
+          {triageError && (
+            <div className="alert alert-danger py-2 px-3 small mb-3" data-testid="triage-error-banner">
+              ⚠️ {triageError}
+            </div>
+          )}
+
+          <div className="row g-3">
+            {/* Owner Selection */}
+            <div className="col-12 col-md-4">
+              <label className="form-label small fw-semibold text-dark">Ticket Owner</label>
+              <select
+                className="form-select form-select-sm"
+                value={ticket.ownerId ? String(ticket.ownerId) : "unassigned"}
+                onChange={(e) => handleReassign(e.target.value)}
+                disabled={triageLoading}
+                data-testid="detail-reassign-select"
+              >
+                <option value="unassigned">-- Unassigned --</option>
+                {assignees.map((staff) => (
+                  <option key={staff.id} value={String(staff.id)}>
+                    {staff.name} ({staff.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* IT Priority */}
+            <div className="col-12 col-md-4">
+              <label className="form-label small fw-semibold text-dark">IT Priority (Triage)</label>
+              <select
+                className="form-select form-select-sm"
+                value={ticket.itPriority || ticket.priority || "MEDIUM"}
+                onChange={(e) => handlePriorityChange(e.target.value)}
+                disabled={triageLoading}
+                data-testid="detail-it-priority-select"
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="URGENT">Urgent</option>
+              </select>
+            </div>
+
+            {/* Status Transition */}
+            <div className="col-12 col-md-4">
+              <label className="form-label small fw-semibold text-dark">Status Transition</label>
+              <select
+                className="form-select form-select-sm"
+                value={ticket.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                disabled={triageLoading}
+                data-testid="detail-status-select"
+              >
+                <option value={ticket.status}>{ticket.status} (Current)</option>
+                {ticket.status === "NEW" && (
+                  <>
+                    <option value="OPEN">➔ OPEN</option>
+                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
+                    <option value="CANCELLED">➔ CANCELLED</option>
+                  </>
+                )}
+                {ticket.status === "OPEN" && (
+                  <>
+                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
+                    <option value="WAITING_FOR_REQUESTER">➔ WAITING_FOR_REQUESTER</option>
+                    <option value="RESOLVED">➔ RESOLVED</option>
+                    <option value="CANCELLED">➔ CANCELLED</option>
+                  </>
+                )}
+                {ticket.status === "IN_PROGRESS" && (
+                  <>
+                    <option value="WAITING_FOR_REQUESTER">➔ WAITING_FOR_REQUESTER</option>
+                    <option value="RESOLVED">➔ RESOLVED</option>
+                    <option value="CANCELLED">➔ CANCELLED</option>
+                  </>
+                )}
+                {ticket.status === "WAITING_FOR_REQUESTER" && (
+                  <>
+                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
+                    <option value="RESOLVED">➔ RESOLVED</option>
+                    <option value="CANCELLED">➔ CANCELLED</option>
+                  </>
+                )}
+                {ticket.status === "RESOLVED" && (
+                  <>
+                    <option value="CLOSED">➔ CLOSED</option>
+                    <option value="REOPENED">➔ REOPENED</option>
+                  </>
+                )}
+                {ticket.status === "CLOSED" && (
+                  <option value="REOPENED">➔ REOPENED</option>
+                )}
+                {ticket.status === "REOPENED" && (
+                  <>
+                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
+                    <option value="RESOLVED">➔ RESOLVED</option>
+                  </>
+                )}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Ticket Summary & Description Slide */}
       <div className="card zen-card p-4" data-testid="ticket-content-card">

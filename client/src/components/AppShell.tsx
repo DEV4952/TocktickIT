@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext.js";
 import { useRequester } from "../context/RequesterContext.js";
 import { CreateTicketScreen } from "./CreateTicketScreen.js";
 import { MyTicketsScreen } from "./MyTicketsScreen.js";
+import { StaffTicketQueueScreen } from "./StaffTicketQueueScreen.js";
 import { TicketDetailScreen } from "./TicketDetailScreen.js";
 import { ChangePasswordScreen } from "./ChangePasswordScreen.js";
 
@@ -43,6 +44,8 @@ export function AppShell() {
     setSelectedTicketId(null);
     setActiveTab("new-ticket");
   };
+
+  const isStaffOrAdmin = authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR";
 
   const roleLabel = authUser?.role === "ADMINISTRATOR"
     ? "Admin"
@@ -237,6 +240,26 @@ export function AppShell() {
       <main className="container py-3 py-md-4 flex-grow-1">
         {activeTab === "change-password" ? (
           <ChangePasswordScreen />
+        ) : isStaffOrAdmin ? (
+          <div data-testid="staff-workspace-container">
+            {selectedTicketId !== null ? (
+              <TicketDetailScreen
+                ticketIdOrNumber={selectedTicketId}
+                onBack={() => setSelectedTicketId(null)}
+              />
+            ) : activeTab === "new-ticket" ? (
+              <div className="row justify-content-center">
+                <div className="col-12 col-lg-8">
+                  <CreateTicketScreen onCancel={handleNavigateWorkspace} />
+                </div>
+              </div>
+            ) : (
+              <StaffTicketQueueScreen
+                onViewTicket={(id) => setSelectedTicketId(id)}
+                onNavigateToNewTicket={handleNavigateNewTicket}
+              />
+            )}
+          </div>
         ) : (
           <div className="row g-3 g-md-4">
             <div className="col-12 col-md-4">

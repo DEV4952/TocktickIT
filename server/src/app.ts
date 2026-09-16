@@ -798,6 +798,9 @@ app.get("/api/tickets/:id", requireAuth, async (req: Request, res: Response) => 
         requester: {
           select: { id: true, name: true, email: true, department: true, avatarUrl: true },
         },
+        owner: {
+          select: { id: true, name: true, email: true, role: true },
+        },
         attachments: {
           where: { isDeleted: false },
           select: {
@@ -825,10 +828,15 @@ app.get("/api/tickets/:id", requireAuth, async (req: Request, res: Response) => 
       id: ticket.id,
       ticketNumber: ticket.ticketNumber,
       title: ticket.title,
+      summary: ticket.title,
       description: ticket.description,
       relatedSystem: ticket.relatedSystem,
       status: ticket.status,
       priority: ticket.priority,
+      requestedPriority: ticket.priority,
+      itPriority: ticket.itPriority,
+      ownerId: ticket.ownerId,
+      owner: ticket.owner,
       categoryId: ticket.categoryId,
       category: ticket.category,
       requesterId: ticket.requesterId,
@@ -1259,6 +1267,435 @@ app.get("/api/admin/users", requireRole("ADMINISTRATOR"), async (_req: Request, 
     return res.status(200).json(users);
   } catch (error) {
     return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to fetch users" });
+  }
+});
+
+
+// ---------------------------------------------------------------------------
+// Lab 3 — IT Staff Ticket Queue & Operational Triage Endpoints (Issue #6 / FR-06, FR-07, FR-08, FR-09)
+// ---------------------------------------------------------------------------
+
+const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
+  NEW: ["OPEN", "IN_PROGRESS", "CANCELLED"],
+  OPEN: ["IN_PROGRESS", "WAITING_FOR_REQUESTER", "RESOLVED", "CANCELLED"],
+  IN_PROGRESS: ["WAITING_FOR_REQUESTER", "RESOLVED", "CANCELLED"],
+  WAITING_FOR_REQUESTER: ["IN_PROGRESS", "RESOLVED", "CANCELLED"],
+  RESOLVED: ["CLOSED", "REOPENED"],
+  CLOSED: ["REOPENED"],
+  REOPENED: ["IN_PROGRESS", "RESOLVED"],
+  CANCELLED: [],
+};
+
+function formatStaffTicket(t: any) {
+  return {
+    ...t,
+    summary: t.title,
+    requestedPriority: t.priority,
+    requester: t.requester
+      ? {
+          id: t.requester.id,
+          name: t.requester.name,
+          fullName: t.requester.name,
+          email: t.requester.email,
+          department: t.requester.department,
+        }
+      : null,
+    owner: t.owner
+      ? {
+          id: t.owner.id,
+          name: t.owner.name,
+          fullName: t.owner.name,
+          email: t.owner.email,
+          role: t.owner.role,
+        }
+      : null,
+  };
+}
+
+// GET /api/staff/assignees - Fetch active staff & admins for reassignment
+app.get("/api/staff/assignees", requireRole("IT_STAFF", "ADMINISTRATOR"), async (_req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const staff = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        role: { in: ["IT_STAFF", "ADMINISTRATOR"] },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        department: true,
+      },
+      orderBy: { name: "asc" },
+    });
+    return res.status(200).json(staff.map((s: any) => ({ ...s, fullName: s.name })));
+  } catch (error) {
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to fetch assignees" });
+  }
+});
+
+// GET /api/staff/tickets - Full queue query with search, filter, sort, and pagination
+
+// GET /api/staff/tickets/:id
+app.get("/api/staff/tickets/:id", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId
+      ? { id: parseInt(idParam, 10) }
+      : { ticketNumber: idParam };
+
+    const prisma = getPrisma();
+    const ticket = await prisma.ticket.findFirst({
+      where: whereQuery,
+      include: {
+        category: true,
+        requester: {
+          select: { id: true, name: true, email: true, department: true, avatarUrl: true },
+        },
+        owner: {
+          select: { id: true, name: true, email: true, role: true },
+        },
+        attachments: {
+          where: { isDeleted: false },
+        },
+      },
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    return res.status(200).json(formatStaffTicket(ticket));
+  } catch (error) {
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to fetch staff ticket detail" });
+  }
+});
+
+app.get("/api/staff/tickets", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const {
+      page = "1",
+      limit = "10",
+      search,
+      status,
+      priority,
+      categoryId,
+      ownerId,
+      sortBy = "createdAt",
+      sortDir = "desc",
+      sortOrder,
+    } = req.query as Record<string, string | undefined>;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+    const skip = (pageNum - 1) * limitNum;
+
+    const where: any = {};
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      where.OR = [
+        { ticketNumber: { contains: q, mode: "insensitive" } },
+        { title: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+        { requester: { name: { contains: q, mode: "insensitive" } } },
+        { requester: { email: { contains: q, mode: "insensitive" } } },
+      ];
+    }
+
+    if (status && status !== "ALL") {
+      where.status = status;
+    }
+
+    if (priority && priority !== "ALL") {
+      where.OR = where.OR
+        ? [{ AND: [where.OR, { OR: [{ itPriority: priority }, { priority: priority }] }] }]
+        : [{ itPriority: priority }, { priority: priority }];
+    }
+
+    if (categoryId && categoryId !== "ALL") {
+      const catId = parseInt(categoryId, 10);
+      if (!isNaN(catId)) where.categoryId = catId;
+    }
+
+    if (ownerId && ownerId !== "ALL") {
+      if (ownerId === "unassigned") {
+        where.ownerId = null;
+      } else if (ownerId === "me") {
+        where.ownerId = req.user!.id;
+      } else {
+        const oId = parseInt(ownerId, 10);
+        if (!isNaN(oId)) where.ownerId = oId;
+      }
+    }
+
+    const direction: "asc" | "desc" =
+      sortDir === "asc" || sortOrder === "asc" ? "asc" : "desc";
+    const allowedSortFields = ["createdAt", "updatedAt", "itPriority", "priority", "ticketNumber", "status", "title"];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+
+    const [tickets, total, allCount, unassignedCount, myCount, inProgressCount] = await Promise.all([
+      prisma.ticket.findMany({
+        where,
+        include: {
+          category: true,
+          requester: {
+            select: { id: true, name: true, email: true, department: true },
+          },
+          owner: {
+            select: { id: true, name: true, email: true, role: true },
+          },
+        },
+        orderBy: { [sortField]: direction },
+        skip,
+        take: limitNum,
+      }),
+      prisma.ticket.count({ where }),
+      prisma.ticket.count(),
+      prisma.ticket.count({ where: { ownerId: null } }),
+      prisma.ticket.count({ where: { ownerId: req.user!.id } }),
+      prisma.ticket.count({ where: { status: "IN_PROGRESS" } }),
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum) || 1;
+
+    return res.status(200).json({
+      data: tickets.map(formatStaffTicket),
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages,
+      },
+      counts: {
+        all: allCount,
+        unassigned: unassignedCount,
+        myTickets: myCount,
+        inProgress: inProgressCount,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to query staff tickets:", error);
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to query staff tickets" });
+  }
+});
+
+// PATCH /api/staff/tickets/:id/claim - Assign current user as owner
+app.patch("/api/staff/tickets/:id/claim", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
+
+    const prisma = getPrisma();
+    const existingTicket = await prisma.ticket.findFirst({ where: whereQuery });
+    if (!existingTicket) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: existingTicket.id },
+      data: { ownerId: req.user!.id },
+      include: {
+        category: true,
+        requester: { select: { id: true, name: true, email: true, department: true } },
+        owner: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+
+    return res.status(200).json({
+      ticket: formatStaffTicket(updated),
+      message: "Ticket successfully claimed",
+    });
+  } catch (error) {
+    console.error("Failed to claim ticket:", error);
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to claim ticket" });
+  }
+});
+
+// PATCH /api/staff/tickets/:id/reassign - Reassign ticket to specified IT Staff/Admin
+app.patch("/api/staff/tickets/:id/reassign", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
+
+    const { ownerId } = req.body;
+    const prisma = getPrisma();
+
+    const existingTicket = await prisma.ticket.findFirst({ where: whereQuery });
+    if (!existingTicket) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    if (ownerId === null || ownerId === undefined) {
+      // Unassign ticket
+      const updated = await prisma.ticket.update({
+        where: { id: existingTicket.id },
+        data: { ownerId: null },
+        include: {
+          category: true,
+          requester: { select: { id: true, name: true, email: true, department: true } },
+          owner: { select: { id: true, name: true, email: true, role: true } },
+        },
+      });
+      return res.status(200).json({
+        ticket: formatStaffTicket(updated),
+        message: "Ticket successfully unassigned",
+      });
+    }
+
+    const targetUserId = parseInt(String(ownerId), 10);
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({
+        error: "INVALID_ASSIGNEE",
+        message: "Target user is not an active IT Staff or Administrator.",
+      });
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!targetUser || !targetUser.isActive || !["IT_STAFF", "ADMINISTRATOR"].includes(targetUser.role)) {
+      return res.status(400).json({
+        error: "INVALID_ASSIGNEE",
+        message: "Target user is not an active IT Staff or Administrator.",
+      });
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: existingTicket.id },
+      data: { ownerId: targetUser.id },
+      include: {
+        category: true,
+        requester: { select: { id: true, name: true, email: true, department: true } },
+        owner: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+
+    return res.status(200).json({
+      ticket: formatStaffTicket(updated),
+      message: "Ticket successfully reassigned",
+    });
+  } catch (error) {
+    console.error("Failed to reassign ticket:", error);
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to reassign ticket" });
+  }
+});
+
+// PATCH /api/staff/tickets/:id/priority - Update itPriority without altering requestedPriority
+app.patch("/api/staff/tickets/:id/priority", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
+
+    const { itPriority } = req.body;
+    const allowedPriorities = ["LOW", "MEDIUM", "HIGH", "URGENT"];
+    if (!itPriority || !allowedPriorities.includes(itPriority)) {
+      return res.status(400).json({
+        error: "INVALID_PRIORITY",
+        message: "Invalid IT priority. Must be one of LOW, MEDIUM, HIGH, URGENT.",
+      });
+    }
+
+    const prisma = getPrisma();
+    const existingTicket = await prisma.ticket.findFirst({ where: whereQuery });
+    if (!existingTicket) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: existingTicket.id },
+      data: { itPriority: itPriority as any },
+      include: {
+        category: true,
+        requester: { select: { id: true, name: true, email: true, department: true } },
+        owner: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+
+    return res.status(200).json({
+      ticket: formatStaffTicket(updated),
+      message: "IT Priority successfully updated",
+    });
+  } catch (error) {
+    console.error("Failed to update IT priority:", error);
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to update IT priority" });
+  }
+});
+
+// PATCH /api/staff/tickets/:id/status - Enforce lifecycle state machine transitions (BR-09)
+app.patch("/api/staff/tickets/:id/status", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
+
+    const { status, resolutionSummary } = req.body;
+    const allowedStatuses = [
+      "NEW",
+      "OPEN",
+      "IN_PROGRESS",
+      "WAITING_FOR_REQUESTER",
+      "RESOLVED",
+      "CLOSED",
+      "REOPENED",
+      "CANCELLED",
+    ];
+
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        error: "INVALID_STATUS",
+        message: "Invalid status value.",
+      });
+    }
+
+    const prisma = getPrisma();
+    const existingTicket = await prisma.ticket.findFirst({ where: whereQuery });
+    if (!existingTicket) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    const currentStatus = existingTicket.status;
+    const validTransitions = VALID_STATUS_TRANSITIONS[currentStatus] || [];
+
+    if (!validTransitions.includes(status)) {
+      return res.status(400).json({
+        error: "INVALID_STATUS_TRANSITION",
+        message: `Disallowed status transition from ${currentStatus} to ${status}.`,
+      });
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: existingTicket.id },
+      data: { status: status as any },
+      include: {
+        category: true,
+        requester: { select: { id: true, name: true, email: true, department: true } },
+        owner: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+
+    if (resolutionSummary && typeof resolutionSummary === "string" && resolutionSummary.trim()) {
+      await prisma.comment.create({
+        data: {
+          ticketId: existingTicket.id,
+          authorId: req.user!.id,
+          body: `[Resolution Summary]: ${resolutionSummary.trim()}`,
+        },
+      });
+    }
+
+    return res.status(200).json({
+      ticket: formatStaffTicket(updated),
+      message: "Ticket status updated successfully",
+    });
+  } catch (error) {
+    console.error("Failed to update ticket status:", error);
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to update ticket status" });
   }
 });
 

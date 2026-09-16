@@ -470,3 +470,211 @@ export async function changePasswordApi(
 
 
 
+
+
+/**
+ * Query the staff ticket queue with search, filter, sort, and pagination.
+ */
+export async function fetchStaffTickets(
+  options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    priority?: string;
+    categoryId?: number | string;
+    ownerId?: string;
+    sortBy?: string;
+    sortDir?: string;
+  } = {}
+) {
+  const queryParams = new URLSearchParams();
+  if (options.page) queryParams.set("page", String(options.page));
+  if (options.limit) queryParams.set("limit", String(options.limit));
+  if (options.search && options.search.trim()) queryParams.set("search", options.search.trim());
+  if (options.status && options.status !== "ALL") queryParams.set("status", options.status);
+  if (options.priority && options.priority !== "ALL") queryParams.set("priority", options.priority);
+  if (options.categoryId && options.categoryId !== "ALL") queryParams.set("categoryId", String(options.categoryId));
+  if (options.ownerId && options.ownerId !== "ALL") queryParams.set("ownerId", options.ownerId);
+  if (options.sortBy) queryParams.set("sortBy", options.sortBy);
+  if (options.sortDir) queryParams.set("sortDir", options.sortDir);
+
+  const url = `/api/staff/tickets${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      credentials: "include",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    throw new Error("Unable to load staff ticket queue. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load staff ticket queue.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Claim an unassigned ticket as the current user.
+ */
+export async function claimTicketApi(ticketIdOrNumber: number | string) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/staff/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/claim`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({}),
+    });
+  } catch {
+    throw new Error("Unable to claim ticket. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to claim ticket.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Reassign a ticket to specified IT Staff or Admin (or null to unassign).
+ */
+export async function reassignTicketApi(ticketIdOrNumber: number | string, ownerId: number | null) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/staff/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/reassign`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ ownerId }),
+    });
+  } catch {
+    throw new Error("Unable to reassign ticket. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to reassign ticket.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Update the IT Priority of a ticket without altering requestedPriority.
+ */
+export async function updateTicketPriorityApi(
+  ticketIdOrNumber: number | string,
+  itPriority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
+) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/staff/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/priority`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ itPriority }),
+    });
+  } catch {
+    throw new Error("Unable to update IT priority. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to update IT priority.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Update ticket status with transition validation (BR-09).
+ */
+export async function updateTicketStatusApi(
+  ticketIdOrNumber: number | string,
+  status: string,
+  resolutionSummary?: string
+) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/staff/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/status`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ status, resolutionSummary }),
+    });
+  } catch {
+    throw new Error("Unable to update ticket status. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to update ticket status.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Fetch all active IT Staff and Admin users for ticket assignment.
+ */
+export async function fetchAssignableStaffApi() {
+  let res: Response;
+  try {
+    res = await fetch("/api/staff/assignees", {
+      credentials: "include",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    throw new Error("Unable to load assignable staff. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load assignable staff.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
