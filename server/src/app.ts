@@ -12,6 +12,7 @@ import {
   validatePasswordComplexity,
   authenticateSession,
   requireAuth,
+  requireRole,
 } from "./utils/auth.js";
 
 // Setup uploads directory
@@ -354,37 +355,9 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 import { generateTicketNumber } from "./utils/ticketNumber.js";
 import { TicketPriority } from "@prisma/client";
 
-app.post("/api/tickets", async (req: Request, res: Response) => {
+app.post("/api/tickets", requireAuth, async (req: Request, res: Response) => {
   try {
-    // 1. Authenticate Requester Context
-    const headerValue = req.headers["x-requester-id"];
-    if (!headerValue) {
-      return res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Missing x-requester-id header",
-      });
-    }
-
-    const requesterId = parseInt(Array.isArray(headerValue) ? headerValue[0] : headerValue, 10);
-    if (isNaN(requesterId) || requesterId <= 0) {
-      return res.status(400).json({
-        error: "BAD_REQUEST",
-        message: "Invalid x-requester-id header",
-      });
-    }
-
-    const prisma = getPrisma();
-    const user = await prisma.user.findUnique({
-      where: { id: requesterId },
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        error: "VALIDATION_ERROR",
-        message: "Invalid ticket data",
-        details: [{ field: "requesterId", issue: "Requester does not exist" }],
-      });
-    }
+    const user = req.user!;
 
     // 2. Check Inactive Requester Constraint
     if (!user.isActive) {
@@ -393,6 +366,8 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
         message: "Inactive requesters cannot submit new tickets.",
       });
     }
+
+    const prisma = getPrisma();
 
     // 3. Extract & Validate Fields
     const rawTitle = req.body.title ?? req.body.summary;
@@ -528,7 +503,7 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
     // 5. Generate Unique Ticket Number
     const ticketNumber = await generateTicketNumber(prisma);
 
-    // 6. Create Ticket & Attachments in DB
+    // 6. Create Ticket & Attachments in DB - ALWAYS bind requesterId to authenticated user.id (Anti-tampering / BR-03)
     const newTicket = await prisma.ticket.create({
       data: {
         ticketNumber,
@@ -599,36 +574,10 @@ const VALID_SORT_FIELDS = ["createdAt", "updatedAt", "priority", "ticketNumber",
 const VALID_SORT_ORDERS = ["asc", "desc"] as const;
 const ALLOWED_PAGE_LIMITS = [5, 10, 20, 50];
 
-app.get("/api/tickets", async (req: Request, res: Response) => {
+app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
   try {
-    // 1. Authenticate Requester Context
-    const headerValue = req.headers["x-requester-id"];
-    if (!headerValue) {
-      return res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Missing x-requester-id header",
-      });
-    }
-
-    const requesterId = parseInt(Array.isArray(headerValue) ? headerValue[0] : headerValue, 10);
-    if (isNaN(requesterId) || requesterId <= 0) {
-      return res.status(400).json({
-        error: "BAD_REQUEST",
-        message: "Invalid x-requester-id header",
-      });
-    }
-
+    const user = req.user!;
     const prisma = getPrisma();
-    const user = await prisma.user.findUnique({
-      where: { id: requesterId },
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        error: "VALIDATION_ERROR",
-        message: "Requester does not exist",
-      });
-    }
 
     // 2. Parse & Validate Query Parameters
     const rawPage = req.query.page ? parseInt(String(req.query.page), 10) : 1;
@@ -703,10 +652,13 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
     }
     const sortOrder = rawSortOrder as (typeof VALID_SORT_ORDERS)[number];
 
-    // 3. Build Prisma Where Clause with STRICT OWNERSHIP ENFORCEMENT
-    const whereClause: any = {
-      requesterId: user.id, // Strictly scoped to active requester!
-    };
+    // 3. Build Prisma Where Clause with STRICT OWNERSHIP ENFORCEMENT for REQUESTER
+    const whereClause: any = {};
+    if (user.role === "REQUESTER") {
+      whereClause.requesterId = user.id; // Strictly scoped to active requester!
+    } else if (req.query.requesterId) {
+      whereClause.requesterId = Number(req.query.requesterId);
+    }
 
     if (statusFilter) {
       whereClause.status = statusFilter;
@@ -754,7 +706,7 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
       // Aggregate metrics for this requester across all statuses
       prisma.ticket.groupBy({
         by: ["status"],
-        where: { requesterId: user.id },
+        where: user.role === "REQUESTER" ? { requesterId: user.id } : whereClause,
         _count: { status: true },
       }),
     ]);
@@ -825,25 +777,9 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
 // Issue 7 — Single Ticket Detail
 // GET /api/tickets/:id
 // ---------------------------------------------------------------------------
-app.get("/api/tickets/:id", async (req: Request, res: Response) => {
+app.get("/api/tickets/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    // 1. Authenticate Requester Context
-    const headerValue = req.headers["x-requester-id"];
-    if (!headerValue) {
-      return res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Missing x-requester-id header",
-      });
-    }
-
-    const requesterId = parseInt(Array.isArray(headerValue) ? headerValue[0] : headerValue, 10);
-    if (isNaN(requesterId) || requesterId <= 0) {
-      return res.status(400).json({
-        error: "BAD_REQUEST",
-        message: "Invalid x-requester-id header",
-      });
-    }
-
+    const user = req.user!;
     const prisma = getPrisma();
     const idParam = req.params.id;
 
@@ -878,7 +814,7 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
       },
     });
 
-    if (!ticket || ticket.requesterId !== requesterId) {
+    if (!ticket || (user.role === "REQUESTER" && ticket.requesterId !== user.id)) {
       return res.status(404).json({
         error: "NOT_FOUND",
         message: "Ticket not found or you do not have permission to view it.",
@@ -914,24 +850,9 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
 // Issue 7 — Get Ticket Attachment Metadata List
 // GET /api/tickets/:id/attachments
 // ---------------------------------------------------------------------------
-app.get("/api/tickets/:id/attachments", async (req: Request, res: Response) => {
+app.get("/api/tickets/:id/attachments", requireAuth, async (req: Request, res: Response) => {
   try {
-    const headerValue = req.headers["x-requester-id"];
-    if (!headerValue) {
-      return res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Missing x-requester-id header",
-      });
-    }
-
-    const requesterId = parseInt(Array.isArray(headerValue) ? headerValue[0] : headerValue, 10);
-    if (isNaN(requesterId) || requesterId <= 0) {
-      return res.status(400).json({
-        error: "BAD_REQUEST",
-        message: "Invalid x-requester-id header",
-      });
-    }
-
+    const user = req.user!;
     const prisma = getPrisma();
     const idParam = req.params.id;
     const isNumericId = /^\d+$/.test(idParam);
@@ -943,7 +864,7 @@ app.get("/api/tickets/:id/attachments", async (req: Request, res: Response) => {
       where: whereQuery,
     });
 
-    if (!ticket || ticket.requesterId !== requesterId) {
+    if (!ticket || (user.role === "REQUESTER" && ticket.requesterId !== user.id)) {
       return res.status(404).json({
         error: "NOT_FOUND",
         message: "Ticket not found or you do not have permission to view attachments for this ticket.",
@@ -979,7 +900,7 @@ app.get("/api/tickets/:id/attachments", async (req: Request, res: Response) => {
 // Issue 7 — Upload Attachment to Ticket
 // POST /api/tickets/:id/attachments
 // ---------------------------------------------------------------------------
-app.post("/api/tickets/:id/attachments", (req: Request, res: Response, next: NextFunction) => {
+app.post("/api/tickets/:id/attachments", requireAuth, (req: Request, res: Response, next: NextFunction) => {
   upload.single("file")(req, res, (err: any) => {
     if (err) {
       if (err.code === "LIMIT_FILE_SIZE") {
@@ -1003,23 +924,7 @@ app.post("/api/tickets/:id/attachments", (req: Request, res: Response, next: Nex
   });
 }, async (req: Request, res: Response) => {
   try {
-    const headerValue = req.headers["x-requester-id"];
-    if (!headerValue) {
-      if (req.file) fs.unlinkSync(req.file.path);
-      return res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Missing x-requester-id header",
-      });
-    }
-
-    const requesterId = parseInt(Array.isArray(headerValue) ? headerValue[0] : headerValue, 10);
-    if (isNaN(requesterId) || requesterId <= 0) {
-      if (req.file) fs.unlinkSync(req.file.path);
-      return res.status(400).json({
-        error: "BAD_REQUEST",
-        message: "Invalid x-requester-id header",
-      });
-    }
+    const user = req.user!;
 
     if (!req.file) {
       return res.status(400).json({
@@ -1047,7 +952,7 @@ app.post("/api/tickets/:id/attachments", (req: Request, res: Response, next: Nex
       });
     }
 
-    if (ticket.requesterId !== requesterId) {
+    if (user.role === "REQUESTER" && ticket.requesterId !== user.id) {
       fs.unlinkSync(req.file.path);
       return res.status(403).json({
         error: "FORBIDDEN",
@@ -1097,7 +1002,7 @@ app.post("/api/tickets/:id/attachments", (req: Request, res: Response, next: Nex
 // Issue 7 — Pre-upload Attachment (Standalone)
 // POST /api/attachments/upload
 // ---------------------------------------------------------------------------
-app.post("/api/attachments/upload", (req: Request, res: Response, next: NextFunction) => {
+app.post("/api/attachments/upload", requireAuth, (req: Request, res: Response, next: NextFunction) => {
   upload.single("file")(req, res, (err: any) => {
     if (err) {
       if (err.code === "LIMIT_FILE_SIZE") {
@@ -1121,15 +1026,6 @@ app.post("/api/attachments/upload", (req: Request, res: Response, next: NextFunc
   });
 }, async (req: Request, res: Response) => {
   try {
-    const headerValue = req.headers["x-requester-id"];
-    if (!headerValue) {
-      if (req.file) fs.unlinkSync(req.file.path);
-      return res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Missing x-requester-id header",
-      });
-    }
-
     if (!req.file) {
       return res.status(400).json({
         error: "NO_FILE",
@@ -1159,24 +1055,9 @@ app.post("/api/attachments/upload", (req: Request, res: Response, next: NextFunc
 // Issue 7 — Download Active Attachment
 // GET /api/attachments/:id/download
 // ---------------------------------------------------------------------------
-app.get("/api/attachments/:id/download", async (req: Request, res: Response) => {
+app.get("/api/attachments/:id/download", requireAuth, async (req: Request, res: Response) => {
   try {
-    const headerValue = req.headers["x-requester-id"];
-    if (!headerValue) {
-      return res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Missing x-requester-id header",
-      });
-    }
-
-    const requesterId = parseInt(Array.isArray(headerValue) ? headerValue[0] : headerValue, 10);
-    if (isNaN(requesterId) || requesterId <= 0) {
-      return res.status(400).json({
-        error: "BAD_REQUEST",
-        message: "Invalid x-requester-id header",
-      });
-    }
-
+    const user = req.user!;
     const attachmentId = parseInt(req.params.id, 10);
     if (isNaN(attachmentId) || attachmentId <= 0) {
       return res.status(400).json({
@@ -1199,7 +1080,7 @@ app.get("/api/attachments/:id/download", async (req: Request, res: Response) => 
     }
 
     // Enforce Ownership Isolation (FR-07.4 / AC-07.9)
-    if (attachment.ticket && attachment.ticket.requesterId !== requesterId) {
+    if (user.role === "REQUESTER" && attachment.ticket && attachment.ticket.requesterId !== user.id) {
       return res.status(403).json({
         error: "FORBIDDEN",
         message: "You do not have permission to download this attachment.",
@@ -1237,24 +1118,9 @@ app.get("/api/attachments/:id/download", async (req: Request, res: Response) => 
 // Issue 7 — Soft Remove Attachment
 // DELETE /api/attachments/:id
 // ---------------------------------------------------------------------------
-app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
+app.delete("/api/attachments/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const headerValue = req.headers["x-requester-id"];
-    if (!headerValue) {
-      return res.status(401).json({
-        error: "UNAUTHORIZED",
-        message: "Missing x-requester-id header",
-      });
-    }
-
-    const requesterId = parseInt(Array.isArray(headerValue) ? headerValue[0] : headerValue, 10);
-    if (isNaN(requesterId) || requesterId <= 0) {
-      return res.status(400).json({
-        error: "BAD_REQUEST",
-        message: "Invalid x-requester-id header",
-      });
-    }
-
+    const user = req.user!;
     const attachmentId = parseInt(req.params.id, 10);
     if (isNaN(attachmentId) || attachmentId <= 0) {
       return res.status(400).json({
@@ -1277,7 +1143,7 @@ app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
     }
 
     // Enforce Ownership Isolation (FR-07.5 / AC-07.9)
-    if (attachment.ticket && attachment.ticket.requesterId !== requesterId) {
+    if (user.role === "REQUESTER" && attachment.ticket && attachment.ticket.requesterId !== user.id) {
       return res.status(403).json({
         error: "FORBIDDEN",
         message: "You do not have permission to remove this attachment.",
@@ -1306,4 +1172,95 @@ app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Lab 3 — Internal Notes Endpoints (IT_STAFF & ADMINISTRATOR only / BR-04)
+// ---------------------------------------------------------------------------
+app.get("/api/tickets/:id/notes", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
+
+    const prisma = getPrisma();
+    const ticket = await prisma.ticket.findFirst({ where: whereQuery });
+    if (!ticket) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    const notes = await prisma.internalNote.findMany({
+      where: { ticketId: ticket.id },
+      include: {
+        author: {
+          select: { id: true, name: true, role: true },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    return res.status(200).json(notes);
+  } catch (error) {
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to fetch internal notes" });
+  }
+});
+
+app.post("/api/tickets/:id/notes", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const { body } = req.body;
+    if (!body || typeof body !== "string" || !body.trim()) {
+      return res.status(400).json({ error: "BAD_REQUEST", message: "Internal note body cannot be empty." });
+    }
+
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
+
+    const prisma = getPrisma();
+    const ticket = await prisma.ticket.findFirst({ where: whereQuery });
+    if (!ticket) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Ticket not found" });
+    }
+
+    const note = await prisma.internalNote.create({
+      data: {
+        body: body.trim(),
+        ticketId: ticket.id,
+        authorId: req.user!.id,
+      },
+      include: {
+        author: {
+          select: { id: true, name: true, role: true },
+        },
+      },
+    });
+    return res.status(201).json(note);
+  } catch (error) {
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to post internal note" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Lab 3 — Administrator User Management Endpoints (ADMINISTRATOR only / FR-12)
+// ---------------------------------------------------------------------------
+app.get("/api/admin/users", requireRole("ADMINISTRATOR"), async (_req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        department: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        createdAt: true,
+      },
+      orderBy: { id: "asc" },
+    });
+    return res.status(200).json(users);
+  } catch (error) {
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to fetch users" });
+  }
+});
+
 export default app;
+

@@ -9,13 +9,31 @@ import {
 } from "../api.js";
 import { Ticket, Attachment } from "../types.js";
 
+import { useAuth } from "../context/AuthContext.js";
+
 interface TicketDetailScreenProps {
   ticketIdOrNumber: string | number;
   onBack: () => void;
 }
 
 export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScreenProps) {
-  const { currentRequester } = useRequester();
+  let authUser = null;
+  try {
+    const auth = useAuth();
+    authUser = auth?.user;
+  } catch {
+    // Fallback
+  }
+
+  let currentRequester = null;
+  try {
+    const reqCtx = useRequester();
+    currentRequester = reqCtx?.currentRequester;
+  } catch {
+    // Fallback
+  }
+
+  const activeUser = authUser || currentRequester;
 
   // Ticket Data States
   const [ticket, setTicket] = useState<Ticket | null>(null);
@@ -37,18 +55,18 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
   // Load ticket & attachment data
   const loadData = useCallback(async () => {
-    if (!currentRequester) return;
+    if (!activeUser) return;
     setIsLoading(true);
     setErrorStatus(null);
     setErrorMessage(null);
 
     try {
-      const ticketData = await fetchTicketById(ticketIdOrNumber, currentRequester.id);
+      const ticketData = await fetchTicketById(ticketIdOrNumber, activeUser.id);
       setTicket(ticketData);
 
       // Load full attachment metadata list
       try {
-        const attList = await fetchTicketAttachments(ticketIdOrNumber, currentRequester.id);
+        const attList = await fetchTicketAttachments(ticketIdOrNumber, activeUser.id);
         setAttachments(attList);
       } catch {
         // Fallback to ticket.attachments
@@ -72,7 +90,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
     } finally {
       setIsLoading(false);
     }
-  }, [ticketIdOrNumber, currentRequester]);
+  }, [ticketIdOrNumber, activeUser]);
 
   useEffect(() => {
     loadData();
@@ -100,7 +118,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   // Handle Attachment Upload
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !currentRequester) return;
+    if (!file || !activeUser) return;
 
     // Reset input so change triggers again
     e.target.value = "";
@@ -130,9 +148,9 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
     setIsUploading(true);
     try {
-      await uploadTicketAttachment(ticketIdOrNumber, file, currentRequester.id);
+      await uploadTicketAttachment(ticketIdOrNumber, file, activeUser.id);
       // Reload attachments
-      const updated = await fetchTicketAttachments(ticketIdOrNumber, currentRequester.id);
+      const updated = await fetchTicketAttachments(ticketIdOrNumber, activeUser.id);
       setAttachments(updated);
     } catch (err: any) {
       setUploadError(err instanceof Error ? err.message : "Unable to upload attachment. Please try again.");
@@ -143,9 +161,9 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
   // Handle Download
   const handleDownload = async (attachment: Attachment) => {
-    if (!currentRequester) return;
+    if (!activeUser) return;
     try {
-      await downloadAttachment(attachment.id, attachment.fileName, currentRequester.id);
+      await downloadAttachment(attachment.id, attachment.fileName, activeUser.id);
     } catch (err: any) {
       alert(err instanceof Error ? err.message : "Failed to download attachment.");
     }
@@ -153,12 +171,12 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
   // Handle Soft-Remove Confirmation Submit
   const handleConfirmRemove = async () => {
-    if (!removingAttachment || !currentRequester) return;
+    if (!removingAttachment || !activeUser) return;
     setIsRemoving(true);
     setRemoveError(null);
 
     try {
-      await removeAttachment(removingAttachment.id, currentRequester.id, removeReason.trim() || undefined);
+      await removeAttachment(removingAttachment.id, activeUser.id, removeReason.trim() || undefined);
       // Update local attachment list
       setAttachments((prev) =>
         prev.map((a) =>
@@ -302,7 +320,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           <div className="col-12 col-sm-6 col-xl-4">
             <span className="text-muted d-block">Requester:</span>
             <strong className="text-dark text-break" data-testid="ticket-info-requester">
-              {ticket.requester?.name || currentRequester?.name} ({ticket.requester?.department || currentRequester?.department})
+              {ticket.requester?.name || activeUser?.name} ({ticket.requester?.department || activeUser?.department || "General"})
             </strong>
           </div>
           <div className="col-12 col-sm-6 col-xl-4">
