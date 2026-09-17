@@ -82,9 +82,12 @@ describe("Lab 3 — Administrator User Management Screen (Issue #8 / #45)", () =
     });
     vi.spyOn(RequesterContextModule, "useRequester").mockReturnValue({
       currentRequester: mockAdminUser,
-      allRequesters: [mockAdminUser],
+      requesters: [mockAdminUser],
+      selectRequester: vi.fn(),
       changeRequester: vi.fn(),
-      loading: false,
+      isLoading: false,
+      error: null,
+      reloadRequesters: vi.fn(),
     });
     vi.mocked(api.fetchAdminUsersApi).mockResolvedValue(mockUsersList);
   });

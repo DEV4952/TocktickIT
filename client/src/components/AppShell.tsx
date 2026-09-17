@@ -136,7 +136,7 @@ export function AppShell() {
                 data-testid="nav-admin-users-tab"
                 style={{ borderRadius: "6px" }}
               >
-                👥 User Management
+                User Management
               </button>
             )}
           </div>
@@ -150,7 +150,6 @@ export function AppShell() {
                 data-testid="change-requester-btn"
                 aria-label="Change Requester"
               >
-                <span>🔄</span>
                 <span className="d-none d-md-inline">Change Requester</span>
               </button>
             )}
@@ -199,7 +198,6 @@ export function AppShell() {
                   }}
                   data-testid="nav-change-password-btn"
                 >
-                  <span>🔒</span>
                   <span>Change Password</span>
                 </button>
                 {authUser ? (
@@ -212,7 +210,6 @@ export function AppShell() {
                     }}
                     data-testid="logout-btn"
                   >
-                    <span>🚪</span>
                     <span>Sign Out</span>
                   </button>
                 ) : (
@@ -225,7 +222,6 @@ export function AppShell() {
                     }}
                     data-testid="change-requester-btn"
                   >
-                    <span>🔄</span>
                     <span>Switch Requester</span>
                   </button>
                 )}

@@ -131,7 +131,6 @@ export function UserManagementScreen() {
     e.preventDefault();
     if (!editingUser) return;
 
-    // Frontend safety warnings
     if (editingUser.id === currentAdmin?.id && !editIsActive) {
       setEditError("Safety policy forbids deactivating your own account.");
       return;
@@ -202,8 +201,8 @@ export function UserManagementScreen() {
       {/* Header & Action Bar */}
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-          <h4 className="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
-            <span>🛡️</span> User Management Console
+          <h4 className="fw-bold mb-1 text-dark">
+            User Management Console
           </h4>
           <p className="text-muted small mb-0">
             Provision user accounts, configure roles and access status, and enforce safety safeguards.
@@ -211,14 +210,14 @@ export function UserManagementScreen() {
         </div>
         <button
           type="button"
-          className="btn btn-success d-flex align-items-center gap-2 shadow-sm"
+          className="btn btn-zen d-flex align-items-center gap-2 shadow-sm"
           onClick={() => {
             setShowCreateModal(true);
             setCreateError(null);
           }}
           data-testid="add-user-btn"
         >
-          <span>➕</span>
+          <span className="fw-bold">+</span>
           <span>Add User</span>
         </button>
       </div>
@@ -228,11 +227,11 @@ export function UserManagementScreen() {
         <div
           className="alert alert-success alert-dismissible fade show d-flex align-items-center justify-content-between mb-4 shadow-sm"
           role="alert"
+          style={{ backgroundColor: "var(--zen-green-50, #f0fdf4)", borderColor: "var(--zen-green-300, #86efac)", color: "var(--zen-green-800, #166534)" }}
           data-testid="admin-success-alert"
         >
           <div className="d-flex align-items-center gap-2">
-            <span>✅</span>
-            <span>{successMessage}</span>
+            <span className="fw-semibold">{successMessage}</span>
           </div>
           <button
             type="button"
@@ -250,10 +249,9 @@ export function UserManagementScreen() {
             {/* Search Input */}
             <div className="col-12 col-md-5">
               <div className="input-group input-group-sm">
-                <span className="input-group-text bg-white border-end-0 text-muted">🔍</span>
                 <input
                   type="text"
-                  className="form-control border-start-0"
+                  className="form-control"
                   placeholder="Search by name or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -264,8 +262,9 @@ export function UserManagementScreen() {
                     className="btn btn-outline-secondary"
                     type="button"
                     onClick={() => setSearchTerm("")}
+                    aria-label="Clear search"
                   >
-                    ✕
+                    Clear
                   </button>
                 )}
               </div>
@@ -304,12 +303,12 @@ export function UserManagementScreen() {
             <div className="col-12 col-md-1 text-end">
               <button
                 type="button"
-                className="btn btn-light btn-sm border w-100"
+                className="btn btn-light btn-sm border w-100 text-muted"
                 onClick={loadUsers}
                 title="Refresh user list"
                 data-testid="refresh-users-btn"
               >
-                🔄
+                Refresh
               </button>
             </div>
           </div>
@@ -320,7 +319,7 @@ export function UserManagementScreen() {
       <div className="card zen-card border-0 shadow-sm overflow-hidden">
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0" data-testid="admin-users-table">
-            <thead className="table-light small text-uppercase text-muted">
+            <thead className="table-light small text-uppercase text-muted" style={{ backgroundColor: "#fafcfb" }}>
               <tr>
                 <th scope="col" className="ps-4">User</th>
                 <th scope="col">Department</th>
@@ -341,7 +340,7 @@ export function UserManagementScreen() {
               ) : error ? (
                 <tr>
                   <td colSpan={6} className="text-center py-4 text-danger">
-                    <span>⚠️ {error}</span>
+                    <span>{error}</span>
                   </td>
                 </tr>
               ) : users.length === 0 ? (
@@ -353,14 +352,13 @@ export function UserManagementScreen() {
               ) : (
                 users.map((u) => {
                   const isSelf = u.id === currentAdmin?.id;
-                  const isLastAdmin = u.role === "ADMINISTRATOR" && u.isActive && activeAdminCount <= 1;
 
                   const roleBadgeClass =
                     u.role === "ADMINISTRATOR"
                       ? "bg-purple-subtle text-purple border border-purple"
                       : u.role === "IT_STAFF"
-                      ? "bg-success-subtle text-success border border-success"
-                      : "bg-info-subtle text-info border border-info";
+                      ? "badge-status-in-progress"
+                      : "badge-status-open";
 
                   return (
                     <tr key={u.id} data-testid={`user-row-${u.id}`}>
@@ -368,8 +366,13 @@ export function UserManagementScreen() {
                       <td className="ps-4">
                         <div className="d-flex align-items-center gap-2">
                           <div
-                            className="rounded-circle bg-light border text-dark d-flex align-items-center justify-content-center fw-bold"
-                            style={{ width: "34px", height: "34px", fontSize: "0.85rem" }}
+                            className="rounded-circle text-white d-flex align-items-center justify-content-center fw-semibold"
+                            style={{
+                              width: "34px",
+                              height: "34px",
+                              fontSize: "0.85rem",
+                              backgroundColor: "var(--color-primary, #15803d)",
+                            }}
                           >
                             {(u.name || u.fullName || u.email).charAt(0).toUpperCase()}
                           </div>
@@ -411,7 +414,7 @@ export function UserManagementScreen() {
                       <td>
                         {u.isActive ? (
                           <span
-                            className="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1"
+                            className="badge badge-status-open d-inline-flex align-items-center gap-1"
                             data-testid={`user-status-active-${u.id}`}
                           >
                             <span className="rounded-circle bg-success" style={{ width: 6, height: 6 }} />
@@ -419,7 +422,7 @@ export function UserManagementScreen() {
                           </span>
                         ) : (
                           <span
-                            className="badge bg-danger-subtle text-danger border border-danger-subtle d-inline-flex align-items-center gap-1"
+                            className="badge badge-priority-urgent d-inline-flex align-items-center gap-1"
                             data-testid={`user-status-suspended-${u.id}`}
                           >
                             <span className="rounded-circle bg-danger" style={{ width: 6, height: 6 }} />
@@ -444,12 +447,12 @@ export function UserManagementScreen() {
                         <div className="btn-group btn-group-sm" role="group">
                           <button
                             type="button"
-                            className="btn btn-outline-primary"
+                            className="btn btn-outline-secondary"
                             onClick={() => openEditModal(u)}
                             data-testid={`edit-user-btn-${u.id}`}
                             title="Edit User Details & Status"
                           >
-                            ✏️ Edit
+                            Edit
                           </button>
                           <button
                             type="button"
@@ -458,7 +461,7 @@ export function UserManagementScreen() {
                             data-testid={`reset-password-btn-${u.id}`}
                             title="Reset Initial Password"
                           >
-                            🔑 Reset PW
+                            Reset PW
                           </button>
                         </div>
                       </td>
@@ -472,11 +475,8 @@ export function UserManagementScreen() {
       </div>
 
       {/* Safety Notice Footer */}
-      <div className="mt-3 d-flex align-items-center gap-2 text-muted small px-2">
-        <span>🔒</span>
-        <span>
-          Safety rules in effect: Self-deactivation and deactivating the last remaining active Administrator are strictly blocked.
-        </span>
+      <div className="mt-3 text-muted small px-2">
+        Safety policy in effect: Self-deactivation and deactivating the last remaining active Administrator are strictly restricted.
       </div>
 
       {/* CREATE USER MODAL */}
@@ -488,9 +488,9 @@ export function UserManagementScreen() {
           data-testid="create-user-modal"
         >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content shadow">
-              <div className="modal-header">
-                <h5 className="modal-title fw-bold">Provision New User Account</h5>
+            <div className="modal-content shadow border-0" style={{ borderRadius: "12px" }}>
+              <div className="modal-header border-bottom">
+                <h5 className="modal-title fw-bold text-dark">Provision New User Account</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -524,7 +524,7 @@ export function UserManagementScreen() {
                     <input
                       type="email"
                       className="form-control"
-                      placeholder="e.g. jdoe@example.com"
+                      placeholder="e.g. jdoe@toktick.it"
                       value={createEmail}
                       onChange={(e) => setCreateEmail(e.target.value)}
                       required
@@ -575,7 +575,7 @@ export function UserManagementScreen() {
                   </div>
                 </div>
 
-                <div className="modal-footer">
+                <div className="modal-footer border-top">
                   <button
                     type="button"
                     className="btn btn-light border"
@@ -585,7 +585,7 @@ export function UserManagementScreen() {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-success"
+                    className="btn btn-zen"
                     disabled={createLoading}
                     data-testid="submit-create-user-btn"
                   >
@@ -607,9 +607,9 @@ export function UserManagementScreen() {
           data-testid="edit-user-modal"
         >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content shadow">
-              <div className="modal-header">
-                <h5 className="modal-title fw-bold">Edit User Account</h5>
+            <div className="modal-content shadow border-0" style={{ borderRadius: "12px" }}>
+              <div className="modal-header border-bottom">
+                <h5 className="modal-title fw-bold text-dark">Edit User Account</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -628,12 +628,12 @@ export function UserManagementScreen() {
                   {/* Self or Last-Admin Warning */}
                   {editingUser.id === currentAdmin?.id && (
                     <div className="alert alert-warning py-2 small mb-3">
-                      ⚠️ <strong>Safety notice:</strong> You are editing your own account. Self-deactivation and demotion away from Administrator are restricted.
+                      <strong>Safety notice:</strong> You are editing your own account. Self-deactivation and demotion away from Administrator are restricted.
                     </div>
                   )}
                   {editingUser.role === "ADMINISTRATOR" && editingUser.isActive && activeAdminCount <= 1 && (
                     <div className="alert alert-warning py-2 small mb-3">
-                      ⚠️ <strong>Last Admin Warning:</strong> This is the sole remaining active Administrator in the system.
+                      <strong>Last Admin Warning:</strong> This is the sole remaining active Administrator in the system.
                     </div>
                   )}
 
@@ -715,7 +715,7 @@ export function UserManagementScreen() {
                   </div>
                 </div>
 
-                <div className="modal-footer">
+                <div className="modal-footer border-top">
                   <button
                     type="button"
                     className="btn btn-light border"
@@ -725,7 +725,7 @@ export function UserManagementScreen() {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary"
+                    className="btn btn-zen"
                     disabled={editLoading}
                     data-testid="submit-edit-user-btn"
                   >
@@ -747,9 +747,9 @@ export function UserManagementScreen() {
           data-testid="reset-password-modal"
         >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content shadow">
-              <div className="modal-header">
-                <h5 className="modal-title fw-bold">Reset Initial Password</h5>
+            <div className="modal-content shadow border-0" style={{ borderRadius: "12px" }}>
+              <div className="modal-header border-bottom">
+                <h5 className="modal-title fw-bold text-dark">Reset Initial Password</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -784,7 +784,7 @@ export function UserManagementScreen() {
                   </div>
                 </div>
 
-                <div className="modal-footer">
+                <div className="modal-footer border-top">
                   <button
                     type="button"
                     className="btn btn-light border"
@@ -794,7 +794,7 @@ export function UserManagementScreen() {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-warning"
+                    className="btn btn-zen"
                     disabled={resetLoading}
                     data-testid="submit-reset-password-btn"
                   >
