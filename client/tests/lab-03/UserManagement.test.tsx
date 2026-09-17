@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { UserManagementScreen } from "../../src/components/UserManagementScreen";
 import { AppShell } from "../../src/components/AppShell";
 import * as api from "../../src/api";
@@ -295,7 +295,9 @@ describe("Lab 3 — Administrator User Management Screen (Issue #8 / #45)", () =
         error: null,
       });
 
-      render(<AppShell />);
+      await act(async () => {
+        render(<AppShell />);
+      });
 
       expect(screen.queryByTestId("nav-admin-users-tab")).not.toBeInTheDocument();
     });
