@@ -310,3 +310,37 @@ body {
     padding: 6px 12px;
   }
 }
+
+/* Role Badges */
+.badge-role-admin {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+  border: 1px solid #d8b4fe;
+  font-weight: 600;
+}
+
+.badge-role-staff {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  font-weight: 600;
+}
+
+.badge-role-requester {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+}
+
+/* Fix pagination select dropdown arrow and padding */
+.per-page-select {
+  min-width: 68px !important;
+  width: auto !important;
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+  padding-left: 0.5rem !important;
+  padding-right: 1.75rem !important;
+  background-position: right 0.4rem center !important;
+  line-height: 1.5 !important;
+}

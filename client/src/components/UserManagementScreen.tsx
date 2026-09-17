@@ -355,10 +355,10 @@ export function UserManagementScreen() {
 
                   const roleBadgeClass =
                     u.role === "ADMINISTRATOR"
-                      ? "bg-purple-subtle text-purple border border-purple"
+                      ? "badge-role-admin"
                       : u.role === "IT_STAFF"
-                      ? "badge-status-in-progress"
-                      : "badge-status-open";
+                      ? "badge-role-staff"
+                      : "badge-role-requester";
 
                   return (
                     <tr key={u.id} data-testid={`user-row-${u.id}`}>
