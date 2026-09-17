@@ -835,6 +835,7 @@ app.get("/api/tickets/:id", requireAuth, async (req: Request, res: Response) => 
       priority: ticket.priority,
       requestedPriority: ticket.priority,
       itPriority: ticket.itPriority,
+      problemAppearsResolved: ticket.problemAppearsResolved,
       ownerId: ticket.ownerId,
       owner: ticket.owner,
       categoryId: ticket.categoryId,
@@ -1183,6 +1184,169 @@ app.delete("/api/attachments/:id", requireAuth, async (req: Request, res: Respon
 // ---------------------------------------------------------------------------
 // Lab 3 — Internal Notes Endpoints (IT_STAFF & ADMINISTRATOR only / BR-04)
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Lab 3 - Public Comments Endpoints (Requester Owner, IT Staff, Admin / FR-10, BR-04, BR-10)
+// ---------------------------------------------------------------------------
+app.get("/api/tickets/:id/comments", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
+
+    const prisma = getPrisma();
+    const ticket = await prisma.ticket.findFirst({ where: whereQuery });
+    if (!ticket || (user.role === "REQUESTER" && ticket.requesterId !== user.id)) {
+      return res.status(404).json({
+        error: "NOT_FOUND",
+        message: "Ticket not found or you do not have permission to view comments for this ticket.",
+      });
+    }
+
+    const comments = await prisma.comment.findMany({
+      where: { ticketId: ticket.id },
+      include: {
+        author: {
+          select: { id: true, name: true, email: true, role: true, avatarUrl: true },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return res.status(200).json(
+      comments.map((c) => ({
+        id: c.id,
+        ticketId: c.ticketId,
+        body: c.body,
+        createdAt: c.createdAt.toISOString(),
+        author: {
+          id: c.author.id,
+          name: c.author.name,
+          fullName: c.author.name,
+          email: c.author.email,
+          role: c.author.role,
+          avatarUrl: c.author.avatarUrl,
+        },
+      }))
+    );
+  } catch (error) {
+    console.error("Failed to fetch ticket comments:", error);
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to fetch ticket comments" });
+  }
+});
+
+app.post("/api/tickets/:id/comments", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const { body } = req.body;
+    if (!body || typeof body !== "string" || !body.trim()) {
+      return res.status(400).json({ error: "BAD_REQUEST", message: "Comment body cannot be empty." });
+    }
+    if (body.trim().length > 2000) {
+      return res.status(400).json({ error: "BAD_REQUEST", message: "Comment body must not exceed 2000 characters." });
+    }
+
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
+
+    const prisma = getPrisma();
+    const ticket = await prisma.ticket.findFirst({ where: whereQuery });
+    if (!ticket || (user.role === "REQUESTER" && ticket.requesterId !== user.id)) {
+      return res.status(404).json({
+        error: "NOT_FOUND",
+        message: "Ticket not found or you do not have permission to post comments on this ticket.",
+      });
+    }
+
+    const comment = await prisma.comment.create({
+      data: {
+        body: body.trim(),
+        ticketId: ticket.id,
+        authorId: user.id,
+      },
+      include: {
+        author: {
+          select: { id: true, name: true, email: true, role: true, avatarUrl: true },
+        },
+      },
+    });
+
+    return res.status(201).json({
+      id: comment.id,
+      ticketId: comment.ticketId,
+      body: comment.body,
+      createdAt: comment.createdAt.toISOString(),
+      author: {
+        id: comment.author.id,
+        name: comment.author.name,
+        fullName: comment.author.name,
+        email: comment.author.email,
+        role: comment.author.role,
+        avatarUrl: comment.author.avatarUrl,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to post comment:", error);
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to post comment" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Lab 3 - Requester Indicate Problem Appears Resolved (FR-05 / AC-09 / BR-05)
+// ---------------------------------------------------------------------------
+app.post("/api/tickets/:id/resolve-indication", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    const idParam = req.params.id;
+    const isNumericId = /^\d+$/.test(idParam);
+    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
+
+    const prisma = getPrisma();
+    const ticket = await prisma.ticket.findFirst({ where: whereQuery });
+    if (!ticket || (user.role === "REQUESTER" && ticket.requesterId !== user.id)) {
+      return res.status(404).json({
+        error: "NOT_FOUND",
+        message: "Ticket not found or you do not have permission to indicate resolution on this ticket.",
+      });
+    }
+
+    // Update problemAppearsResolved to true without modifying ticket lifecycle status
+    const updated = await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { problemAppearsResolved: true },
+    });
+
+    // Auto-generate public comment notification
+    const commentBody =
+      typeof req.body?.comment === "string" && req.body.comment.trim()
+        ? req.body.comment.trim()
+        : "The requester has indicated that the problem appears resolved.";
+
+    await prisma.comment.create({
+      data: {
+        body: commentBody,
+        ticketId: ticket.id,
+        authorId: user.id,
+      },
+    });
+
+    return res.status(200).json({
+      ticket: {
+        id: updated.id,
+        ticketNumber: updated.ticketNumber,
+        status: updated.status,
+        problemAppearsResolved: true,
+        updatedAt: updated.updatedAt.toISOString(),
+      },
+      message: "Indication recorded. IT Staff will review and formally resolve the ticket.",
+    });
+  } catch (error) {
+    console.error("Failed to record resolution indication:", error);
+    return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to record resolution indication" });
+  }
+});
+
 app.get("/api/tickets/:id/notes", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
   try {
     const idParam = req.params.id;
@@ -1199,12 +1363,27 @@ app.get("/api/tickets/:id/notes", requireRole("IT_STAFF", "ADMINISTRATOR"), asyn
       where: { ticketId: ticket.id },
       include: {
         author: {
-          select: { id: true, name: true, role: true },
+          select: { id: true, name: true, email: true, role: true, avatarUrl: true },
         },
       },
       orderBy: { createdAt: "asc" },
     });
-    return res.status(200).json(notes);
+    return res.status(200).json(
+      notes.map((n) => ({
+        id: n.id,
+        ticketId: n.ticketId,
+        body: n.body,
+        createdAt: n.createdAt.toISOString(),
+        author: {
+          id: n.author.id,
+          name: n.author.name,
+          fullName: n.author.name,
+          email: n.author.email,
+          role: n.author.role,
+          avatarUrl: n.author.avatarUrl,
+        },
+      }))
+    );
   } catch (error) {
     return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to fetch internal notes" });
   }
@@ -1215,6 +1394,9 @@ app.post("/api/tickets/:id/notes", requireRole("IT_STAFF", "ADMINISTRATOR"), asy
     const { body } = req.body;
     if (!body || typeof body !== "string" || !body.trim()) {
       return res.status(400).json({ error: "BAD_REQUEST", message: "Internal note body cannot be empty." });
+    }
+    if (body.trim().length > 2000) {
+      return res.status(400).json({ error: "BAD_REQUEST", message: "Internal note body must not exceed 2000 characters." });
     }
 
     const idParam = req.params.id;
