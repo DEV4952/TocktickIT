@@ -11,8 +11,13 @@ import {
   updateTicketPriorityApi,
   updateTicketStatusApi,
   fetchAssignableStaffApi,
+  fetchTicketComments,
+  createTicketComment,
+  fetchTicketInternalNotes,
+  createTicketInternalNote,
+  indicateProblemResolvedApi,
 } from "../api.js";
-import { Ticket, Attachment } from "../types.js";
+import { Ticket, Attachment, TicketComment, InternalNote } from "../types.js";
 
 import { useAuth } from "../context/AuthContext.js";
 
@@ -64,6 +69,26 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   const [triageLoading, setTriageLoading] = useState(false);
   const [triageFeedback, setTriageFeedback] = useState<string | null>(null);
   const [triageError, setTriageError] = useState<string | null>(null);
+
+  // Communication States (Issue #7)
+  const [commTab, setCommTab] = useState<"comments" | "notes">("comments");
+  const [comments, setComments] = useState<TicketComment[]>([]);
+  const [notes, setNotes] = useState<InternalNote[]>([]);
+  const [commentInput, setCommentInput] = useState("");
+  const [noteInput, setNoteInput] = useState("");
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const [isPostingNote, setIsPostingNote] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [commentFeedback, setCommentFeedback] = useState<string | null>(null);
+  const [noteFeedback, setNoteFeedback] = useState<string | null>(null);
+
+  // Requester Resolution State (Issue #7)
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [resolveComment, setResolveComment] = useState("");
+  const [isSubmittingResolve, setIsSubmittingResolve] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [resolveSuccess, setResolveSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (isStaff) {
@@ -175,6 +200,24 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
         // Fallback to ticket.attachments
         setAttachments(ticketData.attachments || []);
       }
+
+      // Load comments (Issue #7)
+      try {
+        const cList = await fetchTicketComments(ticketIdOrNumber, activeUser.id);
+        setComments(cList);
+      } catch {
+        // ignore
+      }
+
+      // Load internal notes if staff (Issue #7)
+      if (isStaff) {
+        try {
+          const nList = await fetchTicketInternalNotes(ticketIdOrNumber);
+          setNotes(nList);
+        } catch {
+          // ignore
+        }
+      }
     } catch (err: any) {
       const msg = err instanceof Error ? err.message : "Failed to load ticket.";
       if (
@@ -198,6 +241,68 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Communication Handlers (Issue #7)
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentInput.trim() || !ticket) return;
+    setIsPostingComment(true);
+    setCommentError(null);
+    try {
+      const newComment = await createTicketComment(ticket.id, commentInput.trim(), activeUser?.id);
+      setComments((prev) => [...prev, newComment]);
+      setCommentInput("");
+      setCommentFeedback("Comment posted successfully!");
+      setTimeout(() => setCommentFeedback(null), 3000);
+    } catch (err: any) {
+      setCommentError(err.message || "Failed to post comment.");
+    } finally {
+      setIsPostingComment(false);
+    }
+  };
+
+  const handlePostNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noteInput.trim() || !ticket) return;
+    setIsPostingNote(true);
+    setNoteError(null);
+    try {
+      const newNote = await createTicketInternalNote(ticket.id, noteInput.trim());
+      setNotes((prev) => [...prev, newNote]);
+      setNoteInput("");
+      setNoteFeedback("Internal note saved successfully!");
+      setTimeout(() => setNoteFeedback(null), 3000);
+    } catch (err: any) {
+      setNoteError(err.message || "Failed to save internal note.");
+    } finally {
+      setIsPostingNote(false);
+    }
+  };
+
+  const handleConfirmResolve = async () => {
+    if (!ticket) return;
+    setIsSubmittingResolve(true);
+    setResolveError(null);
+    try {
+      await indicateProblemResolvedApi(ticket.id, resolveComment.trim() || undefined, activeUser?.id);
+      setTicket((prev) => (prev ? { ...prev, problemAppearsResolved: true } : null));
+      setShowResolveModal(false);
+      setResolveComment("");
+      setResolveSuccess("Thank you! Your resolution indication has been submitted.");
+      setTimeout(() => setResolveSuccess(null), 4000);
+      // Reload comments to see system comment
+      try {
+        const cList = await fetchTicketComments(ticket.id, activeUser?.id);
+        setComments(cList);
+      } catch {
+        // ignore
+      }
+    } catch (err: any) {
+      setResolveError(err.message || "Failed to record resolution indication.");
+    } finally {
+      setIsSubmittingResolve(false);
+    }
+  };
 
   // Format Helper
   const formatFileSize = (bytes: number) => {
@@ -397,6 +502,22 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           </div>
 
           <div className="d-flex align-items-center gap-2 flex-wrap">
+            {!isStaff && ticket.status !== "RESOLVED" && ticket.status !== "CLOSED" && ticket.status !== "CANCELLED" && (
+              ticket.problemAppearsResolved ? (
+                <span className="badge bg-success-subtle text-success border border-success px-3 py-2 fs-6" data-testid="problem-resolved-badge">
+                  ✓ Problem Indicated as Resolved
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-outline-success btn-sm px-3 fw-semibold shadow-sm"
+                  onClick={() => setShowResolveModal(true)}
+                  data-testid="problem-resolved-btn"
+                >
+                  ✓ Problem Appears Resolved
+                </button>
+              )
+            )}
             <span className={`badge ${getStatusBadgeClass(ticket.status)} px-3 py-2 fs-6`} data-testid="header-ticket-status">
               {ticket.status.replace("_", " ")}
             </span>
@@ -596,6 +717,211 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
         </div>
       </div>
 
+      {/* Resolution Success Banner */}
+      {resolveSuccess && (
+        <div className="alert alert-success py-2 px-3 small mb-0 d-flex align-items-center gap-2" data-testid="resolve-success-banner">
+          <span>✓</span>
+          <span>{resolveSuccess}</span>
+        </div>
+      )}
+
+      {/* Communication Section: Public Comments & Internal Notes (Issue #7) */}
+      <div className="card zen-card p-4 shadow-sm" data-testid="ticket-communication-card">
+        {isStaff ? (
+          <ul className="nav nav-tabs card-header-tabs mb-3 border-bottom" role="tablist">
+            <li className="nav-item">
+              <button
+                type="button"
+                className={`nav-link ${commTab === "comments" ? "active fw-bold text-success border-bottom-0" : "text-muted"}`}
+                onClick={() => setCommTab("comments")}
+                data-testid="tab-public-comments"
+              >
+                💬 Public Comments ({comments.length})
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                type="button"
+                className={`nav-link ${commTab === "notes" ? "active fw-bold text-warning-emphasis border-bottom-0 bg-warning-subtle" : "text-muted"}`}
+                onClick={() => setCommTab("notes")}
+                data-testid="tab-internal-notes"
+              >
+                🔒 Internal Notes ({notes.length})
+              </button>
+            </li>
+          </ul>
+        ) : (
+          <div className="pb-3 mb-3 border-bottom d-flex justify-content-between align-items-center">
+            <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2" data-testid="public-comments-header">
+              <span>💬</span>
+              <span>Public Comments ({comments.length})</span>
+            </h5>
+            <span className="text-muted small">Visible to all ticket participants</span>
+          </div>
+        )}
+
+        {/* Tab 1: Public Comments */}
+        {(commTab === "comments" || !isStaff) && (
+          <div data-testid="comments-panel">
+            <div className="d-flex flex-column gap-2 mb-3" data-testid="comments-list">
+              {comments.length === 0 ? (
+                <div className="p-4 text-center text-muted bg-light rounded-3" data-testid="empty-comments">
+                  <p className="small mb-0">No public comments yet. Post an update below.</p>
+                </div>
+              ) : (
+                comments.map((c) => (
+                  <div key={c.id} className="card p-3 bg-light border-0 rounded-3 shadow-xs" data-testid={`comment-item-${c.id}`}>
+                    <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+                      <div className="d-flex align-items-center gap-2">
+                        <strong className="text-dark small" data-testid={`comment-author-${c.id}`}>
+                          {c.author?.name || c.author?.fullName || "User"}
+                        </strong>
+                        <span
+                          className={`badge ${
+                            c.author?.role === "IT_STAFF"
+                              ? "bg-success-subtle text-success border border-success"
+                              : c.author?.role === "ADMINISTRATOR"
+                              ? "bg-purple-subtle text-purple border border-purple"
+                              : "bg-info-subtle text-info border border-info"
+                          } small`}
+                        >
+                          {c.author?.role === "IT_STAFF"
+                            ? "IT Staff"
+                            : c.author?.role === "ADMINISTRATOR"
+                            ? "Admin"
+                            : "Requester"}
+                        </span>
+                      </div>
+                      <span className="text-muted small" style={{ fontSize: "0.75rem" }}>
+                        {new Date(c.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="mb-0 text-dark small text-break lh-base" style={{ whiteSpace: "pre-wrap" }} data-testid={`comment-body-${c.id}`}>
+                      {c.body}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add Public Comment Form */}
+            <form onSubmit={handlePostComment} className="pt-2 border-top">
+              {commentError && (
+                <div className="alert alert-danger py-2 px-3 small mb-2" data-testid="comment-error-banner">
+                  ⚠️ {commentError}
+                </div>
+              )}
+              {commentFeedback && (
+                <div className="alert alert-success py-2 px-3 small mb-2">
+                  ✓ {commentFeedback}
+                </div>
+              )}
+              <div className="mb-2">
+                <textarea
+                  className="form-control form-control-sm"
+                  rows={3}
+                  placeholder="Write a public comment for all participants..."
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  maxLength={2000}
+                  disabled={isPostingComment}
+                  data-testid="new-comment-input"
+                />
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-muted small" style={{ fontSize: "0.75rem" }}>
+                  {commentInput.length}/2000 characters
+                </span>
+                <button
+                  type="submit"
+                  className="btn btn-zen btn-sm px-3 fw-semibold shadow-sm"
+                  disabled={isPostingComment || !commentInput.trim()}
+                  data-testid="post-comment-btn"
+                >
+                  {isPostingComment ? "Posting..." : "Post Comment"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Tab 2: Internal Notes (IT Staff & Admin Only) */}
+        {isStaff && commTab === "notes" && (
+          <div data-testid="notes-panel">
+            <div className="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+              <span className="fw-bold">🔒 Confidential Internal Notes</span>
+              <span className="text-muted">— Visible strictly to IT Staff & Administrators. Strictly hidden from requesters.</span>
+            </div>
+
+            <div className="d-flex flex-column gap-2 mb-3" data-testid="notes-list">
+              {notes.length === 0 ? (
+                <div className="p-4 text-center text-muted bg-warning-subtle rounded-3" data-testid="empty-notes">
+                  <p className="small mb-0">No internal notes recorded yet.</p>
+                </div>
+              ) : (
+                notes.map((n) => (
+                  <div key={n.id} className="card p-3 bg-warning-subtle border-warning-subtle rounded-3 shadow-xs" data-testid={`note-item-${n.id}`}>
+                    <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+                      <div className="d-flex align-items-center gap-2">
+                        <strong className="text-dark small" data-testid={`note-author-${n.id}`}>
+                          {n.author?.name || n.author?.fullName || "Staff"}
+                        </strong>
+                        <span className="badge bg-warning text-dark small">Internal Note</span>
+                      </div>
+                      <span className="text-muted small" style={{ fontSize: "0.75rem" }}>
+                        {new Date(n.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="mb-0 text-dark small text-break lh-base" style={{ whiteSpace: "pre-wrap" }} data-testid={`note-body-${n.id}`}>
+                      {n.body}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Add Internal Note Form */}
+            <form onSubmit={handlePostNote} className="pt-2 border-top">
+              {noteError && (
+                <div className="alert alert-danger py-2 px-3 small mb-2" data-testid="note-error-banner">
+                  ⚠️ {noteError}
+                </div>
+              )}
+              {noteFeedback && (
+                <div className="alert alert-success py-2 px-3 small mb-2">
+                  ✓ {noteFeedback}
+                </div>
+              )}
+              <div className="mb-2">
+                <textarea
+                  className="form-control form-control-sm border-warning"
+                  rows={3}
+                  placeholder="Add confidential IT diagnostic observations, hardware inventory notes, or escalation details..."
+                  value={noteInput}
+                  onChange={(e) => setNoteInput(e.target.value)}
+                  maxLength={2000}
+                  disabled={isPostingNote}
+                  data-testid="new-note-input"
+                />
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-muted small" style={{ fontSize: "0.75rem" }}>
+                  {noteInput.length}/2000 characters
+                </span>
+                <button
+                  type="submit"
+                  className="btn btn-warning btn-sm px-3 fw-semibold text-dark shadow-sm"
+                  disabled={isPostingNote || !noteInput.trim()}
+                  data-testid="post-note-btn"
+                >
+                  {isPostingNote ? "Saving..." : "Add Internal Note"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+
       {/* Attachments Section Slide */}
       <div className="card zen-card p-4" data-testid="ticket-attachments-card">
         <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center pb-3 mb-3 border-bottom gap-2">
@@ -756,6 +1082,78 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           ← Back to My Tickets
         </button>
       </div>
+
+      {/* Problem Appears Resolved Confirmation Modal (FR-05 / AC-09) */}
+      {showResolveModal && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 1060 }}
+          role="dialog"
+          aria-modal="true"
+          data-testid="resolve-confirm-modal"
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow-lg rounded-3">
+              <div className="modal-header border-bottom">
+                <h6 className="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+                  <span>✓</span>
+                  <span>Indicate Problem Appears Resolved</span>
+                </h6>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowResolveModal(false)}
+                  aria-label="Close"
+                />
+              </div>
+              <div className="modal-body">
+                <p className="small text-muted mb-3">
+                  Please confirm that your issue has been resolved. You can optionally add a concluding comment. IT Staff will review and complete the final closure.
+                </p>
+                {resolveError && (
+                  <div className="alert alert-danger py-2 px-3 small mb-3">
+                    ⚠️ {resolveError}
+                  </div>
+                )}
+                <div className="mb-2">
+                  <label className="form-label small fw-semibold text-dark">
+                    Optional Concluding Comment
+                  </label>
+                  <textarea
+                    className="form-control form-control-sm"
+                    rows={3}
+                    placeholder="e.g. Restarted machine and VPN handshake is functioning now. Thank you!"
+                    value={resolveComment}
+                    onChange={(e) => setResolveComment(e.target.value)}
+                    disabled={isSubmittingResolve}
+                    data-testid="resolve-comment-input"
+                  />
+                </div>
+              </div>
+              <div className="modal-footer border-top">
+                <button
+                  type="button"
+                  className="btn btn-light btn-sm px-3"
+                  onClick={() => setShowResolveModal(false)}
+                  disabled={isSubmittingResolve}
+                  data-testid="resolve-cancel-btn"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success btn-sm px-3 fw-semibold shadow-sm"
+                  onClick={handleConfirmResolve}
+                  disabled={isSubmittingResolve}
+                  data-testid="confirm-resolve-btn"
+                >
+                  {isSubmittingResolve ? "Submitting..." : "Confirm Resolution"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ------------------------------------------------------------------ */}
       {/* Remove Attachment Confirmation Modal                               */}

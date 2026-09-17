@@ -72,6 +72,10 @@ export interface Ticket {
   requesterId: number;
   requester: Requester;
   attachments: Attachment[];
+  itPriority?: TicketPriority;
+  ownerId?: number | null;
+  owner?: { id: number; name: string; email: string; role: string } | null;
+  problemAppearsResolved?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -177,4 +181,31 @@ export interface StaffTicketQueueResponse {
     totalPages: number;
   };
   counts: StaffQueueCounts;
+}
+
+export interface CommentAuthor {
+  id: number;
+  name?: string;
+  fullName?: string;
+  email?: string;
+  role: "REQUESTER" | "IT_STAFF" | "ADMINISTRATOR";
+  avatarUrl?: string | null;
+}
+
+export interface TicketComment {
+  id: number;
+  ticketId: number;
+  body: string;
+  createdAt: string;
+  authorId?: number;
+  author: CommentAuthor;
+}
+
+export interface InternalNote {
+  id: number;
+  ticketId: number;
+  body: string;
+  createdAt: string;
+  authorId?: number;
+  author: CommentAuthor;
 }

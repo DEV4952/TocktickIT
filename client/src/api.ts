@@ -678,3 +678,153 @@ export async function fetchAssignableStaffApi() {
 
   return await res.json();
 }
+
+// ---------------------------------------------------------------------------
+// Issue 7 – Public Comments, Internal Notes & Requester Resolution APIs
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch all public comments for a ticket.
+ */
+export async function fetchTicketComments(ticketIdOrNumber: number | string, requesterId?: number) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/comments`, {
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
+    });
+  } catch {
+    throw new Error("Unable to load ticket comments. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load ticket comments.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Post a public comment on a ticket.
+ */
+export async function createTicketComment(ticketIdOrNumber: number | string, body: string, requesterId?: number) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/comments`, {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }, requesterId),
+      body: JSON.stringify({ body }),
+    });
+  } catch {
+    throw new Error("Unable to post comment. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to post comment.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Fetch confidential internal notes for a ticket (IT Staff & Admin only).
+ */
+export async function fetchTicketInternalNotes(ticketIdOrNumber: number | string) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/notes`, {
+      credentials: "include",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    throw new Error("Unable to load internal notes. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load internal notes.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Post a confidential internal note on a ticket (IT Staff & Admin only).
+ */
+export async function createTicketInternalNote(ticketIdOrNumber: number | string, body: string) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/notes`, {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ body }),
+    });
+  } catch {
+    throw new Error("Unable to post internal note. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to post internal note.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Requester indicates problem appears resolved.
+ */
+export async function indicateProblemResolvedApi(ticketIdOrNumber: number | string, comment?: string, requesterId?: number) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/resolve-indication`, {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }, requesterId),
+      body: JSON.stringify({ comment }),
+    });
+  } catch {
+    throw new Error("Unable to submit resolution indication. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to indicate problem resolved.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
