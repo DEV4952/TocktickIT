@@ -556,8 +556,22 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                 <div className="d-flex align-items-center gap-1">
                   <span>Per page:</span>
                   <select
-                    className="form-select form-select-sm py-0 px-2"
-                    style={{ width: "auto" }}
+                    className="form-select form-select-sm"
+                    style={{
+                      width: "75px",
+                      minWidth: "75px",
+                      paddingLeft: "10px",
+                      paddingRight: "28px",
+                      paddingTop: "3px",
+                      paddingBottom: "3px",
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 8px center",
+                      backgroundSize: "12px 10px",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      MozAppearance: "none"
+                    }}
                     value={limit}
                     onChange={(e) => {
                       setLimit(Number(e.target.value));

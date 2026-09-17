@@ -828,3 +828,132 @@ export async function indicateProblemResolvedApi(ticketIdOrNumber: number | stri
 
   return await res.json();
 }
+
+import type { AdminUser, AdminUserQueryOptions, CreateAdminUserPayload, UpdateAdminUserPayload } from "./types";
+
+/**
+ * Fetch all users with optional search and role/active filters (Admin only)
+ */
+export async function fetchAdminUsersApi(options: AdminUserQueryOptions = {}): Promise<AdminUser[]> {
+  const params = new URLSearchParams();
+  if (options.search) params.append("search", options.search);
+  if (options.role && options.role !== "ALL") params.append("role", options.role);
+  if (options.isActive && options.isActive !== "all") params.append("isActive", options.isActive);
+
+  const query = params.toString() ? `?${params.toString()}` : "";
+  let res: Response;
+  try {
+    res = await fetch(`/api/admin/users${query}`, {
+      method: "GET",
+      credentials: "include",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    throw new Error("Unable to fetch users. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to fetch users.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.users || []);
+}
+
+/**
+ * Provision new user account (Admin only)
+ */
+export async function createAdminUserApi(payload: CreateAdminUserPayload): Promise<{ user: AdminUser; message?: string }> {
+  let res: Response;
+  try {
+    res = await fetch("/api/admin/users", {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("Unable to create user. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to create user.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Update user details, role and active toggle (Admin only)
+ */
+export async function updateAdminUserApi(id: number, payload: UpdateAdminUserPayload): Promise<{ user: AdminUser }> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/admin/users/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("Unable to update user. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to update user.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  const data = await res.json();
+  return data.user ? data : { user: data };
+}
+
+/**
+ * Reset initial password forcing mustChangePassword on next login (Admin only)
+ */
+export async function resetAdminUserPasswordApi(id: number, initialPassword: string): Promise<{ message: string }> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/admin/users/${id}/reset-password`, {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ initialPassword, newInitialPassword: initialPassword, newPassword: initialPassword }),
+    });
+  } catch {
+    throw new Error("Unable to reset password. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to reset password.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}

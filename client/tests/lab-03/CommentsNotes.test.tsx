@@ -105,6 +105,8 @@ describe("Lab 3 — Ticket Communications: Comments & Notes UI (Issue #7)", () =
           logout: vi.fn(),
           changePassword: vi.fn(),
           refreshUser: vi.fn(),
+    token: null,
+    error: null,
         }}
       >
         <RequesterContext.Provider

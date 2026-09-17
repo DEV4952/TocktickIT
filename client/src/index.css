@@ -310,3 +310,38 @@ body {
     padding: 6px 12px;
   }
 }
+
+/* Zen Green Role Badges */
+.badge-role-admin {
+  background-color: #dcfce7; /* zen-green-100 */
+  color: #14532d;            /* deep forest zen green */
+  border: 1px solid #86efac; /* zen-green-300 */
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.badge-role-staff {
+  background-color: #f0fdf4; /* zen-green-50 */
+  color: #166534;            /* zen-green-800 */
+  border: 1px solid #bbf7d0; /* zen-green-200 */
+  font-weight: 600;
+}
+
+.badge-role-requester {
+  background-color: #f8faf9; /* clean canvas slate-green */
+  color: #475569;            /* slate-600 */
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+/* Fix pagination select dropdown arrow and padding */
+.per-page-select {
+  min-width: 68px !important;
+  width: auto !important;
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+  padding-left: 0.5rem !important;
+  padding-right: 1.75rem !important;
+  background-position: right 0.4rem center !important;
+  line-height: 1.5 !important;
+}

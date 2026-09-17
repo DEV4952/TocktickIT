@@ -209,3 +209,40 @@ export interface InternalNote {
   authorId?: number;
   author: CommentAuthor;
 }
+
+export interface AdminUser {
+  id: number;
+  name: string;
+  fullName?: string;
+  email: string;
+  department?: string | null;
+  role: Role;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  createdAt: string;
+}
+
+export interface AdminUserQueryOptions {
+  search?: string;
+  role?: string;
+  isActive?: string;
+}
+
+export interface CreateAdminUserPayload {
+  name?: string;
+  fullName?: string;
+  email: string;
+  department?: string;
+  role: Role;
+  isActive?: boolean;
+  initialPassword: string;
+}
+
+export interface UpdateAdminUserPayload {
+  name?: string;
+  fullName?: string;
+  email?: string;
+  department?: string;
+  role?: Role;
+  isActive?: boolean;
+}
