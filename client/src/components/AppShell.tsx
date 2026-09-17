@@ -6,6 +6,7 @@ import { MyTicketsScreen } from "./MyTicketsScreen.js";
 import { StaffTicketQueueScreen } from "./StaffTicketQueueScreen.js";
 import { TicketDetailScreen } from "./TicketDetailScreen.js";
 import { ChangePasswordScreen } from "./ChangePasswordScreen.js";
+import { UserManagementScreen } from "./UserManagementScreen.js";
 
 export function AppShell() {
   let authUser = null;
@@ -29,7 +30,7 @@ export function AppShell() {
   }
 
   const activeUser = authUser || currentRequester;
-  const [activeTab, setActiveTab] = useState<"workspace" | "new-ticket" | "change-password">("workspace");
+  const [activeTab, setActiveTab] = useState<"workspace" | "new-ticket" | "change-password" | "users">("workspace");
   const [selectedTicketId, setSelectedTicketId] = useState<string | number | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -43,6 +44,11 @@ export function AppShell() {
   const handleNavigateNewTicket = () => {
     setSelectedTicketId(null);
     setActiveTab("new-ticket");
+  };
+
+  const handleNavigateUsers = () => {
+    setSelectedTicketId(null);
+    setActiveTab("users");
   };
 
   const isStaffOrAdmin = authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR";
@@ -118,6 +124,21 @@ export function AppShell() {
             >
               + Create Ticket
             </button>
+            {authUser?.role === "ADMINISTRATOR" && (
+              <button
+                type="button"
+                className={`btn btn-sm ${
+                  activeTab === "users"
+                    ? "bg-white text-success fw-bold"
+                    : "text-white-50 hover-white"
+                }`}
+                onClick={handleNavigateUsers}
+                data-testid="nav-admin-users-tab"
+                style={{ borderRadius: "6px" }}
+              >
+                👥 User Management
+              </button>
+            )}
           </div>
 
           <div className="d-flex align-items-center gap-2 ms-auto position-relative">
@@ -233,6 +254,16 @@ export function AppShell() {
           >
             + Create Ticket
           </button>
+          {authUser?.role === "ADMINISTRATOR" && (
+            <button
+              type="button"
+              className={`btn ${activeTab === "users" ? "btn-success text-white fw-semibold" : "btn-light text-muted border"}`}
+              onClick={handleNavigateUsers}
+              data-testid="mobile-nav-users-tab"
+            >
+              Users
+            </button>
+          )}
         </div>
       </div>
 
@@ -240,6 +271,8 @@ export function AppShell() {
       <main className="container py-3 py-md-4 flex-grow-1">
         {activeTab === "change-password" ? (
           <ChangePasswordScreen />
+        ) : activeTab === "users" && authUser?.role === "ADMINISTRATOR" ? (
+          <UserManagementScreen />
         ) : isStaffOrAdmin ? (
           <div data-testid="staff-workspace-container">
             {selectedTicketId !== null ? (
