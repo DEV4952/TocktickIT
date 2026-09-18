@@ -2,5 +2,12 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "prisma": "^6.19.3"
+  },
+  "scripts": {
+    "test:server": "npm --prefix server run test -- --fileParallelism=false",
+    "test:client": "npm --prefix client run test",
+    "test": "npm run test:server && npm run test:client",
+    "test:lab3": "npm --prefix server run test -- --fileParallelism=false tests/lab-03/ && npm --prefix client run test -- tests/lab-03/",
+    "test:lab2": "npm --prefix server run test -- --fileParallelism=false tests/lab-02/ && npm --prefix client run test -- tests/lab-02/"
   }
 }

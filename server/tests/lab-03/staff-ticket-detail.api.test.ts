@@ -90,14 +90,14 @@ describe("Lab 3 — IT Staff Ticket Queue & Operational Triage APIs (Issue #6)",
     // Clean up test tickets created in previous test runs
     await prisma.ticket.deleteMany({
       where: {
-        ticketNumber: { in: ["TKT-QUEUE-001", "TKT-QUEUE-002", "TKT-QUEUE-003"] },
+        ticketNumber: { in: ["TKT-DTL-001", "TKT-DTL-002", "TKT-QUEUE-003"] },
       },
     });
 
     // Create test ticket 1: Unassigned, status NEW, priority MEDIUM
     testTicket1 = await prisma.ticket.create({
       data: {
-        ticketNumber: "TKT-QUEUE-001",
+        ticketNumber: "TKT-DTL-001",
         title: "Test Queue Laptop Battery Issue",
         description: "Laptop battery drains within thirty minutes during video calls.",
         status: "NEW",
@@ -112,7 +112,7 @@ describe("Lab 3 — IT Staff Ticket Queue & Operational Triage APIs (Issue #6)",
     // Create test ticket 2: Assigned to itStaffUser, status OPEN, priority HIGH
     testTicket2 = await prisma.ticket.create({
       data: {
-        ticketNumber: "TKT-QUEUE-002",
+        ticketNumber: "TKT-DTL-002",
         title: "VPN Connection Drops Frequently",
         description: "VPN client disconnects every 15 minutes across all departments.",
         status: "OPEN",
@@ -128,65 +128,8 @@ describe("Lab 3 — IT Staff Ticket Queue & Operational Triage APIs (Issue #6)",
   afterAll(async () => {
     await prisma.ticket.deleteMany({
       where: {
-        ticketNumber: { in: ["TKT-QUEUE-001", "TKT-QUEUE-002", "TKT-QUEUE-003"] },
+        ticketNumber: { in: ["TKT-DTL-001", "TKT-DTL-002", "TKT-QUEUE-003"] },
       },
-    });
-  });
-
-  describe("GET /api/staff/tickets (FR-06)", () => {
-    it("allows IT Staff to query the queue with pagination and counts", async () => {
-      const res = await request(app)
-        .get("/api/staff/tickets")
-        .set("Authorization", `Bearer ${itStaffToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("data");
-      expect(res.body).toHaveProperty("pagination");
-      expect(res.body).toHaveProperty("counts");
-
-      expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.counts).toHaveProperty("all");
-      expect(res.body.counts).toHaveProperty("unassigned");
-      expect(res.body.counts).toHaveProperty("myTickets");
-      expect(res.body.counts).toHaveProperty("inProgress");
-    });
-
-    it("filters tickets by search substring (title/ticketNumber)", async () => {
-      const res = await request(app)
-        .get("/api/staff/tickets?search=Battery")
-        .set("Authorization", `Bearer ${itStaffToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.some((t: any) => t.ticketNumber === "TKT-QUEUE-001")).toBe(true);
-      expect(res.body.data.every((t: any) => t.ticketNumber !== "TKT-QUEUE-002")).toBe(true);
-    });
-
-    it("filters tickets by unassigned owner status", async () => {
-      const res = await request(app)
-        .get("/api/staff/tickets?ownerId=unassigned")
-        .set("Authorization", `Bearer ${itStaffToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.every((t: any) => t.owner === null)).toBe(true);
-      expect(res.body.data.some((t: any) => t.ticketNumber === "TKT-QUEUE-001")).toBe(true);
-    });
-
-    it("filters tickets by 'me' (current user tickets)", async () => {
-      const res = await request(app)
-        .get("/api/staff/tickets?ownerId=me")
-        .set("Authorization", `Bearer ${itStaffToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.every((t: any) => t.owner?.id === itStaffUser.id)).toBe(true);
-      expect(res.body.data.some((t: any) => t.ticketNumber === "TKT-QUEUE-002")).toBe(true);
-    });
-
-    it("blocks Requesters from querying staff ticket queue with 403", async () => {
-      const res = await request(app)
-        .get("/api/staff/tickets")
-        .set("Authorization", `Bearer ${requesterToken}`);
-
-      expect(res.status).toBe(403);
     });
   });
 
