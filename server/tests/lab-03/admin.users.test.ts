@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app.js";
 import { getPrisma } from "../../src/prisma.js";
@@ -16,10 +16,22 @@ describe("Admin User Management Endpoints (lab-03 #45)", () => {
 
   beforeEach(async () => {
     // Clear data in proper order
-    await prisma.comment.deleteMany();
-    await prisma.internalNote.deleteMany();
-        await prisma.ticket.deleteMany();
-        await prisma.user.deleteMany();
+        // Delete only test users to avoid corrupting seed dataset for other tests
+    await prisma.user.deleteMany({
+      where: {
+        email: {
+          in: [
+            "admin1@example.com",
+            "admin2@example.com",
+            "staff@example.com",
+            "user@example.com",
+            "brandnew@example.com",
+            "weak@example.com",
+            "caller@example.com",
+          ],
+        },
+      },
+    });
 
     const hashedPassword = await bcrypt.hash("Password123!", 10);
 
@@ -123,23 +135,24 @@ describe("Admin User Management Endpoints (lab-03 #45)", () => {
         .set("Cookie", adminToken);
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBe(4);
+      expect(res.body.length).toBeGreaterThanOrEqual(4);
 
       // Search by name
       const resSearch = await request(app)
         .get("/api/admin/users?search=Normal")
         .set("Cookie", adminToken);
       expect(resSearch.status).toBe(200);
-      expect(resSearch.body.length).toBe(1);
-      expect(resSearch.body[0].name).toBe("Normal User");
+      expect(resSearch.body.length).toBeGreaterThanOrEqual(1);
+      expect(resSearch.body.some((u: any) => u.name === "Normal User")).toBe(true);
 
       // Filter by role
       const resRole = await request(app)
         .get("/api/admin/users?role=IT_STAFF")
         .set("Cookie", adminToken);
       expect(resRole.status).toBe(200);
-      expect(resRole.body.length).toBe(1);
-      expect(resRole.body[0].role).toBe("IT_STAFF");
+      expect(resRole.body.length).toBeGreaterThanOrEqual(1);
+      expect(resRole.body.every((u: any) => u.role === "IT_STAFF")).toBe(true);
+      expect(resRole.body.some((u: any) => u.email === "staff@example.com")).toBe(true);
     });
   });
 
@@ -328,5 +341,24 @@ describe("Admin User Management Endpoints (lab-03 #45)", () => {
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("WEAK_PASSWORD");
     });
+  });
+
+  afterAll(async () => {
+    await prisma.user.deleteMany({
+      where: {
+        email: {
+          in: [
+            "admin1@example.com",
+            "admin2@example.com",
+            "staff@example.com",
+            "user@example.com",
+            "brandnew@example.com",
+            "weak@example.com",
+            "caller@example.com",
+          ],
+        },
+      },
+    });
+    await prisma.$disconnect();
   });
 });
