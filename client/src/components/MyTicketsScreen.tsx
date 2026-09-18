@@ -451,16 +451,16 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
           /* Tickets Table & Mobile List */
           <div>
             {/* Desktop Table View */}
-            <div className="table-responsive d-none d-md-block">
-              <table className="table table-hover align-middle border mb-0" data-testid="tickets-table">
+            <div className="table-responsive d-none d-lg-block">
+              <table className="table table-hover align-middle border mb-0" style={{ minWidth: "720px", width: "100%" }} data-testid="tickets-table">
                 <thead className="table-light">
                   <tr>
-                    <th scope="col" style={{ width: "16%" }}>Ticket #</th>
-                    <th scope="col" style={{ width: "34%" }}>Summary / Title</th>
-                    <th scope="col" style={{ width: "14%" }}>Category</th>
-                    <th scope="col" style={{ width: "12%" }}>Priority</th>
-                    <th scope="col" style={{ width: "12%" }}>Status</th>
-                    <th scope="col" style={{ width: "12%" }} className="text-end">Actions</th>
+                    <th scope="col" className="text-nowrap" style={{ width: "20%", minWidth: "150px" }}>Ticket #</th>
+                    <th scope="col" style={{ width: "32%" }}>Summary / Title</th>
+                    <th scope="col" className="text-nowrap" style={{ width: "14%" }}>Category</th>
+                    <th scope="col" className="text-nowrap" style={{ width: "11%" }}>Priority</th>
+                    <th scope="col" className="text-nowrap" style={{ width: "11%" }}>Status</th>
+                    <th scope="col" className="text-end text-nowrap pe-3" style={{ width: "12%" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -471,16 +471,18 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                       className="cursor-pointer"
                       data-testid={`ticket-row-${t.id}`}
                     >
-                      <td>
-                        <code className="fw-bold text-dark">{t.ticketNumber}</code>
-                        {t.attachmentCount > 0 && (
-                          <span className="badge bg-light text-muted border ms-1 small" title={`${t.attachmentCount} attachments`}>
-                            {t.attachmentCount} files
-                          </span>
-                        )}
+                      <td className="text-nowrap">
+                        <div className="d-flex align-items-center gap-1 flex-wrap">
+                          <code className="fw-bold text-dark text-nowrap font-monospace" style={{ fontSize: "0.85rem" }}>{t.ticketNumber}</code>
+                          {t.attachmentCount > 0 && (
+                            <span className="badge bg-light text-muted border small" title={`${t.attachmentCount} attachments`}>
+                              {t.attachmentCount} files
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        <div className="fw-semibold text-dark text-truncate" style={{ maxWidth: 320 }} data-testid={`ticket-title-${t.id}`}>
+                        <div className="fw-semibold text-dark text-truncate" style={{ maxWidth: 220 }} data-testid={`ticket-title-${t.id}`}>
                           {t.title}
                         </div>
                         <div className="text-muted small">
@@ -489,13 +491,13 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                         </div>
                       </td>
                       <td>
-                        <span className="badge bg-light text-secondary border">
+                        <span className="badge bg-light text-secondary border text-nowrap">
                           {t.category?.name || "General"}
                         </span>
                       </td>
-                      <td>{getPriorityBadge(t.priority)}</td>
-                      <td>{getStatusBadge(t.status)}</td>
-                      <td className="text-end">
+                      <td className="text-nowrap">{getPriorityBadge(t.priority)}</td>
+                      <td className="text-nowrap">{getStatusBadge(t.status)}</td>
+                      <td className="text-end text-nowrap pe-3">
                         <button
                           type="button"
                           className="btn btn-outline-success btn-sm py-0 px-2"
@@ -519,11 +521,11 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
             </div>
 
             {/* Mobile Card List View */}
-            <div className="d-flex flex-column gap-3 d-md-none" data-testid="tickets-mobile-list">
+            <div className="d-flex flex-column gap-3 d-lg-none" data-testid="tickets-mobile-list">
               {tickets.map((t) => (
                 <div
                   key={t.id}
-                  className="card p-3 border rounded-3 bg-light cursor-pointer shadow-sm"
+                  className="card p-3 border rounded-3 bg-white cursor-pointer shadow-sm zen-ticket-card" style={{ borderLeft: "4px solid var(--color-zen-primary, #0f5132)" }}
                   onClick={() => (onViewTicket ? onViewTicket(t.ticketNumber) : setSelectedTicketId(t.ticketNumber))}
                   data-testid={`ticket-mobile-card-${t.id}`}
                 >

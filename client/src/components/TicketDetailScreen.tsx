@@ -779,8 +779,8 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
                             c.author?.role === "IT_STAFF"
                               ? "bg-success-subtle text-success border border-success"
                               : c.author?.role === "ADMINISTRATOR"
-                              ? "bg-purple-subtle text-purple border border-purple"
-                              : "bg-info-subtle text-info border border-info"
+                              ? "badge-role-admin"
+                              : "badge-role-requester"
                           } small`}
                         >
                           {c.author?.role === "IT_STAFF"

@@ -247,7 +247,7 @@ export function UserManagementScreen() {
         <div className="card-body p-3">
           <div className="row g-2 align-items-center">
             {/* Search Input */}
-            <div className="col-12 col-md-5">
+            <div className="col-12 col-lg-5">
               <div className="input-group input-group-sm">
                 <input
                   type="text"
@@ -271,7 +271,7 @@ export function UserManagementScreen() {
             </div>
 
             {/* Role Filter */}
-            <div className="col-6 col-md-3">
+            <div className="col-6 col-md-5 col-lg-3">
               <select
                 className="form-select form-select-sm"
                 value={roleFilter}
@@ -286,7 +286,7 @@ export function UserManagementScreen() {
             </div>
 
             {/* Status Filter */}
-            <div className="col-6 col-md-3">
+            <div className="col-6 col-md-5 col-lg-3">
               <select
                 className="form-select form-select-sm"
                 value={statusFilter}
@@ -300,7 +300,7 @@ export function UserManagementScreen() {
             </div>
 
             {/* Refresh */}
-            <div className="col-12 col-md-1 text-end">
+            <div className="col-12 col-md-2 col-lg-1 text-end">
               <button
                 type="button"
                 className="btn btn-light btn-sm border w-100 text-muted"
@@ -317,15 +317,16 @@ export function UserManagementScreen() {
 
       {/* Users Table */}
       <div className="card zen-card border-0 shadow-sm overflow-hidden">
-        <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0" data-testid="admin-users-table">
+        {/* Desktop Table View (>= 768px) */}
+        <div className="table-responsive d-none d-lg-block">
+          <table className="table table-hover align-middle mb-0" style={{ width: "100%" }} data-testid="admin-users-table">
             <thead className="table-light small text-uppercase text-muted" style={{ backgroundColor: "#fafcfb" }}>
               <tr>
                 <th scope="col" className="ps-4">User</th>
                 <th scope="col">Department</th>
                 <th scope="col">Role</th>
                 <th scope="col">Status</th>
-                <th scope="col">PW Status</th>
+                <th scope="col" className="d-none d-lg-table-cell">PW Status</th>
                 <th scope="col" className="text-end pe-4">Actions</th>
               </tr>
             </thead>
@@ -471,6 +472,109 @@ export function UserManagementScreen() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile User Card List View (< 768px) */}
+        <div className="d-flex flex-column gap-3 d-lg-none p-3" data-testid="admin-users-mobile-list">
+          {users.map((u) => {
+            const isSelf = u.id === currentAdmin?.id;
+            const roleBadgeClass =
+              u.role === "ADMINISTRATOR"
+                ? "badge-role-admin"
+                : u.role === "IT_STAFF"
+                ? "badge-role-staff"
+                : "badge-role-requester";
+
+            return (
+              <div
+                key={u.id}
+                className="card p-3 border rounded-3 bg-white shadow-sm zen-user-card"
+                data-testid={`mobile-user-card-${u.id}`}
+                style={{ borderLeft: "4px solid var(--color-zen-primary, #0f5132)" }}
+              >
+                {/* User Header: Avatar, Name, Email, You badge */}
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <div
+                    className="rounded-circle text-white d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
+                    style={{
+                      width: "38px",
+                      height: "38px",
+                      fontSize: "0.9rem",
+                      backgroundColor: "var(--color-primary, #15803d)",
+                    }}
+                  >
+                    {(u.name || u.fullName || u.email).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="text-truncate">
+                    <div className="fw-bold text-dark d-flex align-items-center gap-1">
+                      <span>{u.name || u.fullName}</span>
+                      {isSelf && (
+                        <span className="badge bg-secondary-subtle text-secondary small py-0 px-1">
+                          You
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-muted small text-truncate">{u.email}</div>
+                  </div>
+                </div>
+
+                {/* Badges Row: Role, Status, Password Flag, Department */}
+                <div className="d-flex flex-wrap gap-2 align-items-center my-2 pt-2 border-top">
+                  <span className={`badge ${roleBadgeClass}`}>
+                    {u.role === "ADMINISTRATOR"
+                      ? "Administrator"
+                      : u.role === "IT_STAFF"
+                      ? "IT Staff"
+                      : "Requester"}
+                  </span>
+
+                  {u.isActive ? (
+                    <span className="badge badge-status-open d-inline-flex align-items-center gap-1">
+                      <span className="rounded-circle bg-success" style={{ width: 6, height: 6 }} />
+                      Active
+                    </span>
+                  ) : (
+                    <span className="badge badge-priority-urgent d-inline-flex align-items-center gap-1">
+                      <span className="rounded-circle bg-danger" style={{ width: 6, height: 6 }} />
+                      Suspended
+                    </span>
+                  )}
+
+                  {u.mustChangePassword && (
+                    <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
+                      PW Change Required
+                    </span>
+                  )}
+
+                  {u.department && (
+                    <span className="badge bg-light text-secondary border small">
+                      {u.department}
+                    </span>
+                  )}
+                </div>
+
+                {/* Action Buttons Footer */}
+                <div className="d-flex justify-content-end gap-2 pt-2 border-top mt-1">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm px-3"
+                    onClick={() => openEditModal(u)}
+                    data-testid={`mobile-edit-user-btn-${u.id}`}
+                  >
+                    Edit User
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm px-3"
+                    onClick={() => openResetModal(u)}
+                    data-testid={`mobile-reset-password-btn-${u.id}`}
+                  >
+                    Reset Password
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

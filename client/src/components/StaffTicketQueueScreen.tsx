@@ -211,7 +211,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
       <div className="card p-3 bg-white shadow-sm border rounded-3" data-testid="queue-filter-card">
         <div className="row g-2 align-items-center">
           {/* Search */}
-          <div className="col-12 col-md-4">
+          <div className="col-12 col-lg-4">
             <div className="input-group input-group-sm">
               <span className="input-group-text bg-light border-end-0"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" className="text-muted" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg></span>
               <input
@@ -235,7 +235,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
 
           {/* Status Filter */}
-          <div className="col-6 col-sm-4 col-md-2">
+          <div className="col-6 col-md-3 col-lg-2">
             <select
               className="form-select form-select-sm"
               value={statusFilter}
@@ -255,7 +255,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
 
           {/* Priority Filter */}
-          <div className="col-6 col-sm-4 col-md-2">
+          <div className="col-6 col-md-3 col-lg-2">
             <select
               className="form-select form-select-sm"
               value={priorityFilter}
@@ -271,7 +271,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
 
           {/* Owner Filter */}
-          <div className="col-6 col-sm-4 col-md-2">
+          <div className="col-6 col-md-3 col-lg-2">
             <select
               className="form-select form-select-sm"
               value={ownerFilter}
@@ -285,7 +285,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
 
           {/* Category Filter */}
-          <div className="col-6 col-sm-6 col-md-2">
+          <div className="col-6 col-md-3 col-lg-2">
             <select
               className="form-select form-select-sm"
               value={categoryFilter}
@@ -336,8 +336,10 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
             )}
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0" data-testid="staff-ticket-table">
+          <>
+            {/* Desktop Table View (>= 768px) */}
+            <div className="table-responsive d-none d-lg-block">
+              <table className="table table-hover align-middle mb-0" style={{ width: "100%" }} data-testid="staff-ticket-table">
               <thead className="table-light small text-muted text-uppercase">
                 <tr>
                   <th
@@ -354,7 +356,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                   </th>
                   <th>Summary</th>
                   <th>Requester</th>
-                  <th>Status</th>
+                  <th className="text-nowrap">Status</th>
                   <th
                     className="cursor-pointer"
                     onClick={() => {
@@ -367,7 +369,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                   >
                     IT Priority {sortBy === "itPriority" ? (sortDir === "asc" ? "▲" : "▼") : ""}
                   </th>
-                  <th>Assigned Owner</th>
+                  <th className="text-nowrap">Owner</th>
                   <th
                     className="cursor-pointer text-end"
                     onClick={() => {
@@ -380,7 +382,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                   >
                     Created {sortBy === "createdAt" ? (sortDir === "asc" ? "▲" : "▼") : ""}
                   </th>
-                  <th className="text-end">Action</th>
+                  <th className="text-end text-nowrap pe-3">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -395,11 +397,11 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                       onClick={() => onViewTicket(t.id)}
                       data-testid={`queue-row-${t.id}`}
                     >
-                      <td className="fw-semibold text-primary text-nowrap">
+                      <td className="fw-semibold text-primary text-nowrap font-monospace" style={{ fontSize: "0.85rem" }}>
                         {t.ticketNumber}
                       </td>
                       <td>
-                        <div className="fw-semibold text-dark text-truncate" style={{ maxWidth: 260 }}>
+                        <div className="fw-semibold text-dark text-truncate" style={{ maxWidth: 200 }}>
                           {t.title || t.summary}
                         </div>
                         <div className="text-muted small">
@@ -432,7 +434,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                       <td className="small text-muted text-end text-nowrap">
                         {new Date(t.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="text-end" onClick={(e) => e.stopPropagation()}>
+                      <td className="text-end text-nowrap pe-3" onClick={(e) => e.stopPropagation()}>
                         {isUnassigned ? (
                           <button
                             type="button"
@@ -459,7 +461,94 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
               </tbody>
             </table>
           </div>
-        )}
+
+          {/* Mobile Card List View (< 768px) */}
+          <div className="d-flex flex-column gap-3 d-lg-none p-3" data-testid="staff-queue-mobile-list">
+            {tickets.map((t) => {
+              const isUnassigned = !t.ownerId && !t.owner;
+              const isClaimedByMe = t.ownerId === user?.id;
+
+              return (
+                <div
+                  key={t.id}
+                  className="card p-3 border rounded-3 bg-white shadow-sm cursor-pointer zen-ticket-card"
+                  onClick={() => onViewTicket(t.id)}
+                  data-testid={`mobile-queue-card-${t.id}`}
+                  style={{ borderLeft: "4px solid var(--color-zen-primary, #0f5132)" }}
+                >
+                  {/* Card Header: Ticket # & Badges */}
+                  <div className="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                    <span className="fw-bold font-monospace text-primary" style={{ fontSize: "0.95rem" }}>
+                      {t.ticketNumber}
+                    </span>
+                    <div className="d-flex gap-1 align-items-center flex-wrap">
+                      {getPriorityBadge(t.itPriority || t.priority)}
+                      {getStatusBadge(t.status)}
+                    </div>
+                  </div>
+
+                  {/* Title / Summary */}
+                  <h6 className="fw-bold text-dark mb-1 text-break" style={{ lineHeight: 1.4 }}>
+                    {t.title || t.summary}
+                  </h6>
+
+                  {/* Requester & Category Info */}
+                  <div className="text-muted small mb-3">
+                    <div className="d-flex align-items-center gap-1 text-truncate">
+                      <span className="fw-medium text-dark">{t.requester?.name || t.requester?.fullName || "Unknown"}</span>
+                      <span>&bull;</span>
+                      <span className="text-secondary">{t.category?.name || "General"}</span>
+                    </div>
+                    <div className="text-secondary" style={{ fontSize: "0.8rem" }}>
+                      {t.requester?.department || t.requester?.email || ""}
+                    </div>
+                  </div>
+
+                  {/* Card Footer: Owner Status + Date + Claim Action */}
+                  <div className="d-flex justify-content-between align-items-center pt-2 border-top gap-2 flex-wrap">
+                    <div className="d-flex align-items-center gap-2">
+                      {isUnassigned ? (
+                        <span className="badge bg-danger-subtle text-danger border border-danger-subtle">
+                          Unassigned
+                        </span>
+                      ) : (
+                        <span className={`badge ${isClaimedByMe ? "bg-primary-subtle text-primary border border-primary-subtle" : "bg-light text-dark border"}`}>
+                          {isClaimedByMe ? "Assigned: You" : `Owner: ${t.owner?.name || t.owner?.fullName || "Assigned"}`}
+                        </span>
+                      )}
+                      <span className="text-muted" style={{ fontSize: "0.78rem" }}>
+                        {new Date(t.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {isUnassigned ? (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-primary px-3 fw-semibold"
+                          onClick={(e) => handleClaimTicket(t.id, e)}
+                          disabled={claimingId === t.id}
+                          data-testid={`mobile-claim-btn-${t.id}`}
+                        >
+                          {claimingId === t.id ? "Claiming..." : "Claim"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary px-2"
+                          onClick={() => onViewTicket(t.id)}
+                        >
+                          View &rarr;
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
         {/* Pagination Footer */}
         {pagination.total > 0 && (
