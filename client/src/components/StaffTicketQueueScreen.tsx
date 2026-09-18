@@ -202,7 +202,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
       )}
       {errorMessage && (
         <div className="alert alert-danger py-2 px-3 small mb-0 d-flex align-items-center justify-content-between" role="alert">
-          <span>⚠ {errorMessage}</span>
+          <span>{errorMessage}</span>
           <button type="button" className="btn-close small" onClick={() => setErrorMessage(null)} />
         </div>
       )}
