@@ -339,7 +339,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           <>
             {/* Desktop Table View (>= 768px) */}
             <div className="table-responsive d-none d-md-block">
-              <table className="table table-hover align-middle mb-0" style={{ minWidth: "800px" }} data-testid="staff-ticket-table">
+              <table className="table table-hover align-middle mb-0" style={{ width: "100%" }} data-testid="staff-ticket-table">
               <thead className="table-light small text-muted text-uppercase">
                 <tr>
                   <th
@@ -356,7 +356,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                   </th>
                   <th>Summary</th>
                   <th>Requester</th>
-                  <th>Status</th>
+                  <th className="text-nowrap">Status</th>
                   <th
                     className="cursor-pointer"
                     onClick={() => {
@@ -369,7 +369,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                   >
                     IT Priority {sortBy === "itPriority" ? (sortDir === "asc" ? "▲" : "▼") : ""}
                   </th>
-                  <th>Assigned Owner</th>
+                  <th className="text-nowrap">Owner</th>
                   <th
                     className="cursor-pointer text-end"
                     onClick={() => {
@@ -382,7 +382,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                   >
                     Created {sortBy === "createdAt" ? (sortDir === "asc" ? "▲" : "▼") : ""}
                   </th>
-                  <th className="text-end">Action</th>
+                  <th className="text-end text-nowrap pe-3">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -397,11 +397,11 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                       onClick={() => onViewTicket(t.id)}
                       data-testid={`queue-row-${t.id}`}
                     >
-                      <td className="fw-semibold text-primary text-nowrap">
+                      <td className="fw-semibold text-primary text-nowrap font-monospace" style={{ fontSize: "0.85rem" }}>
                         {t.ticketNumber}
                       </td>
                       <td>
-                        <div className="fw-semibold text-dark text-truncate" style={{ maxWidth: 260 }}>
+                        <div className="fw-semibold text-dark text-truncate" style={{ maxWidth: 200 }}>
                           {t.title || t.summary}
                         </div>
                         <div className="text-muted small">
@@ -434,7 +434,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                       <td className="small text-muted text-end text-nowrap">
                         {new Date(t.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="text-end" onClick={(e) => e.stopPropagation()}>
+                      <td className="text-end text-nowrap pe-3" onClick={(e) => e.stopPropagation()}>
                         {isUnassigned ? (
                           <button
                             type="button"

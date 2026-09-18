@@ -319,14 +319,14 @@ export function UserManagementScreen() {
       <div className="card zen-card border-0 shadow-sm overflow-hidden">
         {/* Desktop Table View (>= 768px) */}
         <div className="table-responsive d-none d-md-block">
-          <table className="table table-hover align-middle mb-0" style={{ minWidth: "750px" }} data-testid="admin-users-table">
+          <table className="table table-hover align-middle mb-0" style={{ width: "100%" }} data-testid="admin-users-table">
             <thead className="table-light small text-uppercase text-muted" style={{ backgroundColor: "#fafcfb" }}>
               <tr>
                 <th scope="col" className="ps-4">User</th>
                 <th scope="col">Department</th>
                 <th scope="col">Role</th>
                 <th scope="col">Status</th>
-                <th scope="col">PW Status</th>
+                <th scope="col" className="d-none d-lg-table-cell">PW Status</th>
                 <th scope="col" className="text-end pe-4">Actions</th>
               </tr>
             </thead>
