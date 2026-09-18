@@ -584,7 +584,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
                 disabled={triageLoading}
                 data-testid="detail-claim-btn"
               >
-                {triageLoading ? "Claiming..." : "👤 Claim This Ticket"}
+                {triageLoading ? "Claiming..." : "Claim This Ticket"}
               </button>
             )}
           </div>
@@ -736,7 +736,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
                 onClick={() => setCommTab("comments")}
                 data-testid="tab-public-comments"
               >
-                💬 Public Comments ({comments.length})
+                Public Comments ({comments.length})
               </button>
             </li>
             <li className="nav-item">
@@ -746,7 +746,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
                 onClick={() => setCommTab("notes")}
                 data-testid="tab-internal-notes"
               >
-                🔒 Internal Notes ({notes.length})
+                Internal Notes ({notes.length})
               </button>
             </li>
           </ul>
@@ -849,7 +849,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
         {isStaff && commTab === "notes" && (
           <div data-testid="notes-panel">
             <div className="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-3">
-              <span className="fw-bold">🔒 Confidential Internal Notes</span>
+              <span className="fw-bold">Confidential Internal Notes</span>
               <span className="text-muted">— Visible strictly to IT Staff & Administrators. Strictly hidden from requesters.</span>
             </div>
 
