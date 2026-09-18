@@ -60,10 +60,10 @@ export function AppShell() {
     : "Requester";
 
   const roleBadgeClass = authUser?.role === "ADMINISTRATOR"
-    ? "bg-purple-subtle text-purple border border-purple"
+    ? "badge-role-admin"
     : authUser?.role === "IT_STAFF"
-    ? "bg-success-subtle text-success border border-success"
-    : "bg-info-subtle text-info border border-info";
+    ? "badge-role-staff"
+    : "badge-role-requester";
 
   return (
     <div className="min-vh-100 d-flex flex-column bg-light" data-testid="app-shell">
