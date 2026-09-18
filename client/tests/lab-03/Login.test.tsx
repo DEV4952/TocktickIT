@@ -91,7 +91,7 @@ describe("Lab 3 — LoginScreen Component (UI-01)", () => {
   });
 
   it("displays error banner when login API rejects", async () => {
-    const mockLogin = vi.fn().mockRejectedValue(new Error("Invalid email address or password. Please try again."));
+    const mockLogin = vi.fn().mockRejectedValue(new Error("Invalid email or password. Please try again."));
     const user = userEvent.setup();
 
     renderLoginScreen({ login: mockLogin });
@@ -102,7 +102,7 @@ describe("Lab 3 — LoginScreen Component (UI-01)", () => {
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
     expect(
-      await screen.findByText(/invalid email address or password/i)
+      await screen.findByText(/invalid email or password/i)
     ).toBeInTheDocument();
   });
 });

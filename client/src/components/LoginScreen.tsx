@@ -22,7 +22,7 @@ export function LoginScreen() {
     try {
       await login(email.trim(), password);
     } catch (err: any) {
-      setErrorMessage(err.message || "Invalid email or password. Please try again.");
+      setErrorMessage("Invalid email or password. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -79,49 +79,8 @@ export function LoginScreen() {
             Sign in to your account
           </h4>
 
-          {/* Error Banner Matching Mockup (Red Circle Exclamation + 2 Lines of Text) */}
-          {errorMessage && (
-            <div
-              className="d-flex align-items-center gap-3 p-3 mb-4 text-start"
-              role="alert"
-              data-testid="login-error-banner"
-              style={{
-                backgroundColor: "#fff5f5",
-                border: "1px solid #fed7d7",
-                borderRadius: "8px",
-                color: "#c53030",
-              }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="#e53e3e"
-                strokeWidth="2"
-                className="flex-shrink-0"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <circle cx="12" cy="16" r="0.75" fill="#e53e3e" />
-              </svg>
-              <div className="small lh-sm">
-                <div className="fw-semibold">
-                  {errorMessage.includes("Please try again")
-                    ? errorMessage.split("Please try again")[0].trim().replace(/\.$/, "") + "."
-                    : errorMessage}
-                </div>
-                {errorMessage.includes("Please try again") && (
-                  <div className="mt-1" style={{ color: "#742a2a", fontSize: "0.825rem" }}>
-                    Please try again.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} noValidate>
+            {/* 1. Email Field */}
             <div className="mb-3 text-start">
               <label
                 htmlFor="login-email"
@@ -134,7 +93,7 @@ export function LoginScreen() {
                 id="login-email"
                 type="email"
                 className="form-control"
-                placeholder="name@toktick.it"
+                placeholder="janderson@toktickit.com"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -152,7 +111,8 @@ export function LoginScreen() {
               />
             </div>
 
-            <div className="mb-4 text-start">
+            {/* 2. Password Field */}
+            <div className="mb-3 text-start">
               <label
                 htmlFor="login-password"
                 className="form-label small fw-semibold mb-1"
@@ -205,6 +165,51 @@ export function LoginScreen() {
               </div>
             </div>
 
+            {/* 3. Error Banner Positioned Below Password Field & Above Sign In (Matching Screenshot) */}
+            {errorMessage && (
+              <div
+                className="d-flex align-items-center gap-3 p-3 mb-3 text-start"
+                role="alert"
+                data-testid="login-error-banner"
+                style={{
+                  backgroundColor: "#fff1f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: "8px",
+                  color: "#991b1b",
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#dc2626"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="flex-shrink-0"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <div className="small lh-sm">
+                  <div className="fw-semibold text-danger" style={{ color: "#991b1b" }}>
+                    {errorMessage.includes("Please try again")
+                      ? errorMessage.split("Please try again")[0].trim().replace(/\.$/, "") + "."
+                      : errorMessage}
+                  </div>
+                  {errorMessage.includes("Please try again") && (
+                    <div className="mt-1" style={{ color: "#b91c1c", fontSize: "0.825rem" }}>
+                      Please try again.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 4. Sign In Button */}
             <button
               type="submit"
               className="btn w-100 text-white fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-sm"
@@ -228,6 +233,7 @@ export function LoginScreen() {
             </button>
           </form>
 
+          {/* 5. Forgot Password */}
           <div className="text-center mt-3 pt-1">
             <button
               type="button"
