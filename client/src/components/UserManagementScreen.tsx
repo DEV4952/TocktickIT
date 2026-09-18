@@ -247,7 +247,7 @@ export function UserManagementScreen() {
         <div className="card-body p-3">
           <div className="row g-2 align-items-center">
             {/* Search Input */}
-            <div className="col-12 col-md-5">
+            <div className="col-12 col-lg-5">
               <div className="input-group input-group-sm">
                 <input
                   type="text"
@@ -271,7 +271,7 @@ export function UserManagementScreen() {
             </div>
 
             {/* Role Filter */}
-            <div className="col-6 col-md-3">
+            <div className="col-6 col-md-5 col-lg-3">
               <select
                 className="form-select form-select-sm"
                 value={roleFilter}
@@ -286,7 +286,7 @@ export function UserManagementScreen() {
             </div>
 
             {/* Status Filter */}
-            <div className="col-6 col-md-3">
+            <div className="col-6 col-md-5 col-lg-3">
               <select
                 className="form-select form-select-sm"
                 value={statusFilter}
@@ -300,7 +300,7 @@ export function UserManagementScreen() {
             </div>
 
             {/* Refresh */}
-            <div className="col-12 col-md-1 text-end">
+            <div className="col-12 col-md-2 col-lg-1 text-end">
               <button
                 type="button"
                 className="btn btn-light btn-sm border w-100 text-muted"
@@ -318,7 +318,7 @@ export function UserManagementScreen() {
       {/* Users Table */}
       <div className="card zen-card border-0 shadow-sm overflow-hidden">
         {/* Desktop Table View (>= 768px) */}
-        <div className="table-responsive d-none d-md-block">
+        <div className="table-responsive d-none d-lg-block">
           <table className="table table-hover align-middle mb-0" style={{ width: "100%" }} data-testid="admin-users-table">
             <thead className="table-light small text-uppercase text-muted" style={{ backgroundColor: "#fafcfb" }}>
               <tr>
@@ -475,7 +475,7 @@ export function UserManagementScreen() {
         </div>
 
         {/* Mobile User Card List View (< 768px) */}
-        <div className="d-flex flex-column gap-3 d-md-none p-3" data-testid="admin-users-mobile-list">
+        <div className="d-flex flex-column gap-3 d-lg-none p-3" data-testid="admin-users-mobile-list">
           {users.map((u) => {
             const isSelf = u.id === currentAdmin?.id;
             const roleBadgeClass =

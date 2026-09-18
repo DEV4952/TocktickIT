@@ -211,7 +211,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
       <div className="card p-3 bg-white shadow-sm border rounded-3" data-testid="queue-filter-card">
         <div className="row g-2 align-items-center">
           {/* Search */}
-          <div className="col-12 col-md-4">
+          <div className="col-12 col-lg-4">
             <div className="input-group input-group-sm">
               <span className="input-group-text bg-light border-end-0"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" className="text-muted" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg></span>
               <input
@@ -235,7 +235,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
 
           {/* Status Filter */}
-          <div className="col-6 col-sm-4 col-md-2">
+          <div className="col-6 col-md-3 col-lg-2">
             <select
               className="form-select form-select-sm"
               value={statusFilter}
@@ -255,7 +255,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
 
           {/* Priority Filter */}
-          <div className="col-6 col-sm-4 col-md-2">
+          <div className="col-6 col-md-3 col-lg-2">
             <select
               className="form-select form-select-sm"
               value={priorityFilter}
@@ -271,7 +271,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
 
           {/* Owner Filter */}
-          <div className="col-6 col-sm-4 col-md-2">
+          <div className="col-6 col-md-3 col-lg-2">
             <select
               className="form-select form-select-sm"
               value={ownerFilter}
@@ -285,7 +285,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
 
           {/* Category Filter */}
-          <div className="col-6 col-sm-6 col-md-2">
+          <div className="col-6 col-md-3 col-lg-2">
             <select
               className="form-select form-select-sm"
               value={categoryFilter}
@@ -338,7 +338,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
         ) : (
           <>
             {/* Desktop Table View (>= 768px) */}
-            <div className="table-responsive d-none d-md-block">
+            <div className="table-responsive d-none d-lg-block">
               <table className="table table-hover align-middle mb-0" style={{ width: "100%" }} data-testid="staff-ticket-table">
               <thead className="table-light small text-muted text-uppercase">
                 <tr>
@@ -463,7 +463,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
 
           {/* Mobile Card List View (< 768px) */}
-          <div className="d-flex flex-column gap-3 d-md-none p-3" data-testid="staff-queue-mobile-list">
+          <div className="d-flex flex-column gap-3 d-lg-none p-3" data-testid="staff-queue-mobile-list">
             {tickets.map((t) => {
               const isUnassigned = !t.ownerId && !t.owner;
               const isClaimedByMe = t.ownerId === user?.id;
