@@ -202,7 +202,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
       )}
       {errorMessage && (
         <div className="alert alert-danger py-2 px-3 small mb-0 d-flex align-items-center justify-content-between" role="alert">
-          <span>⚠ {errorMessage}</span>
+          <span>{errorMessage}</span>
           <button type="button" className="btn-close small" onClick={() => setErrorMessage(null)} />
         </div>
       )}
@@ -213,7 +213,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           {/* Search */}
           <div className="col-12 col-md-4">
             <div className="input-group input-group-sm">
-              <span className="input-group-text bg-light border-end-0">🔍</span>
+              <span className="input-group-text bg-light border-end-0"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" className="text-muted" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg></span>
               <input
                 type="text"
                 className="form-control border-start-0"
@@ -312,7 +312,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           </div>
         ) : tickets.length === 0 ? (
           <div className="text-center py-5" data-testid="queue-empty-state">
-            <div className="fs-1 mb-2">📋</div>
+            <div className="fs-2 mb-2 text-muted"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2.5z"/></svg></div>
             <h6 className="fw-bold text-dark">No tickets found</h6>
             <p className="text-muted small mb-3">
               {search || statusFilter !== "ALL" || priorityFilter !== "ALL" || ownerFilter !== "ALL"
@@ -425,7 +425,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
                           <span
                             className={`badge ${isClaimedByMe ? "bg-primary-subtle text-primary border border-primary-subtle" : "bg-light text-dark border"}`}
                           >
-                            {isClaimedByMe ? "👤 You" : t.owner?.name || t.owner?.fullName || "Assigned"}
+                            {isClaimedByMe ? "You" : t.owner?.name || t.owner?.fullName || "Assigned"}
                           </span>
                         )}
                       </td>

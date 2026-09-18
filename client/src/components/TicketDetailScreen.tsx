@@ -573,7 +573,6 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
         <div className="card p-3 p-md-4 border-success bg-success-subtle shadow-sm rounded-3" data-testid="operational-triage-card">
           <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h6 className="fw-bold text-success-emphasis mb-0 d-flex align-items-center gap-2">
-              <span>🛠️</span>
               <span>IT Staff Operational Triage Controls</span>
             </h6>
             {ticket.ownerId !== authUser?.id && (
@@ -584,7 +583,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
                 disabled={triageLoading}
                 data-testid="detail-claim-btn"
               >
-                {triageLoading ? "Claiming..." : "👤 Claim This Ticket"}
+                {triageLoading ? "Claiming..." : "Claim This Ticket"}
               </button>
             )}
           </div>
@@ -594,7 +593,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           )}
           {triageError && (
             <div className="alert alert-danger py-2 px-3 small mb-3" data-testid="triage-error-banner">
-              ⚠️ {triageError}
+              {triageError}
             </div>
           )}
 
@@ -736,7 +735,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
                 onClick={() => setCommTab("comments")}
                 data-testid="tab-public-comments"
               >
-                💬 Public Comments ({comments.length})
+                Public Comments ({comments.length})
               </button>
             </li>
             <li className="nav-item">
@@ -746,14 +745,13 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
                 onClick={() => setCommTab("notes")}
                 data-testid="tab-internal-notes"
               >
-                🔒 Internal Notes ({notes.length})
+                Internal Notes ({notes.length})
               </button>
             </li>
           </ul>
         ) : (
           <div className="pb-3 mb-3 border-bottom d-flex justify-content-between align-items-center">
             <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2" data-testid="public-comments-header">
-              <span>💬</span>
               <span>Public Comments ({comments.length})</span>
             </h5>
             <span className="text-muted small">Visible to all ticket participants</span>
@@ -808,7 +806,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
             <form onSubmit={handlePostComment} className="pt-2 border-top">
               {commentError && (
                 <div className="alert alert-danger py-2 px-3 small mb-2" data-testid="comment-error-banner">
-                  ⚠️ {commentError}
+                  {commentError}
                 </div>
               )}
               {commentFeedback && (
@@ -849,7 +847,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
         {isStaff && commTab === "notes" && (
           <div data-testid="notes-panel">
             <div className="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-3">
-              <span className="fw-bold">🔒 Confidential Internal Notes</span>
+              <span className="fw-bold">Confidential Internal Notes</span>
               <span className="text-muted">— Visible strictly to IT Staff & Administrators. Strictly hidden from requesters.</span>
             </div>
 
@@ -884,7 +882,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
             <form onSubmit={handlePostNote} className="pt-2 border-top">
               {noteError && (
                 <div className="alert alert-danger py-2 px-3 small mb-2" data-testid="note-error-banner">
-                  ⚠️ {noteError}
+                  {noteError}
                 </div>
               )}
               {noteFeedback && (
@@ -1112,7 +1110,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
                 </p>
                 {resolveError && (
                   <div className="alert alert-danger py-2 px-3 small mb-3">
-                    ⚠️ {resolveError}
+                    {resolveError}
                   </div>
                 )}
                 <div className="mb-2">

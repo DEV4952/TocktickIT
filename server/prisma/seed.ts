@@ -264,7 +264,16 @@ async function main() {
         categoryId: catHardware.id,
         requesterId: samantha.id,
         ownerId: michael.id,
-        attachments: [],
+        attachments: [
+          {
+            fileName: "old-diagnostic-log.txt",
+            fileSize: 12040,
+            fileType: "text/plain",
+            fileUrl: "/uploads/attachments/old-diagnostic-log.txt",
+            isDeleted: true,
+            deletedAt: new Date(),
+          },
+        ],
         comments: [
           {
             authorId: michael.id,

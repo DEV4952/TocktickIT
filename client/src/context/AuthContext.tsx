@@ -67,7 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshUser]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthResponse> => {
-    setIsLoading(true);
     setError(null);
     try {
       const res = await loginApi(email, password);
@@ -84,8 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const msg = err instanceof Error ? err.message : "Failed to log in.";
       setError(msg);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
@@ -104,7 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const changePassword = useCallback(
     async (currentPassword: string, newPassword: string, confirmPassword: string) => {
-      setIsLoading(true);
       setError(null);
       try {
         const savedToken = token || localStorage.getItem(TOKEN_KEY);
@@ -117,13 +113,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const msg = err instanceof Error ? err.message : "Failed to update password.";
         setError(msg);
         throw err;
-      } finally {
-        setIsLoading(false);
       }
     },
     [token]
   );
-
   return (
     <AuthContext.Provider
       value={{

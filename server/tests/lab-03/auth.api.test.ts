@@ -47,6 +47,59 @@ describe("Lab 3 — Authentication & Session Management APIs (Issue #4)", () => 
         passwordHash: defaultHash,
       },
     });
+
+    // Ensure jordan.taylor is inactive
+    await prisma.user.upsert({
+      where: { email: "jordan.taylor@toktick.it" },
+      update: {
+        passwordHash: defaultHash,
+        isActive: false,
+      },
+      create: {
+        name: "Jordan Taylor",
+        email: "jordan.taylor@toktick.it",
+        department: "Finance",
+        role: "REQUESTER",
+        isActive: false,
+        passwordHash: defaultHash,
+      },
+    });
+
+    // Ensure michael.brown is active IT_STAFF
+    await prisma.user.upsert({
+      where: { email: "michael.brown@toktick.it" },
+      update: {
+        passwordHash: defaultHash,
+        role: "IT_STAFF",
+        isActive: true,
+      },
+      create: {
+        name: "Michael Brown",
+        email: "michael.brown@toktick.it",
+        department: "IT Operations",
+        role: "IT_STAFF",
+        isActive: true,
+        passwordHash: defaultHash,
+      },
+    });
+
+    // Ensure john.smith is active ADMINISTRATOR
+    await prisma.user.upsert({
+      where: { email: "john.smith@toktick.it" },
+      update: {
+        passwordHash: defaultHash,
+        role: "ADMINISTRATOR",
+        isActive: true,
+      },
+      create: {
+        name: "John Smith",
+        email: "john.smith@toktick.it",
+        department: "System Administration",
+        role: "ADMINISTRATOR",
+        isActive: true,
+        passwordHash: defaultHash,
+      },
+    });
   });
 
   afterAll(async () => {
@@ -138,11 +191,12 @@ describe("Lab 3 — Authentication & Session Management APIs (Issue #4)", () => 
           password: "Password123!",
         });
 
-      const cookies = loginRes.headers["set-cookie"];
+      const cookies = loginRes.headers["set-cookie"] || [loginRes.header["set-cookie"]];
+      const cookieHeader = Array.isArray(cookies) ? cookies[0] : cookies;
 
       const meRes = await request(app)
         .get("/api/auth/me")
-        .set("Cookie", cookies);
+        .set("Cookie", cookieHeader);
 
       expect(meRes.status).toBe(200);
       expect(meRes.body.user.role).toBe("ADMINISTRATOR");
