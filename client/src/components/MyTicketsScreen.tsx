@@ -451,7 +451,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
           /* Tickets Table & Mobile List */
           <div>
             {/* Desktop Table View */}
-            <div className="table-responsive d-none d-md-block">
+            <div className="table-responsive d-none d-lg-block">
               <table className="table table-hover align-middle border mb-0" style={{ minWidth: "720px", width: "100%" }} data-testid="tickets-table">
                 <thead className="table-light">
                   <tr>
@@ -521,11 +521,11 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
             </div>
 
             {/* Mobile Card List View */}
-            <div className="d-flex flex-column gap-3 d-md-none" data-testid="tickets-mobile-list">
+            <div className="d-flex flex-column gap-3 d-lg-none" data-testid="tickets-mobile-list">
               {tickets.map((t) => (
                 <div
                   key={t.id}
-                  className="card p-3 border rounded-3 bg-light cursor-pointer shadow-sm"
+                  className="card p-3 border rounded-3 bg-white cursor-pointer shadow-sm zen-ticket-card" style={{ borderLeft: "4px solid var(--color-zen-primary, #0f5132)" }}
                   onClick={() => (onViewTicket ? onViewTicket(t.ticketNumber) : setSelectedTicketId(t.ticketNumber))}
                   data-testid={`ticket-mobile-card-${t.id}`}
                 >
