@@ -9,77 +9,104 @@
 
 | PR / Issue | Branch | Reviewer verdict | Notes |
 |---|---|---|---|
-| #38 (Issue #1) | feature/lab3-specification | approved | Sprint 3 engineering contract, specification, UI/API contracts, and acceptance criteria |
-| #48 (Issue #2) | feature/lab3-tests-plan | approved | Lab 3 Test DD plan and traceability matrix in docs/lab-03/tests.md |
-| #49 (Issue #3) | feature/lab3-db-user-migration | approved | User model, Role enum, ticket workflow fields, and idempotent seed script |
-| #50 (Issue #4) | feature/lab3-auth-session | approved | Secure authentication endpoints, bcrypt hashing, session cookies, and login screens |
-| #51 (Issue #5) | feature/lab3-rbac-authorization | approved | Server-side RBAC middleware, anti-tampering on creation, and ownership isolation |
-| #52 (Issue #6) | feat/staff-ticket-queue | approved | Shared IT Staff Ticket Queue with search, filters, pagination, and claim action |
-| #53 (Issue #7) | feat/ticket-comments-notes | approved | Public Comments, role-restricted Internal Notes, and requester resolution indication |
-| #54 (Issue #8) | feat/admin-user-management | approved | Minimalist Administrator User Management screen, account safety rules, and password reset |
-| #55 (Issue #9) | test/lab3-e2e-automation | approved | Automated test suite execution (193/193 tests passed), zero Lab 2 regressions, and test matrix |
-| #56 (Issue #10) | feature/lab3-visual-qa | approved | Zen Green visual QA audit across viewports (1440px/768px/375px), responsive card transformation, high-contrast role badges, and release integration |
+| [#38](https://github.com/DEV4952/TocktickIT/pull/38) (Issue #1) | feature/lab3-specification | approved | docs: establish lab 3 engineering contract and specifications (spec dd) |
+| [#48](https://github.com/DEV4952/TocktickIT/pull/48) (Issue #2) | feature/lab3-tests-plan | approved | docs: establish lab 3 test dd plan and traceability matrix (issue #2) |
+| [#49](https://github.com/DEV4952/TocktickIT/pull/49) (Issue #3) | feature/lab3-db-user-migration | approved | [Issue #3] User Model & Database Migration |
+| [#50](https://github.com/DEV4952/TocktickIT/pull/50) (Issue #4) | feature/lab3-auth-session | approved | Feature/lab3 auth session |
+| [#51](https://github.com/DEV4952/TocktickIT/pull/51) (Issue #5) | feature/lab3-rbac-authorization | approved | Feature/lab3 rbac authorization |
+| [#52](https://github.com/DEV4952/TocktickIT/pull/52) (Issue #6) | feat/staff-ticket-queue | approved | feat(staff): implement shared IT staff ticket queue and operational triage (Issue #6) |
+| [#53](https://github.com/DEV4952/TocktickIT/pull/53) (Issue #7) | feat/ticket-comments-notes | approved | feat(communication): implement public comments, internal notes, and requester resolution indication (Issue #7) |
+| [#54](https://github.com/DEV4952/TocktickIT/pull/54) (Issue #8) | feat/admin-user-management | approved | Feat/admin user management |
+| [#55](https://github.com/DEV4952/TocktickIT/pull/55) (Issue #9) | test/lab3-e2e-automation | approved | Test/lab3 e2e automation |
+| [#56](https://github.com/DEV4952/TocktickIT/pull/56) (Issue #10) | feature/lab3-visual-qa | approved | Feature/lab3 visual qa |
+
+---
+
+## Pull Requests I reviewed for my partner
+
+| PR / Issue | Branch | Reviewer verdict | Notes |
+|---|---|---|---|
+| [#41](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/41) (Issue #1) | feature/lab3-specification | approved | Lab 3 Engineering Contract and Test Plan |
+| [#42](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/42) (Issue #2) | feature/lab3-tests-plan | approved | Lab 3 User Model Migration and Seed Data |
+| [#43](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/43) (Issue #3) | feature/lab3-db-user-migration | approved | Lab 3 Authentication Foundation |
+| [#44](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/44) (Issue #4) | feature/lab3-auth-session | approved | Mandatory First Login Password Change |
+| [#45](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/45) (Issue #5) | feature/lab3-rbac-authorization | approved | Role-Based Authorization and Requester Regression |
+| [#46](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/46) (Issue #6) | feat/staff-ticket-queue | approved | IT Staff Ticket Queue |
+| [#47](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/47) (Issue #7) | feat/ticket-comments-notes | approved | IT Staff Ticket Detail and Operations |
+| [#48](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/48) (Issue #8) | feat/admin-user-management | approved | Public Comments and Internal Notes |
+| [#49](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/49) (Issue #9) | test/lab3-e2e-automation | approved | Administrator User Management |
+| [#50](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/50) (Issue #10) | feature/lab3-visual-qa | approved | Lab 3 E2E, Responsive, Regression and Release Integration |
 
 ---
 
 ## Detailed Peer Review Records by Issue
 
-### Issue #1 : Lab 3 Engineering Specification (PR #38)
-- **Reviewer comment received:** Specifications are detailed and comprehensive. Ensure that the Development Requester selector from Lab 2 is completely decoupled once authentication is introduced.
-- **How I responded:** Added architectural migration guidelines in `docs/lab-03/specification.md` explicitly defining how the session identity replaces the development persona selector.
-- **My comment:** Please verify that the 15 functional requirements and 15 business rules match the assignment constraints.
-- **Partner's response:** Verified. The scope boundaries and explicit exclusions match the handout requirements. Approved.
+### Issue #1 : docs: establish lab 3 engineering contract and specifications (spec dd)
+- **Reviewer comment received:** looks good to me naka. Approved!
+- **How I responded:** Thank you
+- **Issue #1 (Partner):** Lab 3 Engineering Contract and Test Plan ([PR #41](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/41))
+- **My comment:** The PR description is fantastic. It gives a clear overview and made reviewing much easier
+- **Partner's response:** Thx ka
 
-### Issue #2 : Test-Driven Development Plan & Traceability Matrix (PR #48)
-- **Reviewer comment received:** Make sure the matrix explicitly maps all API and UI acceptance criteria (AC-01 through AC-14) to planned test files.
-- **How I responded:** Structured `docs/lab-03/tests.md` with complete requirement-to-test mapping tables, test execution commands, and DoD criteria.
-- **My comment:** Please review test distribution between server integration tests and client component tests.
-- **Partner's response:** The test matrix covers all critical paths and safety boundaries cleanly. Approved.
+### Issue #2 : docs: establish lab 3 test dd plan and traceability matrix (issue #2)
+- **Reviewer comment received:** looks good ka. Approved!
+- **How I responded:** Thank you kub
+- **Issue #2 (Partner):** Lab 3 User Model Migration and Seed Data ([PR #42](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/42))
+- **My comment:** looks good kub. Approved!
+- **Partner's response:** Rogers!
 
-### Issue #3 : User Model, Roles & Database Migration (PR #49)
-- **Reviewer comment received:** Database schema correctly implements the `Role` enum. Ensure seed scripts provide the minimum user quotas required by the lab.
-- **How I responded:** Implemented idempotent seed script in `server/prisma/seed.ts` seeding 12 realistic users across Requester, IT Staff, and Administrator roles.
-- **My comment:** Checked database relations and verified that Lab 2 tickets and attachments remain intact.
-- **Partner's response:** Ran `npm run prisma:seed` and verified user counts and relations. Approved.
+### Issue #3 : [Issue #3] User Model & Database Migration
+- **Reviewer comment received:** Looks good ka!
+- **How I responded:** Thank you
+- **Issue #3 (Partner):** Lab 3 Authentication Foundation ([PR #43](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/43))
+- **My comment:** Authentication implementation looks solid! 👍 APPROVE!!!!
+- **Partner's response:** Acknowledge with thanks
 
-### Issue #4 : Authentication & Session Management (PR #50)
-- **Reviewer comment received:** Login and password change APIs work as expected. Ensure first-login password enforcement strictly blocks access until updated.
-- **How I responded:** Added server-side middleware and frontend navigation guard blocking all normal screens if `mustChangePassword === true`.
-- **My comment:** Added `LoginScreen` and `ChangePasswordScreen` matching Zen Green theme.
-- **Partner's response:** Tested login, first-login password update, and logout cookie invalidation. Approved.
+### Issue #4 : Feature/lab3 auth session
+- **Reviewer comment received:** Everything looks good!
+- **How I responded:** Thank you
+- **Issue #4 (Partner):** Mandatory First Login Password Change ([PR #44](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/44))
+- **My comment:** Nice work kub. approve!
+- **Partner's response:** Thank you ka
 
-### Issue #5 : RBAC & Authorization Boundaries (PR #51)
-- **Reviewer comment received:** Ensure client cannot inject `requesterId` in request bodies to forge ticket ownership.
-- **How I responded:** Enforced server-side `req.user.id` binding in `POST /api/tickets` and added 404 ownership isolation for foreign requester queries.
-- **My comment:** Added 12 automated tests in `authorization.api.test.ts` covering all RBAC boundaries.
-- **Partner's response:** Verified with automated test runs and direct API calls. Approved.
+### Issue #5 : Feature/lab3 rbac authorization
+- **Reviewer comment received:** Everything looks good after testing the result is all passed. Great jobs!
+- **How I responded:** Thank you kub
+- **Issue #5 (Partner):** Role-Based Authorization and Requester Regression ([PR #45](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/45))
+- **My comment:** LGTM! nice na kub good good approve
+- **Partner's response:** Thx ka
 
-### Issue #6 : IT Staff Ticket Queue & Operational Triage (PR #52)
-- **Reviewer comment received:** The queue search and filters are responsive. Check that unassigned tickets can be claimed directly by active IT Staff.
-- **How I responded:** Implemented `PATCH /api/staff/tickets/:id/claim` and `PATCH /api/staff/tickets/:id/reassign` with validation preventing reassignment to requesters.
-- **My comment:** Added pagination and debounce search on the queue table.
-- **Partner's response:** Operational triage controls and status transition matrix behave as required. Approved.
+### Issue #6 : feat(staff): implement shared IT staff ticket queue and operational triage (Issue #6)
+- **Reviewer comment received:** Everything looks good to me. Good works ka! Keep going 💪💪
+- **How I responded:** Thank you mak kub
+- **Issue #6 (Partner):** IT Staff Ticket Queue ([PR #46](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/46))
+- **My comment:** Good job kub approve!!
+- **Partner's response:** Thank you ka
 
-### Issue #7 : Public Comments & Internal Notes (PR #53)
-- **Reviewer comment received:** Internal Notes must be strictly inaccessible to Requesters, both via UI tabs and direct API calls.
-- **How I responded:** Enforced 403 Forbidden on `/notes` endpoints for non-staff roles and conditioned UI tab rendering strictly on `role !== "REQUESTER"`.
-- **My comment:** Added "Problem Appears Resolved" indication for ticket requesters.
-- **Partner's response:** Tested note secrecy and comment submission. Approved.
+### Issue #7 : feat(communication): implement public comments, internal notes, and requester resolution indication (Issue #7)
+- **Reviewer comment received:** Everything looks good ka. Good jobs!
+- **How I responded:** Thank you
+- **Issue #7 (Partner):** IT Staff Ticket Detail and Operations ([PR #47](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/47))
+- **My comment:** Over all look good to me Approve!
+- **Partner's response:** Thx you
 
-### Issue #8 : Administrator User Management Screen & Safety Rules (PR #54)
-- **Reviewer comment received:** Safety rules for self-deactivation and last active admin protection are critical. Ensure they return appropriate HTTP conflict codes.
-- **How I responded:** Implemented safety guards returning 403 for self-deactivation/demotion and 409 `LAST_ACTIVE_ADMIN` when attempting to deactivate the sole remaining admin.
-- **My comment:** Styled User Management table with Zen Green role badges and per-page select dropdown.
-- **Partner's response:** Tested user creation, role assignment, and safety guard boundaries. Approved.
+### Issue #8 : Feat/admin user management
+- **Reviewer comment received:** Good work ka. Everything has no any conflicts.
+- **How I responded:** Thank you kub
+- **Issue #8 (Partner):** Public Comments and Internal Notes ([PR #48](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/48))
+- **My comment:** LGTM! The implementation is clear and follows the existing project structure well.
+- **Partner's response:** Thank you!
 
-### Issue #9 : Automated & E2E Testing Suite (PR #55)
-- **Reviewer comment received:** Ensure 100% of planned tests pass with zero regressions on existing Lab 2 suites.
-- **How I responded:** Executed all 25 test suites across Server and Client (193 tests passed, 100% clean) and updated `docs/lab-03/tests.md`.
-- **My comment:** Verified that both Lab 2 and Lab 3 suites pass simultaneously without database race conditions.
-- **Partner's response:** Verified test execution logs. All DoD items satisfied. Approved.
+### Issue #9 : Test/lab3 e2e automation
+- **Reviewer comment received:** Everything looks good na. Great jobs bro!
+- **How I responded:** Thank you
+- **Issue #9 (Partner):** Administrator User Management ([PR #49](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/49))
+- **My comment:** Ok fine look good i will approve it
+- **Partner's response:** Thx jraa
 
-### Issue #10 : UI Polish, Evidence & Release Integration (PR #56)
-- **Reviewer comment received:** Table layouts on mobile viewports must not clip or push critical operational controls out of view. Ensure badge contrast conforms to WCAG standards.
-- **How I responded:** Converted Staff Ticket Queue and Admin User Management into native Zen Green card lists on mobile (< 768px) with high-contrast role badges (#6d28d9 on #ede9fe for Administrator) and captured complete screenshot evidence in `artifacts/lab-03/screenshots/`.
-- **My comment:** Verified zero layout defects across 1440px, 768px, and 375px viewports, and ensured 100% test suite passage.
-- **Partner's response:** UI feels native and responsive across mobile and desktop. Badges are legible and clear. Final DoD verified. Approved.
+### Issue #10 : Feature/lab3 visual qa
+- **Reviewer comment received:** Everything looks good ka YaY!
+- **How I responded:** Thank you
+- **Issue #10 (Partner):** Lab 3 E2E, Responsive, Regression and Release Integration ([PR #50](https://github.com/yiiipunn/TockTickIT-Service-Desk/pull/50))
+- **My comment:** over all look good approve
+- **Partner's response:** Khob Khun ka!

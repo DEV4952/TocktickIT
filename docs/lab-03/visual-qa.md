@@ -21,7 +21,7 @@ The visual QA audit verified that all screens, components, and interactive workf
 | Viewport | Screen Size | Target Devices | Layout Strategy & Verification Result |
 |---|---|---|---|
 | **Desktop** | 1440px &times; 900px | High-res desktop displays | Full multi-column data tables, sticky headers, operational triage drawer, split layout comments & notes. **Pass (100%)** |
-| **Tablet** | 768px &times; 1024px | iPad, Android Tablets | Adaptive table with horizontal scroll (`min-width: 800px`), metrics cards in 2&times;2 grid, responsive modal overlays. **Pass (100%)** |
+| **Tablet** | 768px &times; 1024px, 820px &times; 1180px | iPad Mini, iPad Air, Android Tablets | Dynamically transforms into **Zen Green Responsive Cards** (`d-lg-none`), full-width search bar, spacious 4-up filter dropdowns with zero text truncation, metrics cards in balanced 2&times;2 grid, and direct tap-friendly action buttons (Claim, Edit, Reset Password). **Pass (100%)** |
 | **Mobile** | 375px &times; 812px | iPhone SE, 13/14/15, Pixel | Tables convert into native **Zen Green Mobile Cards** with prominent status/priority badges, full-width summaries, and easy-touch action buttons. **Pass (100%)** |
 
 ---
@@ -43,7 +43,7 @@ The visual QA audit verified that all screens, components, and interactive workf
   - 4 interactive stat cards (Total, Unassigned, Assigned to Me, In Progress) responsive in 4-column (desktop), 2-column (tablet), and 1-column (mobile).
 - **Queue Table & Mobile Card List:**
   - **Desktop (1440px):** Clean table with sortable column headers, clear status badges, and direct "Claim" button for unassigned tickets.
-  - **Mobile (375px):** Automatically transforms from data table into **Zen Green Mobile Cards** with green left-border accent (`#0f5132`), header ticket number, status and priority pills, full summary, requester details, and touch-friendly Claim button.
+  - **Tablet (768px – 820px, iPad Mini & iPad Air) & Mobile (375px):** Automatically transforms from wide data tables into native **Zen Green Cards** with green left-border accent (`#0f5132`), header ticket number, status and priority pills, full summary, requester details, and touch-friendly Claim button without horizontal table clipping or off-screen action buttons.
 
 ### 3.3. Staff Ticket Detail & Operational Triage (`UI-04`, `UI-05`)
 - **Operational Triage Card:**
@@ -102,9 +102,9 @@ artifacts/lab-03/screenshots/
 
 ## 5. Final Definition of Done (DoD) Verification
 
-- [x] Responsive audit complete across Desktop (1440px), Tablet (768px), and Mobile (375px) with zero layout clipping or horizontal overflow.
+- [x] Responsive audit complete across Desktop (1440px), Tablet (768px iPad Mini & 820px iPad Air), and Mobile (375px) with zero layout clipping or horizontal overflow.
 - [x] High-contrast role badges verified under WCAG 2.1 AA guidelines.
 - [x] All submission screenshot artifacts generated and organized in designated folders.
 - [x] `docs/lab-03/reviewer.md` and `docs/lab-03/ai-use.md` fully completed with all 10 issue records.
 - [x] Automated test suite executed with 100% pass rate (64 Server tests + 32 Client tests = 96 Lab 3 tests; 193 Total regression tests).
-- [x] Pull Request opened from `feature/lab3-visual-qa` into `lab3-staging`.
+- [x] Pull Request #56 successfully reviewed and merged from `feature/lab3-visual-qa` into `lab3-staging`.
