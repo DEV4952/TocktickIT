@@ -1,0 +1,244 @@
+import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import request from "supertest";
+import { app } from "../../src/app.js";
+import { getPrisma } from "../../src/prisma.js";
+import { createSessionToken } from "../../src/utils/auth.js";
+import bcrypt from "bcryptjs";
+
+describe("Lab 3 — IT Staff Ticket Queue & Operational Triage APIs (Issue #6)", () => {
+  const prisma = getPrisma();
+
+  let itStaffUser: any;
+  let itStaffUser2: any;
+  let adminUser: any;
+  let requesterUser: any;
+
+  let itStaffToken: string;
+  let itStaffToken2: string;
+  let adminToken: string;
+  let requesterToken: string;
+
+  let testCategory: any;
+  let testTicket1: any;
+  let testTicket2: any;
+
+  beforeEach(async () => {
+    itStaffUser = await prisma.user.upsert({
+      where: { email: "staff.queue1@toktick.it" },
+      update: { role: "IT_STAFF", isActive: true, mustChangePassword: false },
+      create: {
+        email: "staff.queue1@toktick.it",
+        name: "Staff Queue User 1",
+        department: "IT Support",
+        role: "IT_STAFF",
+        isActive: true,
+        mustChangePassword: false,
+        passwordHash: bcrypt.hashSync("Password123!", 10),
+      },
+    });
+
+    itStaffUser2 = await prisma.user.upsert({
+      where: { email: "staff.queue2@toktick.it" },
+      update: { role: "IT_STAFF", isActive: true, mustChangePassword: false },
+      create: {
+        email: "staff.queue2@toktick.it",
+        name: "Staff Queue User 2",
+        department: "IT Operations",
+        role: "IT_STAFF",
+        isActive: true,
+        mustChangePassword: false,
+        passwordHash: bcrypt.hashSync("Password123!", 10),
+      },
+    });
+
+    adminUser = await prisma.user.upsert({
+      where: { email: "admin.queue@toktick.it" },
+      update: { role: "ADMINISTRATOR", isActive: true, mustChangePassword: false },
+      create: {
+        email: "admin.queue@toktick.it",
+        name: "Admin Queue User",
+        department: "IT Leadership",
+        role: "ADMINISTRATOR",
+        isActive: true,
+        mustChangePassword: false,
+        passwordHash: bcrypt.hashSync("Password123!", 10),
+      },
+    });
+
+    requesterUser = await prisma.user.upsert({
+      where: { email: "requester.queue@toktick.it" },
+      update: { role: "REQUESTER", isActive: true, mustChangePassword: false },
+      create: {
+        email: "requester.queue@toktick.it",
+        name: "Requester Queue User",
+        department: "Sales",
+        role: "REQUESTER",
+        isActive: true,
+        mustChangePassword: false,
+        passwordHash: bcrypt.hashSync("Password123!", 10),
+      },
+    });
+
+    itStaffToken = createSessionToken(itStaffUser);
+    itStaffToken2 = createSessionToken(itStaffUser2);
+    adminToken = createSessionToken(adminUser);
+    requesterToken = createSessionToken(requesterUser);
+
+    // Use existing seeded category without creating new ones to maintain 4 categories invariant
+    testCategory = await prisma.category.findFirstOrThrow();
+
+    // Clean up test tickets created in previous test runs
+    await prisma.ticket.deleteMany({
+      where: {
+        ticketNumber: { in: ["TKT-DTL-001", "TKT-DTL-002", "TKT-QUEUE-003"] },
+      },
+    });
+
+    // Create test ticket 1: Unassigned, status NEW, priority MEDIUM
+    testTicket1 = await prisma.ticket.create({
+      data: {
+        ticketNumber: "TKT-DTL-001",
+        title: "Test Queue Laptop Battery Issue",
+        description: "Laptop battery drains within thirty minutes during video calls.",
+        status: "NEW",
+        priority: "MEDIUM",
+        itPriority: "MEDIUM",
+        categoryId: testCategory.id,
+        requesterId: requesterUser.id,
+        ownerId: null,
+      },
+    });
+
+    // Create test ticket 2: Assigned to itStaffUser, status OPEN, priority HIGH
+    testTicket2 = await prisma.ticket.create({
+      data: {
+        ticketNumber: "TKT-DTL-002",
+        title: "VPN Connection Drops Frequently",
+        description: "VPN client disconnects every 15 minutes across all departments.",
+        status: "OPEN",
+        priority: "HIGH",
+        itPriority: "HIGH",
+        categoryId: testCategory.id,
+        requesterId: requesterUser.id,
+        ownerId: itStaffUser.id,
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.ticket.deleteMany({
+      where: {
+        ticketNumber: { in: ["TKT-DTL-001", "TKT-DTL-002", "TKT-QUEUE-003"] },
+      },
+    });
+  });
+
+  describe("PATCH /api/staff/tickets/:id/claim (FR-07)", () => {
+    it("allows IT Staff to claim an unassigned ticket", async () => {
+      const res = await request(app)
+        .patch(`/api/staff/tickets/${testTicket1.id}/claim`)
+        .set("Authorization", `Bearer ${itStaffToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.ticket.ownerId).toBe(itStaffUser.id);
+      expect(res.body.ticket.owner.name).toBe(itStaffUser.name);
+
+      const dbTicket = await prisma.ticket.findUnique({ where: { id: testTicket1.id } });
+      expect(dbTicket?.ownerId).toBe(itStaffUser.id);
+    });
+  });
+
+  describe("PATCH /api/staff/tickets/:id/reassign (FR-07)", () => {
+    it("allows reassigning a ticket to another active IT staff member", async () => {
+      const res = await request(app)
+        .patch(`/api/staff/tickets/${testTicket1.id}/reassign`)
+        .set("Authorization", `Bearer ${itStaffToken}`)
+        .send({ ownerId: itStaffUser2.id });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ticket.ownerId).toBe(itStaffUser2.id);
+
+      const dbTicket = await prisma.ticket.findUnique({ where: { id: testTicket1.id } });
+      expect(dbTicket?.ownerId).toBe(itStaffUser2.id);
+    });
+
+    it("rejects reassignment to a Requester with 400 Bad Request", async () => {
+      const res = await request(app)
+        .patch(`/api/staff/tickets/${testTicket1.id}/reassign`)
+        .set("Authorization", `Bearer ${itStaffToken}`)
+        .send({ ownerId: requesterUser.id });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("INVALID_ASSIGNEE");
+    });
+  });
+
+  describe("PATCH /api/staff/tickets/:id/priority (FR-08)", () => {
+    it("updates itPriority independently without altering requester's requestedPriority", async () => {
+      const res = await request(app)
+        .patch(`/api/staff/tickets/${testTicket1.id}/priority`)
+        .set("Authorization", `Bearer ${itStaffToken}`)
+        .send({ itPriority: "URGENT" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ticket.itPriority).toBe("URGENT");
+      expect(res.body.ticket.priority).toBe("MEDIUM");
+
+      const dbTicket = await prisma.ticket.findUnique({ where: { id: testTicket1.id } });
+      expect(dbTicket?.itPriority).toBe("URGENT");
+      expect(dbTicket?.priority).toBe("MEDIUM");
+    });
+
+    it("rejects invalid priority value with 400 Bad Request", async () => {
+      const res = await request(app)
+        .patch(`/api/staff/tickets/${testTicket1.id}/priority`)
+        .set("Authorization", `Bearer ${itStaffToken}`)
+        .send({ itPriority: "SUPER_URGENT" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("INVALID_PRIORITY");
+    });
+  });
+
+  describe("PATCH /api/staff/tickets/:id/status (FR-09 / BR-09)", () => {
+    it("allows valid status transition from NEW to OPEN or IN_PROGRESS", async () => {
+      const res = await request(app)
+        .patch(`/api/staff/tickets/${testTicket1.id}/status`)
+        .set("Authorization", `Bearer ${itStaffToken}`)
+        .send({ status: "IN_PROGRESS" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ticket.status).toBe("IN_PROGRESS");
+
+      const dbTicket = await prisma.ticket.findUnique({ where: { id: testTicket1.id } });
+      expect(dbTicket?.status).toBe("IN_PROGRESS");
+    });
+
+    it("rejects invalid transition according to state machine (NEW -> RESOLVED) with 400", async () => {
+      const res = await request(app)
+        .patch(`/api/staff/tickets/${testTicket1.id}/status`)
+        .set("Authorization", `Bearer ${itStaffToken}`)
+        .send({ status: "RESOLVED" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("INVALID_STATUS_TRANSITION");
+    });
+
+    it("rejects transition from terminal CANCELLED state with 400", async () => {
+      // First cancel the ticket (valid transition NEW -> CANCELLED)
+      await request(app)
+        .patch(`/api/staff/tickets/${testTicket1.id}/status`)
+        .set("Authorization", `Bearer ${itStaffToken}`)
+        .send({ status: "CANCELLED" });
+
+      // Attempt invalid transition CANCELLED -> OPEN
+      const res = await request(app)
+        .patch(`/api/staff/tickets/${testTicket1.id}/status`)
+        .set("Authorization", `Bearer ${itStaffToken}`)
+        .send({ status: "OPEN" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("INVALID_STATUS_TRANSITION");
+    });
+  });
+});

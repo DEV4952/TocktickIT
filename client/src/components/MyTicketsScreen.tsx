@@ -4,13 +4,31 @@ import { fetchTickets, fetchCategories } from "../api.js";
 import { TicketSummary, PaginationMetadata, TicketMetrics, Category } from "../types.js";
 import { TicketDetailModal } from "./TicketDetailModal.js";
 
+import { useAuth } from "../context/AuthContext.js";
+
 interface MyTicketsScreenProps {
   onNavigateToNewTicket: () => void;
   onViewTicket?: (ticketIdOrNumber: string | number) => void;
 }
 
 export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicketsScreenProps) {
-  const { currentRequester } = useRequester();
+  let authUser = null;
+  try {
+    const auth = useAuth();
+    authUser = auth?.user;
+  } catch {
+    // Fallback
+  }
+
+  let currentRequester = null;
+  try {
+    const reqCtx = useRequester();
+    currentRequester = reqCtx?.currentRequester;
+  } catch {
+    // Fallback
+  }
+
+  const activeUser = authUser || currentRequester;
 
   // Data States
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
@@ -70,11 +88,11 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
 
   // Fetch Tickets
   const loadTickets = useCallback(async () => {
-    if (!currentRequester) return;
+    if (!activeUser) return;
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetchTickets(currentRequester.id, {
+      const response = await fetchTickets(activeUser.id, {
         page,
         limit,
         search,
@@ -92,7 +110,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
     } finally {
       setIsLoading(false);
     }
-  }, [currentRequester, page, limit, search, status, priority, categoryId, sortBy, sortOrder]);
+  }, [activeUser, page, limit, search, status, priority, categoryId, sortBy, sortOrder]);
 
   // Load tickets on dependency change
   useEffect(() => {
@@ -140,10 +158,10 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
     }
   };
 
-  if (!currentRequester) {
+  if (!activeUser) {
     return (
       <div className="alert alert-warning" role="alert">
-        Please select a development requester persona.
+        Please sign in to view your tickets.
       </div>
     );
   }
@@ -160,14 +178,14 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
               My IT Tickets
             </h4>
             <p className="text-muted small mb-0">
-              Overview and tracking of service requests submitted under your persona.
+              Overview and tracking of service requests submitted under your account.
             </p>
           </div>
           <button
             type="button"
             className="btn btn-zen d-flex align-items-center gap-2"
             onClick={onNavigateToNewTicket}
-            disabled={!currentRequester.isActive}
+            disabled={!activeUser.isActive}
             data-testid="header-create-ticket-btn"
           >
             <span>Submit New Ticket</span>
@@ -422,7 +440,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                 type="button"
                 className="btn btn-zen btn-sm px-4"
                 onClick={onNavigateToNewTicket}
-                disabled={!currentRequester.isActive}
+                disabled={!activeUser.isActive}
                 data-testid="empty-create-ticket-btn"
               >
                 Submit Your First Ticket
@@ -433,16 +451,16 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
           /* Tickets Table & Mobile List */
           <div>
             {/* Desktop Table View */}
-            <div className="table-responsive d-none d-md-block">
-              <table className="table table-hover align-middle border mb-0" data-testid="tickets-table">
+            <div className="table-responsive d-none d-lg-block">
+              <table className="table table-hover align-middle border mb-0" style={{ minWidth: "720px", width: "100%" }} data-testid="tickets-table">
                 <thead className="table-light">
                   <tr>
-                    <th scope="col" style={{ width: "16%" }}>Ticket #</th>
-                    <th scope="col" style={{ width: "34%" }}>Summary / Title</th>
-                    <th scope="col" style={{ width: "14%" }}>Category</th>
-                    <th scope="col" style={{ width: "12%" }}>Priority</th>
-                    <th scope="col" style={{ width: "12%" }}>Status</th>
-                    <th scope="col" style={{ width: "12%" }} className="text-end">Actions</th>
+                    <th scope="col" className="text-nowrap" style={{ width: "20%", minWidth: "150px" }}>Ticket #</th>
+                    <th scope="col" style={{ width: "32%" }}>Summary / Title</th>
+                    <th scope="col" className="text-nowrap" style={{ width: "14%" }}>Category</th>
+                    <th scope="col" className="text-nowrap" style={{ width: "11%" }}>Priority</th>
+                    <th scope="col" className="text-nowrap" style={{ width: "11%" }}>Status</th>
+                    <th scope="col" className="text-end text-nowrap pe-3" style={{ width: "12%" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -453,16 +471,18 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                       className="cursor-pointer"
                       data-testid={`ticket-row-${t.id}`}
                     >
-                      <td>
-                        <code className="fw-bold text-dark">{t.ticketNumber}</code>
-                        {t.attachmentCount > 0 && (
-                          <span className="badge bg-light text-muted border ms-1 small" title={`${t.attachmentCount} attachments`}>
-                            {t.attachmentCount} files
-                          </span>
-                        )}
+                      <td className="text-nowrap">
+                        <div className="d-flex align-items-center gap-1 flex-wrap">
+                          <code className="fw-bold text-dark text-nowrap font-monospace" style={{ fontSize: "0.85rem" }}>{t.ticketNumber}</code>
+                          {t.attachmentCount > 0 && (
+                            <span className="badge bg-light text-muted border small" title={`${t.attachmentCount} attachments`}>
+                              {t.attachmentCount} files
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        <div className="fw-semibold text-dark text-truncate" style={{ maxWidth: 320 }} data-testid={`ticket-title-${t.id}`}>
+                        <div className="fw-semibold text-dark text-truncate" style={{ maxWidth: 220 }} data-testid={`ticket-title-${t.id}`}>
                           {t.title}
                         </div>
                         <div className="text-muted small">
@@ -471,13 +491,13 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                         </div>
                       </td>
                       <td>
-                        <span className="badge bg-light text-secondary border">
+                        <span className="badge bg-light text-secondary border text-nowrap">
                           {t.category?.name || "General"}
                         </span>
                       </td>
-                      <td>{getPriorityBadge(t.priority)}</td>
-                      <td>{getStatusBadge(t.status)}</td>
-                      <td className="text-end">
+                      <td className="text-nowrap">{getPriorityBadge(t.priority)}</td>
+                      <td className="text-nowrap">{getStatusBadge(t.status)}</td>
+                      <td className="text-end text-nowrap pe-3">
                         <button
                           type="button"
                           className="btn btn-outline-success btn-sm py-0 px-2"
@@ -501,11 +521,11 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
             </div>
 
             {/* Mobile Card List View */}
-            <div className="d-flex flex-column gap-3 d-md-none" data-testid="tickets-mobile-list">
+            <div className="d-flex flex-column gap-3 d-lg-none" data-testid="tickets-mobile-list">
               {tickets.map((t) => (
                 <div
                   key={t.id}
-                  className="card p-3 border rounded-3 bg-light cursor-pointer shadow-sm"
+                  className="card p-3 border rounded-3 bg-white cursor-pointer shadow-sm zen-ticket-card" style={{ borderLeft: "4px solid var(--color-zen-primary, #0f5132)" }}
                   onClick={() => (onViewTicket ? onViewTicket(t.ticketNumber) : setSelectedTicketId(t.ticketNumber))}
                   data-testid={`ticket-mobile-card-${t.id}`}
                 >
@@ -538,8 +558,22 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
                 <div className="d-flex align-items-center gap-1">
                   <span>Per page:</span>
                   <select
-                    className="form-select form-select-sm py-0 px-2"
-                    style={{ width: "auto" }}
+                    className="form-select form-select-sm"
+                    style={{
+                      width: "75px",
+                      minWidth: "75px",
+                      paddingLeft: "10px",
+                      paddingRight: "28px",
+                      paddingTop: "3px",
+                      paddingBottom: "3px",
+                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 8px center",
+                      backgroundSize: "12px 10px",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      MozAppearance: "none"
+                    }}
                     value={limit}
                     onChange={(e) => {
                       setLimit(Number(e.target.value));

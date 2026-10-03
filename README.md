@@ -1,23 +1,63 @@
 # TokTickIT — IT Service Desk
 
-TokTickIT is a full-stack IT Service Desk and ticketing web application designed for enterprise IT service requests, ticket tracking, diagnostic attachment management, and multi-user requester workflows.
+TokTickIT is an enterprise full-stack IT Service Desk and ticketing web application designed for IT service requests, ticket tracking, diagnostic attachment management, multi-role access control, and operational triage.
 
 Developed as part of **CPE 334 Introduction to Software Engineering in the Age of AI Agents**, KMUTT.
 
 ---
 
-## Lab 2 — Requester-Facing Ticketing MVP
+## Lab 3 — User Management, Authentication, RBAC & Operational Triage
 
-In Lab 2, TokTickIT implements the complete end-to-end Requester (end-user) experience using a **Development Requester** persona context switcher, **Zen Green Design System**, PostgreSQL database persistence, and a comprehensive automated test suite.
+In Lab 3, TokTickIT transitions from simulated identities to a production-grade multi-role application featuring secure authentication, role-based access control (RBAC), shared IT staff queue management, confidential internal notes, and administrative safety safeguards.
 
-### Key Features (Lab 2)
+### Key Features (Lab 3)
 
-- **Development Requester Context Switcher:** Simulated multi-user testing identity selection (`RequesterContext`), header injection (`x-requester-id`), and persistent session state.
-- **Create Ticket Workflow:** Validated ticket creation with collision-resistant ticket number generation (`TK-YYYYMMDD-XXXX`), category and related system selectors, requested priority badges, and immediate attachment staging.
-- **My Tickets Dashboard:** Paginated, searchable, filterable (by Category, Status, Priority), and sortable table with strict Requester ownership isolation.
-- **Ticket Detail & Diagnostic Attachments:** Read-only ticket information view with live attachment management (up to 5 active files, max 5MB/file, JPG/PNG/WEBP/PDF), secure download streaming, and soft removal with reason capture.
-- **Confirmation Modals & Feedback Alerts:** Interactive removal dialogs with reason recording and success feedback banners across screens.
-- **Responsive Zen Green UI:** Optimized for Desktop (≥992px), Tablet/iPad (768px–991px), and Mobile (<768px) with mobile navigation bar, zero emojis, and accessible color tokens.
+- **Secure Authentication & Session Management:**
+  - Password hashing with bcrypt, secure HTTP-only session cookies, and bearer token support.
+  - First-login mandatory password change enforcement (`mustChangePassword = true`) blocking access to normal business APIs until complexity requirements (min 8 chars, mixed case, number, symbol) are met.
+- **Role-Based Access Control (RBAC):**
+  - Explicit three-role architecture: `REQUESTER`, `IT_STAFF`, and `ADMINISTRATOR`.
+  - Server-side middleware (`requireAuth`, `requireRole`) enforcing zero data leakage.
+  - Anti-tampering protection on ticket creation, binding ticket ownership strictly to the authenticated session user.
+  - Ownership isolation preventing Requesters from accessing foreign tickets (HTTP 404).
+- **IT Staff Ticket Queue & Operational Triage:**
+  - Shared IT queue with real-time operational metrics cards (Total, Unassigned, Assigned to Me, In Progress).
+  - Multi-criteria filtering (Status, Priority, Owner, Category) with debounced search.
+  - One-click ticket claiming and staff reassignment with validation preventing assignment to non-staff.
+  - Independent IT Priority triage preserving the requester's original requested priority.
+  - Enforced status state machine preventing invalid transitions (e.g. `NEW` -> `RESOLVED` or transitions from terminal `CANCELLED`).
+- **Ticket Communications (Public Comments vs. Confidential Internal Notes):**
+  - Public comments visible to both requesters and staff.
+  - Role-restricted Internal Notes strictly inaccessible to Requesters (HTTP 403) with distinct visual confidentiality indicators.
+  - Requester "Problem Appears Resolved" indication workflow posting automated system comments.
+- **Administrator User Management & Safety Guards:**
+  - Dedicated User Management Console for provisioning and updating accounts.
+  - Self-deactivation and self-demotion safety blocks (HTTP 403).
+  - Last active administrator protection rule preventing lockout (HTTP 409).
+  - Administrative password reset flow generating initial credentials with mandatory change flag.
+- **Zen Green Responsive Polish & Tablet Optimizations:**
+  - Full WCAG AA contrast compliance (6.2:1 contrast ratio on role badges).
+  - Native **Zen Green Card View** on Tablet (iPad Mini 768px, iPad Air 820px portrait) and Mobile (< 768px), preventing table horizontal clipping and preserving immediate access to Action buttons.
+
+---
+
+## Documentation Index
+
+### Lab 3 Documentation ([docs/lab-03/](docs/lab-03/))
+
+| Document | Path | Purpose |
+|---|---|---|
+| **Engineering Specification** | [`docs/lab-03/specification.md`](docs/lab-03/specification.md) | Sprint 3 goal, scope, Functional Requirements (FR-01–15), Business Rules (BR-01–15), Acceptance Criteria (AC-01–14), Authorization Matrix, Definition of Done |
+| **REST API Specification** | [`docs/lab-03/api-spec.md`](docs/lab-03/api-spec.md) | Endpoint contracts for Auth, Staff Queue, Triage, Notes, Comments, and Admin User APIs with error schemas |
+| **UI Specification** | [`docs/lab-03/ui-spec.md`](docs/lab-03/ui-spec.md) | Zen Green design tokens, screen contracts (UI-01 to UI-06), role badges, and component layouts |
+| **Development Credentials** | [`docs/lab-03/development-credentials.md`](docs/lab-03/development-credentials.md) | Seed user accounts, default passwords, and persona testing reference |
+| **Automated Testing & Traceability** | [`docs/lab-03/tests.md`](docs/lab-03/tests.md) | TDD test matrix mapping AC-01–14 to 33 API/UI test suites, execution commands, and DoD checklist |
+| **Visual QA Checklist** | [`docs/lab-03/visual-qa.md`](docs/lab-03/visual-qa.md) | Multi-viewport responsive audit (1440px, 768px iPad Mini, 820px iPad Air, 375px), WCAG AA badge contrast audit |
+| **Peer Review Record** | [`docs/lab-03/reviewer.md`](docs/lab-03/reviewer.md) | Formal peer review log for 10 authored PRs (#38, #48–#56) with review comments and partner approvals |
+| **AI Use & Reflection** | [`docs/lab-03/ai-use.md`](docs/lab-03/ai-use.md) | 10 key prompts logged and reflective engineering summary across Spec-Agent and Coding-Agent workflows |
+
+### Lab 2 Documentation ([docs/lab-02/](docs/lab-02/))
+Refer to [`docs/lab-02/`](docs/lab-02/) for earlier Sprint 2 requester ticketing deliverables.
 
 ---
 
@@ -26,25 +66,9 @@ In Lab 2, TokTickIT implements the complete end-to-end Requester (end-user) expe
 | Layer | Technologies |
 |---|---|
 | **Frontend** | React 18, TypeScript, Vite, Bootstrap 5, Zen Green CSS Tokens |
-| **Backend** | Node.js, Express.js, TypeScript, Multer, Prisma ORM |
+| **Backend** | Node.js, Express.js, TypeScript, Multer, bcryptjs, Prisma ORM |
 | **Database** | PostgreSQL 14+ |
-| **Testing** | Vitest, React Testing Library, Supertest, JSDOM (106 / 106 tests passing) |
-
----
-
-## Documentation Index
-
-All engineering contracts, specifications, test matrices, and sprint evidence are located in [`docs/lab-02/`](docs/lab-02/):
-
-| Document | Path | Purpose |
-|---|---|---|
-| **Engineering Specification** | [`docs/lab-02/specification.md`](docs/lab-02/specification.md) | Sprint goal, scope, Functional Requirements (FR-01–09), Business Rules (BR-01–15), Acceptance Criteria (AC-01–09), DoD |
-| **REST API Specification** | [`docs/lab-02/api-spec.md`](docs/lab-02/api-spec.md) | Endpoint contracts, request/response JSON schemas, error handling, query params, ownership rules |
-| **UI Specification** | [`docs/lab-02/ui-spec.md`](docs/lab-02/ui-spec.md) | Zen Green design system tokens, screen layouts, responsive behavior, validation styles |
-| **Automated Testing & Traceability** | [`docs/lab-02/tests.md`](docs/lab-02/tests.md) | Test strategy, planned test matrix, AC-to-test mapping, execution commands, 100% pass verification |
-| **Visual QA Checklist** | [`docs/lab-02/visual-qa.md`](docs/lab-02/visual-qa.md) | Desktop, Tablet, and Mobile visual inspection checklist, layout audits, zero-emoji verification |
-| **Peer Review Record** | [`docs/lab-02/reviewer.md`](docs/lab-02/reviewer.md) | Review records for 10 authored PRs and 8 partner PRs reviewed with `@yiiipunn` |
-| **AI Use & Reflection** | [`docs/lab-02/ai-use.md`](docs/lab-02/ai-use.md) | 10 key prompts logged and reflective engineering summary |
+| **Testing** | Vitest, React Testing Library, Supertest, JSDOM (193 / 193 tests passing, 100%) |
 
 ---
 
@@ -67,7 +91,7 @@ npm install
 cp .env.example .env
 # Ensure DATABASE_URL in .env points to your PostgreSQL instance
 
-# Run migrations and idempotent seed (Categories, Systems, Requesters)
+# Run migrations and idempotent seed (Users, Roles, Categories, Systems, Tickets)
 npx prisma migrate dev
 npm run prisma:seed
 
@@ -94,18 +118,24 @@ npm run dev
 
 ## Running Automated Tests
 
-TokTickIT includes 106 automated tests covering Unit, API Integration, UI Component, Responsive, and Full E2E workflows.
+TokTickIT features a complete test-driven suite with **193 automated tests** across Server and Client with 100% pass rate and zero regressions.
+
+### Run Lab 3 Tests (Combined Server + Client)
+```bash
+npm run test:lab3
+```
+*Runs 64 server integration tests and 32 client component tests specific to Lab 3 (96 tests total).*
 
 ### Run All Backend Tests (Server)
 ```bash
 cd server
 npm test
 ```
-*Executes 56 Supertest + Vitest integration tests for API endpoints, ownership isolation, ticket sequence generation, and attachment lifecycles.*
+*Executes all Supertest + Vitest integration tests for Auth, RBAC, Staff Queue, Comments, Notes, User Management, and Lab 2 APIs (120 tests).*
 
 ### Run All Frontend Tests (Client)
 ```bash
 cd client
 npm test
 ```
-*Executes 50 Vitest + React Testing Library tests for screens, components, modals, responsive navigation, and full E2E requester workflow.*
+*Executes all Vitest + React Testing Library tests for Login, Password Change, Staff Queue, Staff Detail, User Management, and Requester workflows (73 tests).*

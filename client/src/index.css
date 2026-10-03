@@ -310,3 +310,64 @@ body {
     padding: 6px 12px;
   }
 }
+
+/* Role Badges matching UI Spec Section 2.1 */
+.bg-purple-subtle {
+  background-color: #ede9fe !important;
+}
+.text-purple {
+  color: #6d28d9 !important;
+}
+.border-purple {
+  border-color: #c4b5fd !important;
+}
+
+.badge-role-admin {
+  background-color: #ede9fe !important;
+  color: #6d28d9 !important;
+  border: 1px solid #c4b5fd !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em;
+}
+
+.badge-role-staff {
+  background-color: #dcfce7 !important;
+  color: #15803d !important;
+  border: 1px solid #86efac !important;
+  font-weight: 600 !important;
+}
+
+.badge-role-requester {
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
+  border: 1px solid #bae6fd !important;
+  font-weight: 500 !important;
+}
+
+/* Fix pagination select dropdown arrow and padding */
+.per-page-select {
+  min-width: 68px !important;
+  width: auto !important;
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+  padding-left: 0.5rem !important;
+  padding-right: 1.75rem !important;
+  background-position: right 0.4rem center !important;
+  line-height: 1.5 !important;
+}
+
+
+/* Zen Card Hover & Border Accents */
+.zen-ticket-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.zen-ticket-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08) !important;
+}
+.zen-user-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.zen-user-card:hover {
+  box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.06) !important;
+}

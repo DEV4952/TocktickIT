@@ -1,3 +1,25 @@
+export type Role = "REQUESTER" | "IT_STAFF" | "ADMINISTRATOR";
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  fullName?: string;
+  department?: string | null;
+  avatarUrl?: string | null;
+  role: Role;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AuthResponse {
+  token?: string;
+  user: User;
+  message?: string;
+}
+
 export interface Requester {
   id: number;
   name: string;
@@ -14,7 +36,15 @@ export interface Category {
   createdAt?: string;
 }
 
-export type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+export type TicketStatus =
+  | "NEW"
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_FOR_REQUESTER"
+  | "RESOLVED"
+  | "CLOSED"
+  | "REOPENED"
+  | "CANCELLED";
 export type TicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
 export interface Attachment {
@@ -42,6 +72,10 @@ export interface Ticket {
   requesterId: number;
   requester: Requester;
   attachments: Attachment[];
+  itPriority?: TicketPriority;
+  ownerId?: number | null;
+  owner?: { id: number; name: string; email: string; role: string } | null;
+  problemAppearsResolved?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -123,4 +157,92 @@ export interface ApiError {
     field: string;
     issue: string;
   }>;
+}
+
+
+export interface StaffQueueCounts {
+  all: number;
+  unassigned: number;
+  myTickets: number;
+  inProgress: number;
+}
+
+export interface StaffTicketSummary extends Ticket {
+  summary?: string;
+  requestedPriority?: TicketPriority;
+}
+
+export interface StaffTicketQueueResponse {
+  data: StaffTicketSummary[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  counts: StaffQueueCounts;
+}
+
+export interface CommentAuthor {
+  id: number;
+  name?: string;
+  fullName?: string;
+  email?: string;
+  role: "REQUESTER" | "IT_STAFF" | "ADMINISTRATOR";
+  avatarUrl?: string | null;
+}
+
+export interface TicketComment {
+  id: number;
+  ticketId: number;
+  body: string;
+  createdAt: string;
+  authorId?: number;
+  author: CommentAuthor;
+}
+
+export interface InternalNote {
+  id: number;
+  ticketId: number;
+  body: string;
+  createdAt: string;
+  authorId?: number;
+  author: CommentAuthor;
+}
+
+export interface AdminUser {
+  id: number;
+  name: string;
+  fullName?: string;
+  email: string;
+  department?: string | null;
+  role: Role;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  createdAt: string;
+}
+
+export interface AdminUserQueryOptions {
+  search?: string;
+  role?: string;
+  isActive?: string;
+}
+
+export interface CreateAdminUserPayload {
+  name?: string;
+  fullName?: string;
+  email: string;
+  department?: string;
+  role: Role;
+  isActive?: boolean;
+  initialPassword: string;
+}
+
+export interface UpdateAdminUserPayload {
+  name?: string;
+  fullName?: string;
+  email?: string;
+  department?: string;
+  role?: Role;
+  isActive?: boolean;
 }

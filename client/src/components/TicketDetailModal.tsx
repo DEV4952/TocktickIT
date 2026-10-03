@@ -3,13 +3,32 @@ import { useRequester } from "../context/RequesterContext.js";
 import { fetchTicketById } from "../api.js";
 import { Ticket } from "../types.js";
 
+import { useAuth } from "../context/AuthContext.js";
+
 interface TicketDetailModalProps {
   ticketIdOrNumber: string | number;
   onClose: () => void;
 }
 
 export function TicketDetailModal({ ticketIdOrNumber, onClose }: TicketDetailModalProps) {
-  const { currentRequester } = useRequester();
+  let authUser = null;
+  try {
+    const auth = useAuth();
+    authUser = auth?.user;
+  } catch {
+    // Fallback
+  }
+
+  let currentRequester = null;
+  try {
+    const reqCtx = useRequester();
+    currentRequester = reqCtx?.currentRequester;
+  } catch {
+    // Fallback
+  }
+
+  const activeUser = authUser || currentRequester;
+
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,11 +36,11 @@ export function TicketDetailModal({ ticketIdOrNumber, onClose }: TicketDetailMod
   useEffect(() => {
     let isMounted = true;
     async function loadTicket() {
-      if (!currentRequester) return;
+      if (!activeUser) return;
       setIsLoading(true);
       setError(null);
       try {
-        const data = await fetchTicketById(ticketIdOrNumber, currentRequester.id);
+        const data = await fetchTicketById(ticketIdOrNumber, activeUser.id);
         if (isMounted) {
           setTicket(data);
         }
@@ -40,7 +59,7 @@ export function TicketDetailModal({ ticketIdOrNumber, onClose }: TicketDetailMod
     return () => {
       isMounted = false;
     };
-  }, [ticketIdOrNumber, currentRequester]);
+  }, [ticketIdOrNumber, activeUser]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;

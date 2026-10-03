@@ -105,6 +105,22 @@ export async function fetchCurrentRequester(requesterId: number): Promise<Reques
   return data;
 }
 
+function getAuthHeaders(customHeaders?: Record<string, string>, devRequesterId?: number): Record<string, string> {
+  const headers: Record<string, string> = { ...customHeaders };
+  try {
+    const token = localStorage.getItem("toktickit_auth_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  } catch {
+    // ignore
+  }
+  if (devRequesterId) {
+    headers["x-requester-id"] = String(devRequesterId);
+  }
+  return headers;
+}
+
 /**
  * Submit a new IT support ticket under the active requester's identity.
  */
@@ -122,16 +138,14 @@ export async function createTicket(
       fileUrl: string;
     }>;
   },
-  requesterId: number
+  requesterId?: number
 ) {
   let res: Response;
   try {
     res = await fetch("/api/tickets", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }, requesterId),
       body: JSON.stringify(ticketData),
     });
   } catch {
@@ -156,7 +170,7 @@ export async function createTicket(
  * Fetch paginated tickets for the active requester with optional filters, search, and sorting.
  */
 export async function fetchTickets(
-  requesterId: number,
+  requesterId?: number,
   options: {
     page?: number;
     limit?: number;
@@ -182,9 +196,8 @@ export async function fetchTickets(
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
     });
   } catch {
     throw new Error("Unable to load tickets. Please check your connection.");
@@ -207,13 +220,12 @@ export async function fetchTickets(
 /**
  * Fetch full ticket details for a single ticket by numeric ID or Ticket Number.
  */
-export async function fetchTicketById(ticketIdOrNumber: number | string, requesterId: number) {
+export async function fetchTicketById(ticketIdOrNumber: number | string, requesterId?: number) {
   let res: Response;
   try {
     res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}`, {
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
     });
   } catch {
     throw new Error("Unable to load ticket details. Please check your connection.");
@@ -236,13 +248,12 @@ export async function fetchTicketById(ticketIdOrNumber: number | string, request
 /**
  * Fetch all attachments (including soft-removed metadata) for a single ticket.
  */
-export async function fetchTicketAttachments(ticketIdOrNumber: number | string, requesterId: number) {
+export async function fetchTicketAttachments(ticketIdOrNumber: number | string, requesterId?: number) {
   let res: Response;
   try {
     res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/attachments`, {
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
     });
   } catch {
     throw new Error("Unable to load ticket attachments. Please check your connection.");
@@ -268,7 +279,7 @@ export async function fetchTicketAttachments(ticketIdOrNumber: number | string, 
 export async function uploadTicketAttachment(
   ticketIdOrNumber: number | string,
   file: File,
-  requesterId: number
+  requesterId?: number
 ) {
   const formData = new FormData();
   formData.append("file", file);
@@ -277,9 +288,8 @@ export async function uploadTicketAttachment(
   try {
     res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/attachments`, {
       method: "POST",
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
       body: formData,
     });
   } catch {
@@ -303,13 +313,12 @@ export async function uploadTicketAttachment(
 /**
  * Download an active attachment file.
  */
-export async function downloadAttachment(attachmentId: number, fileName: string, requesterId: number) {
+export async function downloadAttachment(attachmentId: number, fileName: string, requesterId?: number) {
   let res: Response;
   try {
     res = await fetch(`/api/attachments/${attachmentId}/download`, {
-      headers: {
-        "x-requester-id": String(requesterId),
-      },
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
     });
   } catch {
     throw new Error("Unable to download attachment. Please check your connection.");
@@ -340,15 +349,13 @@ export async function downloadAttachment(attachmentId: number, fileName: string,
 /**
  * Soft-remove an attachment from a ticket with optional reason.
  */
-export async function removeAttachment(attachmentId: number, requesterId: number, reason?: string) {
+export async function removeAttachment(attachmentId: number, requesterId?: number, reason?: string) {
   let res: Response;
   try {
     res = await fetch(`/api/attachments/${attachmentId}`, {
       method: "DELETE",
-      headers: {
-        "x-requester-id": String(requesterId),
-        "Content-Type": "application/json",
-      },
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }, requesterId),
       body: JSON.stringify({ reason }),
     });
   } catch {
@@ -369,4 +376,584 @@ export async function removeAttachment(attachmentId: number, requesterId: number
   return await res.json();
 }
 
+/**
+ * Log in with email and password.
+ */
+export async function loginApi(email: string, password: string): Promise<any> {
+  let res: Response;
+  try {
+    res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new Error("Unable to reach server. Please check your network connection.");
+  }
 
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "Invalid email or password. Please try again.");
+  }
+
+  return data;
+}
+
+/**
+ * Log out current user session.
+ */
+export async function logoutApi(): Promise<void> {
+  try {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+    });
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Fetch current authenticated user.
+ */
+export async function getMeApi(token?: string | null): Promise<any> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch("/api/auth/me", { headers });
+  } catch {
+    throw new Error("Unable to check authentication status.");
+  }
+
+  if (!res.ok) {
+    throw new Error("Not authenticated");
+  }
+
+  return await res.json();
+}
+
+/**
+ * Change user password.
+ */
+export async function changePasswordApi(
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword: string,
+  token?: string | null
+): Promise<any> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch("/api/auth/change-password", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+    });
+  } catch {
+    throw new Error("Unable to reach server. Please check your network connection.");
+  }
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to update password.");
+  }
+
+  return data;
+}
+
+
+
+
+
+/**
+ * Query the staff ticket queue with search, filter, sort, and pagination.
+ */
+export async function fetchStaffTickets(
+  options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    priority?: string;
+    categoryId?: number | string;
+    ownerId?: string;
+    sortBy?: string;
+    sortDir?: string;
+  } = {}
+) {
+  const queryParams = new URLSearchParams();
+  if (options.page) queryParams.set("page", String(options.page));
+  if (options.limit) queryParams.set("limit", String(options.limit));
+  if (options.search && options.search.trim()) queryParams.set("search", options.search.trim());
+  if (options.status && options.status !== "ALL") queryParams.set("status", options.status);
+  if (options.priority && options.priority !== "ALL") queryParams.set("priority", options.priority);
+  if (options.categoryId && options.categoryId !== "ALL") queryParams.set("categoryId", String(options.categoryId));
+  if (options.ownerId && options.ownerId !== "ALL") queryParams.set("ownerId", options.ownerId);
+  if (options.sortBy) queryParams.set("sortBy", options.sortBy);
+  if (options.sortDir) queryParams.set("sortDir", options.sortDir);
+
+  const url = `/api/staff/tickets${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      credentials: "include",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    throw new Error("Unable to load staff ticket queue. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load staff ticket queue.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Claim an unassigned ticket as the current user.
+ */
+export async function claimTicketApi(ticketIdOrNumber: number | string) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/staff/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/claim`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({}),
+    });
+  } catch {
+    throw new Error("Unable to claim ticket. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to claim ticket.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Reassign a ticket to specified IT Staff or Admin (or null to unassign).
+ */
+export async function reassignTicketApi(ticketIdOrNumber: number | string, ownerId: number | null) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/staff/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/reassign`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ ownerId }),
+    });
+  } catch {
+    throw new Error("Unable to reassign ticket. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to reassign ticket.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Update the IT Priority of a ticket without altering requestedPriority.
+ */
+export async function updateTicketPriorityApi(
+  ticketIdOrNumber: number | string,
+  itPriority: "LOW" | "MEDIUM" | "HIGH" | "URGENT"
+) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/staff/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/priority`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ itPriority }),
+    });
+  } catch {
+    throw new Error("Unable to update IT priority. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to update IT priority.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Update ticket status with transition validation (BR-09).
+ */
+export async function updateTicketStatusApi(
+  ticketIdOrNumber: number | string,
+  status: string,
+  resolutionSummary?: string
+) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/staff/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/status`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ status, resolutionSummary }),
+    });
+  } catch {
+    throw new Error("Unable to update ticket status. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to update ticket status.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Fetch all active IT Staff and Admin users for ticket assignment.
+ */
+export async function fetchAssignableStaffApi() {
+  let res: Response;
+  try {
+    res = await fetch("/api/staff/assignees", {
+      credentials: "include",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    throw new Error("Unable to load assignable staff. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load assignable staff.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Issue 7 – Public Comments, Internal Notes & Requester Resolution APIs
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch all public comments for a ticket.
+ */
+export async function fetchTicketComments(ticketIdOrNumber: number | string, requesterId?: number) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/comments`, {
+      credentials: "include",
+      headers: getAuthHeaders({}, requesterId),
+    });
+  } catch {
+    throw new Error("Unable to load ticket comments. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load ticket comments.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Post a public comment on a ticket.
+ */
+export async function createTicketComment(ticketIdOrNumber: number | string, body: string, requesterId?: number) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/comments`, {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }, requesterId),
+      body: JSON.stringify({ body }),
+    });
+  } catch {
+    throw new Error("Unable to post comment. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to post comment.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Fetch confidential internal notes for a ticket (IT Staff & Admin only).
+ */
+export async function fetchTicketInternalNotes(ticketIdOrNumber: number | string) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/notes`, {
+      credentials: "include",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    throw new Error("Unable to load internal notes. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to load internal notes.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Post a confidential internal note on a ticket (IT Staff & Admin only).
+ */
+export async function createTicketInternalNote(ticketIdOrNumber: number | string, body: string) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/notes`, {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ body }),
+    });
+  } catch {
+    throw new Error("Unable to post internal note. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to post internal note.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Requester indicates problem appears resolved.
+ */
+export async function indicateProblemResolvedApi(ticketIdOrNumber: number | string, comment?: string, requesterId?: number) {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${encodeURIComponent(String(ticketIdOrNumber))}/resolve-indication`, {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }, requesterId),
+      body: JSON.stringify({ comment }),
+    });
+  } catch {
+    throw new Error("Unable to submit resolution indication. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to indicate problem resolved.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+import type { AdminUser, AdminUserQueryOptions, CreateAdminUserPayload, UpdateAdminUserPayload } from "./types";
+
+/**
+ * Fetch all users with optional search and role/active filters (Admin only)
+ */
+export async function fetchAdminUsersApi(options: AdminUserQueryOptions = {}): Promise<AdminUser[]> {
+  const params = new URLSearchParams();
+  if (options.search) params.append("search", options.search);
+  if (options.role && options.role !== "ALL") params.append("role", options.role);
+  if (options.isActive && options.isActive !== "all") params.append("isActive", options.isActive);
+
+  const query = params.toString() ? `?${params.toString()}` : "";
+  let res: Response;
+  try {
+    res = await fetch(`/api/admin/users${query}`, {
+      method: "GET",
+      credentials: "include",
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    throw new Error("Unable to fetch users. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to fetch users.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.users || []);
+}
+
+/**
+ * Provision new user account (Admin only)
+ */
+export async function createAdminUserApi(payload: CreateAdminUserPayload): Promise<{ user: AdminUser; message?: string }> {
+  let res: Response;
+  try {
+    res = await fetch("/api/admin/users", {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("Unable to create user. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to create user.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
+
+/**
+ * Update user details, role and active toggle (Admin only)
+ */
+export async function updateAdminUserApi(id: number, payload: UpdateAdminUserPayload): Promise<{ user: AdminUser }> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/admin/users/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("Unable to update user. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to update user.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  const data = await res.json();
+  return data.user ? data : { user: data };
+}
+
+/**
+ * Reset initial password forcing mustChangePassword on next login (Admin only)
+ */
+export async function resetAdminUserPasswordApi(id: number, initialPassword: string): Promise<{ message: string }> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/admin/users/${id}/reset-password`, {
+      method: "POST",
+      credentials: "include",
+      headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ initialPassword, newInitialPassword: initialPassword, newPassword: initialPassword }),
+    });
+  } catch {
+    throw new Error("Unable to reset password. Please check your connection.");
+  }
+
+  if (!res.ok) {
+    let errorMsg = "Failed to reset password.";
+    try {
+      const errJson = await res.json();
+      if (errJson.message) errorMsg = errJson.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}
