@@ -620,9 +620,14 @@ export async function updateTicketPriorityApi(
 /**
  * Update ticket status with transition validation (BR-09).
  */
+export class TicketWorkflowApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
 export async function updateTicketStatusApi(
   ticketIdOrNumber: number | string,
   status: string,
+  currentUpdatedAt: string,
   resolutionSummary?: string
 ) {
   let res: Response;
@@ -631,7 +636,7 @@ export async function updateTicketStatusApi(
       method: "PATCH",
       credentials: "include",
       headers: getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ status, resolutionSummary }),
+      body: JSON.stringify({ status, currentUpdatedAt, resolutionSummary }),
     });
   } catch {
     throw new Error("Unable to update ticket status. Please check your connection.");
@@ -645,7 +650,7 @@ export async function updateTicketStatusApi(
     } catch {
       // ignore
     }
-    throw new Error(errorMsg);
+    throw new TicketWorkflowApiError(res.status, errorMsg);
   }
 
   return await res.json();

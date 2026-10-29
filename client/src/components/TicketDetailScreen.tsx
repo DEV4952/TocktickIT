@@ -1,5 +1,6 @@
+import { permittedTransitions } from "../ticketWorkflow.js";
 import { ActionsTaken } from "./ActionsTaken.js";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRequester } from "../context/RequesterContext.js";
 import {
   fetchTicketById,
@@ -29,9 +30,11 @@ interface TicketDetailScreenProps {
 
 export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScreenProps) {
   let authUser = null;
+  let authLoading = true;
   try {
     const auth = useAuth();
     authUser = auth?.user;
+    authLoading = auth?.isLoading ?? true;
   } catch {
     // Fallback
   }
@@ -65,11 +68,15 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   const [removeSuccess, setRemoveSuccess] = useState<string | null>(null);
 
   // Operational Triage State (Issue #6)
-  const isStaff = authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR";
+  const isStaff = !authLoading && (authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR");
   const [assignees, setAssignees] = useState<any[]>([]);
   const [triageLoading, setTriageLoading] = useState(false);
   const [triageFeedback, setTriageFeedback] = useState<string | null>(null);
   const [triageError, setTriageError] = useState<string | null>(null);
+
+  const statusBusy = useRef(false);
+  const [workflowConflict, setWorkflowConflict] = useState(false);
+  const [refreshingWorkflow, setRefreshingWorkflow] = useState(false);
 
   // Communication States (Issue #7)
   const [commTab, setCommTab] = useState<"comments" | "notes">("comments");
@@ -108,8 +115,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       const res = await claimTicketApi(ticket.id);
       setTicket((prev: any) => ({
         ...prev,
-        ownerId: res.ticket.ownerId,
-        owner: res.ticket.owner,
+        ...res.ticket,
       }));
       setTriageFeedback("Ticket successfully claimed!");
       setTimeout(() => setTriageFeedback(null), 3000);
@@ -130,8 +136,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       const res = await reassignTicketApi(ticket.id, newOwnerId);
       setTicket((prev: any) => ({
         ...prev,
-        ownerId: res.ticket.ownerId,
-        owner: res.ticket.owner,
+        ...res.ticket,
       }));
       setTriageFeedback("Ticket ownership successfully updated!");
       setTimeout(() => setTriageFeedback(null), 3000);
@@ -151,7 +156,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       const res = await updateTicketPriorityApi(ticket.id, newPriority);
       setTicket((prev: any) => ({
         ...prev,
-        itPriority: res.ticket.itPriority,
+        ...res.ticket,
       }));
       setTriageFeedback("IT Priority successfully updated!");
       setTimeout(() => setTriageFeedback(null), 3000);
@@ -163,23 +168,29 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!ticket) return;
-    setTriageLoading(true);
-    setTriageError(null);
-    setTriageFeedback(null);
+    if (!ticket || triageLoading || statusBusy.current || workflowConflict || !permittedTransitions(ticket.status, authUser?.role).includes(newStatus as Ticket["status"])) return;
+    statusBusy.current = true;
+    setTriageLoading(true); setTriageError(null); setTriageFeedback(null);
     try {
-      const res = await updateTicketStatusApi(ticket.id, newStatus);
-      setTicket((prev: any) => ({
-        ...prev,
-        status: res.ticket.status,
-      }));
-      setTriageFeedback(`Status transitioned to ${newStatus}!`);
-      setTimeout(() => setTriageFeedback(null), 3000);
+      const res = await updateTicketStatusApi(ticket.id, newStatus, ticket.updatedAt);
+      setTicket(prev => prev ? { ...prev, ...res.ticket } : null);
+      setTriageFeedback("Status updated successfully.");
     } catch (err: any) {
-      setTriageError(err.message || "Disallowed status transition.");
-    } finally {
-      setTriageLoading(false);
-    }
+      if (err.status === 409) {
+        setWorkflowConflict(true);
+        setTriageError("Another update occurred. Your change was not saved. Load the latest ticket and review it before changing status again.");
+      } else setTriageError(err.message || "Unable to change ticket status.");
+    } finally { statusBusy.current = false; setTriageLoading(false); }
+  };
+  const refreshWorkflow = async () => {
+    if (!ticket || refreshingWorkflow) return;
+    setRefreshingWorkflow(true);
+    try {
+      const latest = await fetchTicketById(ticket.id, activeUser!.id);
+      setTicket(latest); setWorkflowConflict(false); setTriageError(null);
+      setTriageFeedback("Latest ticket loaded. Review its status and details before choosing a transition.");
+    } catch (err: any) { setTriageError(err.message || "Unable to load the latest ticket. Please try again."); }
+    finally { setRefreshingWorkflow(false); }
   };
 
   // Load ticket & attachment data
@@ -192,6 +203,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
     try {
       const ticketData = await fetchTicketById(ticketIdOrNumber, activeUser.id);
       setTicket(ticketData);
+      setWorkflowConflict(false);
 
       // Load full attachment metadata list
       try {
@@ -595,6 +607,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           {triageError && (
             <div className="alert alert-danger py-2 px-3 small mb-3" data-testid="triage-error-banner">
               {triageError}
+              {workflowConflict && <button type="button" className="btn btn-outline-secondary btn-sm d-block mt-2" disabled={refreshingWorkflow} onClick={refreshWorkflow}>{refreshingWorkflow ? "Loading latest ticket?" : "Load latest ticket"}</button>}
             </div>
           )}
 
@@ -637,59 +650,17 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
             {/* Status Transition */}
             <div className="col-12 col-md-4">
-              <label className="form-label small fw-semibold text-dark">Status Transition</label>
+              <label htmlFor="workflow-status" className="form-label small fw-semibold text-dark">Status Transition</label>
               <select
                 className="form-select form-select-sm"
+                id="workflow-status"
                 value={ticket.status}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                disabled={triageLoading}
+                disabled={triageLoading || workflowConflict || refreshingWorkflow || !permittedTransitions(ticket.status, authUser?.role).length}
                 data-testid="detail-status-select"
               >
                 <option value={ticket.status}>{ticket.status} (Current)</option>
-                {ticket.status === "NEW" && (
-                  <>
-                    <option value="OPEN">➔ OPEN</option>
-                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
-                    <option value="CANCELLED">➔ CANCELLED</option>
-                  </>
-                )}
-                {ticket.status === "OPEN" && (
-                  <>
-                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
-                    <option value="WAITING_FOR_REQUESTER">➔ WAITING_FOR_REQUESTER</option>
-                    <option value="RESOLVED">➔ RESOLVED</option>
-                    <option value="CANCELLED">➔ CANCELLED</option>
-                  </>
-                )}
-                {ticket.status === "IN_PROGRESS" && (
-                  <>
-                    <option value="WAITING_FOR_REQUESTER">➔ WAITING_FOR_REQUESTER</option>
-                    <option value="RESOLVED">➔ RESOLVED</option>
-                    <option value="CANCELLED">➔ CANCELLED</option>
-                  </>
-                )}
-                {ticket.status === "WAITING_FOR_REQUESTER" && (
-                  <>
-                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
-                    <option value="RESOLVED">➔ RESOLVED</option>
-                    <option value="CANCELLED">➔ CANCELLED</option>
-                  </>
-                )}
-                {ticket.status === "RESOLVED" && (
-                  <>
-                    <option value="CLOSED">➔ CLOSED</option>
-                    <option value="REOPENED">➔ REOPENED</option>
-                  </>
-                )}
-                {ticket.status === "CLOSED" && (
-                  <option value="REOPENED">➔ REOPENED</option>
-                )}
-                {ticket.status === "REOPENED" && (
-                  <>
-                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
-                    <option value="RESOLVED">➔ RESOLVED</option>
-                  </>
-                )}
+                {permittedTransitions(ticket.status, authUser?.role).map(status => <option key={status} value={status}>? {status}</option>)}
               </select>
             </div>
           </div>
