@@ -8,6 +8,13 @@
     "test:client": "npm --prefix client run test",
     "test": "npm run test:server && npm run test:client",
     "test:lab3": "npm --prefix server run test -- --fileParallelism=false tests/lab-03/ && npm --prefix client run test -- tests/lab-03/",
-    "test:lab2": "npm --prefix server run test -- --fileParallelism=false tests/lab-02/ && npm --prefix client run test -- tests/lab-02/"
+    "test:lab2": "npm --prefix server run test -- --fileParallelism=false tests/lab-02/ && npm --prefix client run test -- tests/lab-02/",
+    "prisma:generate": "npx prisma generate --schema server/prisma/schema.prisma",
+    "seed": "npm --prefix server run prisma:seed",
+    "check:actions": "node scripts/check-actions.js"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
   }
 }
