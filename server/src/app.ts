@@ -1,3 +1,4 @@
+import { actionsTakenRouter } from "./routes/actionsTaken.js";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -2134,6 +2135,8 @@ app.patch("/api/staff/tickets/:id/status", requireRole("IT_STAFF", "ADMINISTRATO
     return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to update ticket status" });
   }
 });
+
+app.use("/api/tickets/:id/actions", actionsTakenRouter);
 
 export default app;
 
