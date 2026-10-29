@@ -957,3 +957,38 @@ export async function resetAdminUserPasswordApi(id: number, initialPassword: str
 
   return await res.json();
 }
+
+export class ActionsApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
+async function actionsRequest<T>(ticketId: number, method = "GET", actionId?: string, input?: import("./types.js").ActionTakenInput): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${ticketId}/actions${actionId ? `/${encodeURIComponent(actionId)}` : ""}`, {
+      method, credentials: "include", headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: input ? JSON.stringify({
+        actionDateTime: input.actionDateTime, description: input.description, result: input.result,
+        followUpRequired: input.followUpRequired, followUpNote: input.followUpNote, attachmentNotes: input.attachmentNotes,
+      }) : undefined,
+    });
+  } catch { throw new Error("Unable to connect. Check your connection and try again."); }
+  if (!res.ok) {
+    const defaults: Record<number, string> = {
+      400: "Check the action details and try again.", 401: "Your session has expired. Please sign in again.",
+      403: "You do not have permission to access or modify these actions.", 404: "The ticket or action is no longer available.",
+    };
+    const data = await res.json().catch(() => ({}));
+    throw new ActionsApiError(res.status, defaults[res.status] ? `${defaults[res.status]}${res.status === 400 && data.message ? ` ${data.message}` : ""}` : data.message || "Unable to load or save actions. Please try again.");
+  }
+  return res.json();
+}
+export function fetchActionsTaken(ticketId: number) {
+  return actionsRequest<{ ticketId: number; ticketNumber: string; totalActions: number; actions: import("./types.js").ActionTaken[] }>(ticketId);
+}
+export function createActionTaken(ticketId: number, input: import("./types.js").ActionTakenInput) {
+  return actionsRequest<{ action: import("./types.js").ActionTaken }>(ticketId, "POST", undefined, input);
+}
+export function updateActionTaken(ticketId: number, actionId: string, input: import("./types.js").ActionTakenInput) {
+  return actionsRequest<{ action: import("./types.js").ActionTaken }>(ticketId, "PATCH", actionId, input);
+}

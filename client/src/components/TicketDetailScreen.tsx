@@ -1,3 +1,4 @@
+import { ActionsTaken } from "./ActionsTaken.js";
 import React, { useEffect, useState, useCallback } from "react";
 import { useRequester } from "../context/RequesterContext.js";
 import {
@@ -723,6 +724,8 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           <span>{resolveSuccess}</span>
         </div>
       )}
+
+      <ActionsTaken key={`${ticket.id}:${authUser?.id || "guest"}`} ticketId={ticket.id} />
 
       {/* Communication Section: Public Comments & Internal Notes (Issue #7) */}
       <div className="card zen-card p-4 shadow-sm" data-testid="ticket-communication-card">

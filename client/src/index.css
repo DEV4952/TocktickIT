@@ -371,3 +371,32 @@ body {
 .zen-user-card:hover {
   box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.06) !important;
 }
+
+/* Actions Taken: naturally wrapping cards across mobile, tablet and desktop. */
+.actions-section, .actions-entry, .actions-details > div { min-width: 0; }
+.actions-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.actions-entry { border: 1px solid var(--color-border); border-left: 3px solid var(--color-primary); border-radius: 8px; padding: 1rem; }
+.actions-entry-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: 1rem; }
+.actions-entry time { font-size: .875rem; color: var(--color-text-muted); }
+.actions-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 0; }
+.actions-details > div:first-child, .actions-details > div:nth-child(2), .actions-details > div:last-child { grid-column: 1 / -1; }
+.actions-details dt { font-size: .8rem; color: var(--color-text-muted); margin-bottom: .25rem; }
+.actions-details dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.actions-performer { overflow-wrap: anywhere; }
+.actions-performer .badge { white-space: normal; }
+.actions-modal-backdrop { position: fixed; inset: 0; z-index: 1100; background: rgba(15, 23, 42, .5); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.actions-modal { width: 100%; max-width: 640px; max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; overflow: hidden; }
+.actions-modal-header, .actions-modal-footer { display: flex; gap: 1rem; align-items: center; padding: 1rem 1.25rem; flex-shrink: 0; }
+.actions-modal-header { justify-content: space-between; border-bottom: 1px solid var(--color-border); }
+.actions-modal form { display: flex; flex-direction: column; min-height: 0; }
+.actions-modal-body { padding: 1.25rem; overflow-y: auto; min-height: 0; }
+.actions-modal-footer { justify-content: flex-end; border-top: 1px solid var(--color-border); }
+.actions-modal input, .actions-modal textarea { min-width: 0; max-width: 100%; }
+.actions-modal textarea { overflow-wrap: anywhere; }
+@media (max-width: 575px) {
+  .actions-section { padding: 1rem; }
+  .actions-details { grid-template-columns: minmax(0, 1fr); }
+  .actions-modal-backdrop { padding: .5rem; }
+  .actions-modal { max-height: calc(100dvh - 1rem); }
+  .actions-modal-header, .actions-modal-body, .actions-modal-footer { padding: 1rem; }
+}
