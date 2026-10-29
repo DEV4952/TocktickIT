@@ -246,3 +246,27 @@ export interface UpdateAdminUserPayload {
   role?: Role;
   isActive?: boolean;
 }
+
+export interface ActionTaken {
+  id: string;
+  ticketId: number;
+  actionDateTime: string;
+  description: string;
+  result: string;
+  performedById: number;
+  performedBy: Pick<User, "id" | "name" | "role">;
+  followUpRequired: boolean;
+  followUpNote: string | null;
+  attachmentNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActionTakenInput {
+  actionDateTime: string;
+  description: string;
+  result: string;
+  followUpRequired: boolean;
+  followUpNote: string | null;
+  attachmentNotes: string | null;
+}
