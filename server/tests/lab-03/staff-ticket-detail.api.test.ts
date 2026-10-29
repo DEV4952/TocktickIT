@@ -205,7 +205,7 @@ describe("Lab 3 — IT Staff Ticket Queue & Operational Triage APIs (Issue #6)",
       const res = await request(app)
         .patch(`/api/staff/tickets/${testTicket1.id}/status`)
         .set("Authorization", `Bearer ${itStaffToken}`)
-        .send({ status: "IN_PROGRESS" });
+        .send({ status: "IN_PROGRESS", currentUpdatedAt: testTicket1.updatedAt.toISOString() });
 
       expect(res.status).toBe(200);
       expect(res.body.ticket.status).toBe("IN_PROGRESS");
@@ -218,7 +218,7 @@ describe("Lab 3 — IT Staff Ticket Queue & Operational Triage APIs (Issue #6)",
       const res = await request(app)
         .patch(`/api/staff/tickets/${testTicket1.id}/status`)
         .set("Authorization", `Bearer ${itStaffToken}`)
-        .send({ status: "RESOLVED" });
+        .send({ status: "RESOLVED", currentUpdatedAt: testTicket1.updatedAt.toISOString() });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("INVALID_STATUS_TRANSITION");
@@ -229,13 +229,13 @@ describe("Lab 3 — IT Staff Ticket Queue & Operational Triage APIs (Issue #6)",
       await request(app)
         .patch(`/api/staff/tickets/${testTicket1.id}/status`)
         .set("Authorization", `Bearer ${itStaffToken}`)
-        .send({ status: "CANCELLED" });
+        .send({ status: "CANCELLED", currentUpdatedAt: testTicket1.updatedAt.toISOString() });
 
       // Attempt invalid transition CANCELLED -> OPEN
       const res = await request(app)
         .patch(`/api/staff/tickets/${testTicket1.id}/status`)
         .set("Authorization", `Bearer ${itStaffToken}`)
-        .send({ status: "OPEN" });
+        .send({ status: "OPEN", currentUpdatedAt: (await prisma.ticket.findUniqueOrThrow({ where: { id: testTicket1.id } })).updatedAt.toISOString() });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("INVALID_STATUS_TRANSITION");

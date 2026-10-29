@@ -1,3 +1,4 @@
+import { changeTicketStatus, WorkflowError } from "./services/ticketWorkflow.js";
 import { actionsTakenRouter } from "./routes/actionsTaken.js";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
@@ -1712,16 +1713,6 @@ app.post("/api/admin/users/:id/reset-password", requireRole("ADMINISTRATOR"), as
 // Lab 3 — IT Staff Ticket Queue & Operational Triage Endpoints (Issue #6 / FR-06, FR-07, FR-08, FR-09)
 // ---------------------------------------------------------------------------
 
-const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
-  NEW: ["OPEN", "IN_PROGRESS", "CANCELLED"],
-  OPEN: ["IN_PROGRESS", "WAITING_FOR_REQUESTER", "RESOLVED", "CANCELLED"],
-  IN_PROGRESS: ["WAITING_FOR_REQUESTER", "RESOLVED", "CANCELLED"],
-  WAITING_FOR_REQUESTER: ["IN_PROGRESS", "RESOLVED", "CANCELLED"],
-  RESOLVED: ["CLOSED", "REOPENED"],
-  CLOSED: ["REOPENED"],
-  REOPENED: ["IN_PROGRESS", "RESOLVED"],
-  CANCELLED: [],
-};
 
 function formatStaffTicket(t: any) {
   return {
@@ -2067,70 +2058,12 @@ app.patch("/api/staff/tickets/:id/priority", requireRole("IT_STAFF", "ADMINISTRA
 // PATCH /api/staff/tickets/:id/status - Enforce lifecycle state machine transitions (BR-09)
 app.patch("/api/staff/tickets/:id/status", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
   try {
-    const idParam = req.params.id;
-    const isNumericId = /^\d+$/.test(idParam);
-    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
-
-    const { status, resolutionSummary } = req.body;
-    const allowedStatuses = [
-      "NEW",
-      "OPEN",
-      "IN_PROGRESS",
-      "WAITING_FOR_REQUESTER",
-      "RESOLVED",
-      "CLOSED",
-      "REOPENED",
-      "CANCELLED",
-    ];
-
-    if (!status || !allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        error: "INVALID_STATUS",
-        message: "Invalid status value.",
-      });
-    }
-
-    const prisma = getPrisma();
-    const existingTicket = await prisma.ticket.findFirst({ where: whereQuery });
-    if (!existingTicket) {
-      return res.status(404).json({ error: "NOT_FOUND", message: "Ticket not found" });
-    }
-
-    const currentStatus = existingTicket.status;
-    const validTransitions = VALID_STATUS_TRANSITIONS[currentStatus] || [];
-
-    if (!validTransitions.includes(status)) {
-      return res.status(400).json({
-        error: "INVALID_STATUS_TRANSITION",
-        message: `Disallowed status transition from ${currentStatus} to ${status}.`,
-      });
-    }
-
-    const updated = await prisma.ticket.update({
-      where: { id: existingTicket.id },
-      data: { status: status as any },
-      include: {
-        category: true,
-        requester: { select: { id: true, name: true, email: true, department: true } },
-        owner: { select: { id: true, name: true, email: true, role: true } },
-      },
-    });
-
-    if (resolutionSummary && typeof resolutionSummary === "string" && resolutionSummary.trim()) {
-      await prisma.comment.create({
-        data: {
-          ticketId: existingTicket.id,
-          authorId: req.user!.id,
-          body: `[Resolution Summary]: ${resolutionSummary.trim()}`,
-        },
-      });
-    }
-
-    return res.status(200).json({
-      ticket: formatStaffTicket(updated),
-      message: "Ticket status updated successfully",
-    });
+    const updated = await changeTicketStatus(req.params.id, req.body, req.user!.id);
+    return res.status(200).json({ ticket: formatStaffTicket(updated), message: "Ticket status updated successfully" });
   } catch (error) {
+    if (error instanceof WorkflowError) {
+      return res.status(error.status).json({ error: error.code, message: error.message, ...(error.latest ? { ticket: formatStaffTicket(error.latest) } : {}) });
+    }
     console.error("Failed to update ticket status:", error);
     return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to update ticket status" });
   }
