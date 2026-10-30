@@ -42,8 +42,8 @@ In accordance with Lab 4 Handout Section 12 (Minimum Lab 4 Structure), the test 
 |---|---|---|---|:---:|
 | **Server API** | `server/tests/lab-04/actions-taken.api.test.ts` | Actions Taken CRUD, auto performer attribution, conditional follow-up note, inactive user rejection, requester read-only | Vitest + Supertest | 10 |
 | **Server API** | `server/tests/lab-04/ticket-workflow.api.test.ts` | Status transition matrix, resolution gate, advisory requester solved flag, optimistic concurrency `409 Conflict` | Vitest + Supertest | 8 |
-| **Server API** | `server/tests/lab-04/requester-dashboard.api.test.ts` | Requester metrics (`myOpen`, `waiting`, `inProgress`, `resolved`, `closed`), customer data isolation, recent tickets | Vitest + Supertest | 6 |
-| **Server API** | `server/tests/lab-04/staff-dashboard.api.test.ts` | IT Staff queue metrics (`new`, `open`, `inProgress`, `waiting`, `myAssigned`, `unassigned`), deltas, status/priority breakdowns, admin counts | Vitest + Supertest | 8 |
+| **Server API** | `server/tests/lab-04/requester-dashboard.api.test.ts` | Requester metrics (`myOpen`, `waiting`, `inProgress`, `resolved`, `closed`), customer data isolation, recent tickets | Vitest + Supertest | 15 |
+| **Server API** | `server/tests/lab-04/staff-dashboard.api.test.ts` | IT Staff queue metrics (`new`, `open`, `inProgress`, `waiting`, `myAssigned`, `unassigned`), deltas, status/priority breakdowns, admin counts | Vitest + Supertest | 12 |
 | **Client UI** | `client/tests/lab-04/StaffDashboard.test.tsx` | Staff dashboard rendering, metric cards with deltas, recent tickets list, quick actions, drill-down click routing | Vitest + RTL | 6 |
 | **Client UI** | `client/tests/lab-04/RequesterDashboard.test.tsx` | Requester dashboard rendering, customer metric cards, recent tickets, drill-down links to My Tickets | Vitest + RTL | 5 |
 | **Client UI** | `client/tests/lab-04/ActionsTaken.test.tsx` | Embedded Actions Taken table, Add/Edit modal, conditional follow-up field, read-only mode for Requester | Vitest + RTL | 7 |
@@ -64,26 +64,26 @@ The following matrix establishes explicit, observable mapping from every Require
 |---|---|---|---|---|---|:---:|
 | **API-01** | API | AC-01, FR-01, BR-01 | Create valid Action Taken under ticket | HTTP 201 Created; action persisted under target ticket; returns created object | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
 | **API-02** | API | AC-01, FR-02, BR-03 | Auto performer attribution | Backend binds `performedById = session.userId`; client-supplied performer ID is ignored | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
-| **API-03** | API | AC-02, FR-03, BR-04 | Follow-up required without follow-up note | HTTP 422 Unprocessable Entity; descriptive error stating note is mandatory | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
+| **API-03** | API | AC-02, FR-03, BR-04 | Follow-up required without follow-up note | HTTP 400 Bad Request; descriptive error stating note is mandatory | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
 | **API-04** | API | FR-03, BR-04 | Follow-up required = false with empty note | HTTP 201 Created; `followUpNote` saved as null or empty without validation error | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
 | **API-05** | API | AC-03, FR-05, BR-05 | Requester attempts to create Action Taken | HTTP 403 Forbidden; zero records created; permission rejected | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
 | **API-06** | API | AC-04, FR-05, BR-05 | Requester lists Actions Taken on owned ticket | HTTP 200 OK; returns list of actions recorded by IT staff for viewing | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
 | **API-07** | API | AC-05, FR-04 | IT Staff updates an existing Action Taken | HTTP 200 OK; updates description/result; refreshes `updatedAt`; preserves original performer | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
-| **API-08** | API | AC-12, FR-06, BR-11 | Action attributed to inactive user (`isActive = false`)| HTTP 422 Unprocessable Entity; rejects inactive user action | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
+| **API-08** | API | AC-12, FR-06, BR-11 | Action attributed to inactive user (`isActive = false`)| HTTP 400 Bad Request; rejects inactive user action | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
 | **API-09** | API | FR-07, BR-12 | Action Taken with attachment notes reference | HTTP 201 Created; persists `attachmentNotes` without altering attachment storage | `server/tests/lab-04/actions-taken.api.test.ts` | Planned |
 | **API-10** | API | AC-09, FR-08, BR-06 | Permitted status transition (`OPEN` ➔ `IN_PROGRESS`) | HTTP 200 OK; updates ticket status; updates `updatedAt` | `server/tests/lab-04/ticket-workflow.api.test.ts` | Planned |
-| **API-11** | API | AC-09, FR-08, BR-06 | Disallowed status transition (`NEW` ➔ `RESOLVED`) | HTTP 422 Unprocessable Entity; rejects illegal jump; returns permitted list | `server/tests/lab-04/ticket-workflow.api.test.ts` | Planned |
+| **API-11** | API | AC-09, FR-08, BR-06 | Disallowed status transition (`NEW` ➔ `RESOLVED`) | HTTP 400 Bad Request; rejects illegal jump; returns permitted list | `server/tests/lab-04/ticket-workflow.api.test.ts` | Planned |
 | **API-12** | API | AC-11, FR-09, BR-07 | Requester submits advisory solved flag | HTTP 200 OK; sets `problemAppearsResolved = true`; leaves `status` unchanged | `server/tests/lab-04/ticket-workflow.api.test.ts` | Planned |
 | **API-13** | API | BR-07 | Requester attempts direct status change to `RESOLVED` | HTTP 403 Forbidden; requester cannot bypass resolution gate | `server/tests/lab-04/ticket-workflow.api.test.ts` | Planned |
 | **API-14** | API | AC-10, FR-10, BR-08 | Optimistic concurrency: update with current timestamp | HTTP 200 OK; status transitions cleanly when client timestamp matches DB | `server/tests/lab-04/ticket-workflow.api.test.ts` | Planned |
 | **API-15** | API | AC-10, FR-10, BR-08 | Optimistic concurrency: update with stale timestamp | HTTP 409 Conflict; returns current server state; prevents silent overwrite | `server/tests/lab-04/ticket-workflow.api.test.ts` | Planned |
-| **API-16** | API | AC-06, FR-11, BR-09 | Requester dashboard metrics query | HTTP 200 OK; returns `myOpenTickets`, `waitingForRequester`, `inProgress`, `resolved`, `closed` | `server/tests/lab-04/requester-dashboard.api.test.ts` | Planned |
-| **API-17** | API | AC-06, BR-09 | Requester dashboard data isolation | HTTP 200 OK; strictly verifies counts include only tickets where `requesterId = session.userId` | `server/tests/lab-04/requester-dashboard.api.test.ts` | Planned |
-| **API-18** | API | FR-11, BR-10 | Requester dashboard empty state | HTTP 200 OK; user with zero tickets receives all metric counts as `0` and empty recent array `[]` | `server/tests/lab-04/requester-dashboard.api.test.ts` | Planned |
-| **API-19** | API | AC-07, FR-12, BR-10 | IT Staff dashboard operational queue metrics | HTTP 200 OK; returns `new`, `open`, `inProgress`, `waiting`, `myAssigned`, `unassigned` counts | `server/tests/lab-04/staff-dashboard.api.test.ts` | Planned |
-| **API-20** | API | FR-12, BR-12 | IT Staff dashboard daily delta computation | HTTP 200 OK; computes net delta compared to records created previous calendar day (UTC) | `server/tests/lab-04/staff-dashboard.api.test.ts` | Planned |
-| **API-21** | API | FR-12 | IT Staff dashboard status and priority breakdowns | HTTP 200 OK; returns counts grouped by `status` and `itPriority` | `server/tests/lab-04/staff-dashboard.api.test.ts` | Planned |
-| **API-22** | API | FR-13 | Administrator dashboard user account counts | HTTP 200 OK; returns user breakdown (`totalUsers`, `activeUsers`, `requesters`, `staff`, `admins`) | `server/tests/lab-04/staff-dashboard.api.test.ts` | Planned |
+| **API-16** | API | AC-06, FR-11, BR-09 | Requester dashboard metrics query | HTTP 200 OK; returns `myOpenTickets`, `waitingForRequester`, `recentlyUpdated`, `recentlyResolved`, `inProgress`, `resolved`, `closed` | `server/tests/lab-04/requester-dashboard.api.test.ts` | Passed (Lab4.7) |
+| **API-17** | API | AC-06, BR-09 | Requester dashboard data isolation | HTTP 200 OK; strictly verifies counts include only tickets where `requesterId = session.userId` | `server/tests/lab-04/requester-dashboard.api.test.ts` | Passed (Lab4.7) |
+| **API-18** | API | FR-11, BR-10 | Requester dashboard empty state | HTTP 200 OK; user with zero tickets receives all metric counts as `0` and empty recent array `[]` | `server/tests/lab-04/requester-dashboard.api.test.ts` | Passed (Lab4.7) |
+| **API-19** | API | AC-07, FR-12, BR-10 | IT Staff dashboard operational queue metrics | HTTP 200 OK; returns `newCount`, `openCount`, `inProgressCount`, `waitingRequesterCount`, `myAssignedCount`, `unassignedCount` counts | `server/tests/lab-04/staff-dashboard.api.test.ts` | Passed (Lab4.7) |
+| **API-20** | API | FR-12, BR-12 | IT Staff dashboard daily delta computation | HTTP 200 OK; numeric creation-cohort deltas at UTC boundaries; positive/negative/zero and neutral zero without yesterday data; independent SQL match | `server/tests/lab-04/staff-dashboard.api.test.ts` | Passed (Lab4.7) |
+| **API-21** | API | FR-12 | IT Staff dashboard status and priority breakdowns | HTTP 200 OK; returns counts grouped by `status` and `itPriority` | `server/tests/lab-04/staff-dashboard.api.test.ts` | Passed (Lab4.7) |
+| **API-22** | API | FR-13 | Administrator dashboard user account counts | HTTP 200 OK; returns user breakdown (`totalUsers`, `activeUsers`, `inactiveUsers`, `requesterCount`, `itStaffCount`, `adminCount`) | `server/tests/lab-04/staff-dashboard.api.test.ts` | Passed (Lab4.7) |
 | **UI-01** | UI | AC-01, FR-04 | Actions Taken table rendering in Ticket Detail | Renders actions table with Date/Time, Description, Result, Performer, and Follow-Up pill | `client/tests/lab-04/ActionsTaken.test.tsx` | Planned |
 | **UI-02** | UI | AC-02, BR-04 | Actions Taken form conditional follow-up note | Checking "Follow-Up Required" dynamically displays and enforces required `followUpNote` input | `client/tests/lab-04/ActionsTaken.test.tsx` | Planned |
 | **UI-03** | UI | AC-04, FR-05 | Actions Taken Requester read-only mode | Displays action history; omits `+ Add Action Taken` and `Edit` buttons from the DOM | `client/tests/lab-04/ActionsTaken.test.tsx` | Planned |
@@ -131,3 +131,31 @@ npx playwright test e2e/lab-04/
 npm --prefix server test && npm --prefix client test
 ```
 *Expected: 100% of tests passing with zero regressions across all server and client test suites.*
+
+## Lab4.7 actual dashboard evidence (2026-10-30)
+
+The current contract is api-spec.md section 4. Admin account statistics are returned only to ADMINISTRATOR callers of /api/dashboard/staff; no separate /admin API is planned. Delta values are numbers derived from current-status/current-owner creation cohorts, not historical queue changes. Requester recent metrics use a rolling inclusive seven-day UTC window; recent lists are five all-time latest public summaries.
+
+| Evidence | Actual tests / result |
+| --- | --- |
+| API-16/17/18 plus boundary, future-date, sorting, list-limit and field-projection checks | requester-dashboard.api.test.ts: 15 passed |
+| API-19/20/21/22 plus role/account protection and independent PostgreSQL checks | staff-dashboard.api.test.ts: 12 passed |
+| Staff global-empty counts/categories/list | Mocked transaction aggregate snapshot; real empty PostgreSQL database not available under current permissions |
+| Requester zero-count/empty-list scope | Real PostgreSQL fixtures, passed |
+| Repeatable Read snapshot configuration | Verified in both endpoint suites |
+
+Legacy plan rows not exercised by this issue remain Planned. Do not infer full-Lab completion from dashboard test results. Both suites use UUID fixtures and exact-ID cleanup; no existing rows are reset or deleted. See dashboard-api-verification.md for complete commands, SQL, results and limitations.
+
+## Rubric Actions Taken extension: actual coverage
+
+This scope was explicitly added by the user to the Lab4.7 branch to address grading Parts 6?7; it is not described as a minor change.
+
+| Requirement | Test path | Evidence |
+| --- | --- | --- |
+| AC-AT-01 / FR-AT-01/02 | server/tests/lab-04/action-lifecycle.api.test.ts | Full four-state graph for Staff/Admin; assignment defaults/reassignment, inactive/non-staff rejection, unassigned legacy rules, terminal immutability |
+| AC-AT-02 / FR-AT-03 | server/tests/lab-04/action-lifecycle.api.test.ts | Requester isolation, immutable performer, before/after snapshots, no history mutation endpoint, stable ordering |
+| AC-AT-03 / FR-AT-04 | server/tests/lab-04/action-lifecycle.api.test.ts | Missing/malformed/stale tokens, concurrent requests and rollback on audit failure |
+| Assignment/lifecycle/history UI | client/tests/lab-04/ActionLifecycle.test.tsx | Active assignee form, original recorder, start/complete/cancel, terminal controls, read-only Requester, history/retry, conflict, failed/duplicate saves |
+| Previous Actions Taken behavior | server/tests/lab-04/actions-taken.api.test.ts and client/tests/lab-04/ActionsTaken.test.tsx | Retained assertions; client payload contract intentionally extends with assigneeId/version while preserving performer/ticket immutability |
+
+See actions-taken-lifecycle-verification.md for actual final results and migration/data preservation checks. Do not infer rendered responsive/browser evidence from component tests.

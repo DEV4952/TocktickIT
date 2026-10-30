@@ -43,10 +43,9 @@ All error responses adhere to a consistent contract:
 | `/api/tickets/:ticketId/actions` | `POST` | ❌ 403 | ❌ 403 | ✅ 201 | ✅ 201 | ❌ 401 |
 | `/api/tickets/:ticketId/actions` | `GET` | ✅ 200 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
 | `/api/tickets/:ticketId/actions/:id` | `GET` | ✅ 200 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
-| `/api/tickets/:ticketId/actions/:id` | `PUT` | ❌ 403 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
+| `/api/tickets/:ticketId/actions/:id` | `PATCH` | ❌ 403 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
 | `/api/dashboard/requester` | `GET` | ✅ 200 | ✅ 200* | ❌ 403 | ❌ 403 | ❌ 401 |
 | `/api/dashboard/staff` | `GET` | ❌ 403 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
-| `/api/dashboard/admin` | `GET` | ❌ 403 | ❌ 403 | ❌ 403 | ✅ 200 | ❌ 401 |
 | `/api/staff/tickets/:id/status` | `PATCH` | ❌ 403 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
 | `/api/tickets/:id/resolve-indication`| `POST` | ✅ 200 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
 
@@ -54,445 +53,176 @@ All error responses adhere to a consistent contract:
 
 ---
 
-## 3. Actions Taken API Endpoints
+## 3. Actions Taken APIs (rubric-aligned extension)
 
-### 3.1. Create Action Taken
-Record a new operational action taken under a specified ticket.
+All endpoints require signed authentication. IT_STAFF and ADMINISTRATOR share existing ticket access; REQUESTER can read only owned Ticket actions/history (foreign access: 403). Requesters cannot create, edit, assign or transition actions (403). Missing authentication is 401; missing record/wrong action parent is 404. Public account projections contain only id/name/role.
 
-- **Method:** `POST`
-- **Endpoint:** `/api/tickets/:ticketId/actions`
-- **Access:** Authenticated `IT_STAFF` or `ADMINISTRATOR`
-- **Path Parameters:**
-  - `ticketId` (integer, required): ID of the parent ticket.
+### 3.1. Create and update
 
-#### Request Body Schema
-```json
-{
-  "actionDateTime": "2026-10-28T14:30:00.000Z",
-  "description": "Inspected access point AP-04 in North Building. Reset PoE switch port.",
-  "result": "Access point rebooted successfully and SSIDs are broadcasting normally.",
-  "followUpRequired": true,
-  "followUpNote": "Monitor Wi-Fi signal strength during peak hours tomorrow at 10:00 AM.",
-  "attachmentNotes": "Refer to ping-test-log.txt uploaded in Ticket Attachments."
-}
-```
+- POST /api/tickets/:id/actions creates RECORDED; performedById is exclusively the authenticated creator and immutable.
+- PATCH /api/tickets/:id/actions/:actionId updates nonterminal content/assignment. PUT is not supported.
+- Fields: actionDateTime (optional server time on create, valid ISO timestamp), description (trimmed 5?3000 chars), result (trimmed 3?3000), followUpRequired (required boolean on create), followUpNote (at least 3 trimmed chars when required, otherwise null), attachmentNotes (nullable, at most 1000 chars).
+- Optional assigneeId: active IT_STAFF/ADMINISTRATOR ID or null. Create omission defaults to creator; legacy rows remain null until assigned. Assignee is independent of performedBy and Ticket owner.
+- PATCH optionally accepts currentUpdatedAt for stale-edit detection. New UI always sends it; older clients remain compatible. IDs, ticket/performer relations, supplied status/history and audit timestamps are not writable through content updates.
+- 201/200 returns { message, action }; action includes scalar fields plus performedBy and nullable assignee projections. Input/assignee/follow-up errors return 400. A supplied stale token returns 409; optimistic checks and history insertion are atomic.
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `actionDateTime` | string (ISO-8601) | Optional | Timestamp work was performed. Defaults to current server time if omitted. |
-| `description` | string | **Yes** | Detailed description of action taken (min 5, max 3000 chars). |
-| `result` | string | **Yes** | Outcome of the action (min 3, max 3000 chars). |
-| `followUpRequired` | boolean | **Yes** | Whether follow-up action is required. |
-| `followUpNote` | string | Conditional | **Required** if `followUpRequired === true` (min 3 chars). Ignored/null if false. |
-| `attachmentNotes` | string | Optional | Notes indicating relevant attachments or screenshots (max 1000 chars). |
+### 3.2. List and history
 
-#### Response `201 Created`
-```json
-{
-  "message": "Action taken recorded successfully",
-  "action": {
-    "id": 12,
-    "ticketId": 45,
-    "actionDateTime": "2026-10-28T14:30:00.000Z",
-    "description": "Inspected access point AP-04 in North Building. Reset PoE switch port.",
-    "result": "Access point rebooted successfully and SSIDs are broadcasting normally.",
-    "performedBy": {
-      "id": 3,
-      "name": "Sarah Connor",
-      "email": "sarah.connor@toktick.it",
-      "role": "IT_STAFF"
-    },
-    "followUpRequired": true,
-    "followUpNote": "Monitor Wi-Fi signal strength during peak hours tomorrow at 10:00 AM.",
-    "attachmentNotes": "Refer to ping-test-log.txt uploaded in Ticket Attachments.",
-    "createdAt": "2026-10-28T14:35:12.120Z",
-    "updatedAt": "2026-10-28T14:35:12.120Z"
-  }
-}
-```
+- GET /api/tickets/:id/actions returns { ticketId, ticketNumber, totalActions, actions }. Empty list is successful. Backend orders actionDateTime DESC, createdAt DESC, ID ASC; UI presents chronological actionDateTime ASC, createdAt ASC, ID ASC.
+- GET /api/tickets/:id/actions/:actionId/history returns { history }, ordered createdAt ASC, ID ASC. Each entry has event, actorId, public actor projection, before/after scalar JSON snapshots and createdAt. Legacy actions have no fabricated history.
+- There is no single-action GET, history mutation or action deletion endpoint. History is append-only through application APIs, retained until parent deletion by authorized database/lifecycle operations. Privileged SQL is not covered by this API immutability guarantee.
 
-#### Error Responses
-- `400 Bad Request`: Invalid payload shape or illegal future timestamp (`actionDateTime` > 5 minutes in future).
-- `401 Unauthorized`: Session missing or expired.
-- `403 Forbidden`: Authenticated user is a `REQUESTER`.
-- `404 Not Found`: Parent `ticketId` does not exist.
-- `422 Unprocessable Entity`: Validation failure (e.g. `followUpRequired` is true but `followUpNote` is empty or missing).
-```json
-{
-  "error": "VALIDATION_FAILED",
-  "message": "Follow-up note is mandatory when follow-up is required.",
-  "details": [
-    { "field": "followUpNote", "issue": "Must not be empty when followUpRequired is true" }
-  ]
-}
-```
-- `422 Unprocessable Entity` (Inactive Performer Safeguard):
-```json
-{
-  "error": "INACTIVE_USER_REJECTED",
-  "message": "Actions cannot be recorded by or assigned to an inactive user account."
-}
-```
+### 3.3. Action lifecycle (distinct from Ticket lifecycle)
 
----
+PATCH /api/tickets/:id/actions/:actionId/status accepts { status, currentUpdatedAt }. Token is mandatory UTC ISO including milliseconds, as returned by the API.
 
-### 3.2. List Actions Taken for Ticket
-Retrieve all Actions Taken lines for a specific ticket, sorted chronologically.
+| Source | Destinations | Conditions |
+| --- | --- | --- |
+| RECORDED | IN_PROGRESS, COMPLETED, CANCELLED | Staff/Admin; active assignee for start/complete |
+| IN_PROGRESS | COMPLETED, CANCELLED | Staff/Admin; active assignee for complete |
+| COMPLETED | none | Content/assignment locked |
+| CANCELLED | none | Content/assignment locked |
 
-- **Method:** `GET`
-- **Endpoint:** `/api/tickets/:ticketId/actions`
-- **Access:** Authenticated `IT_STAFF`, `ADMINISTRATOR`, or Ticket Owner `REQUESTER`
-- **Path Parameters:**
-  - `ticketId` (integer, required): ID of the parent ticket.
+Fresh same-status/illegal transition and missing/malformed token return 400; stale/concurrent token returns 409 with no partial change/event. Cancellation can be unassigned. Starting/completing revalidates and locks the assignee account through commit. Success returns { message, action } with a newer updatedAt. No automatic Ticket status change occurs.
 
-#### Response `200 OK`
-```json
-{
-  "ticketId": 45,
-  "ticketNumber": "TKT-2026-00045",
-  "totalActions": 2,
-  "actions": [
-    {
-      "id": 11,
-      "ticketId": 45,
-      "actionDateTime": "2026-10-28T10:15:00.000Z",
-      "description": "Remote diagnostic ping and traceroute conducted.",
-      "result": "Severe packet loss (40%) identified on default gateway.",
-      "performedBy": {
-        "id": 2,
-        "name": "Alex Mercer",
-        "email": "alex.mercer@toktick.it",
-        "role": "IT_STAFF"
-      },
-      "followUpRequired": true,
-      "followUpNote": "On-site dispatch scheduled for 14:00.",
-      "attachmentNotes": null,
-      "createdAt": "2026-10-28T10:20:00.000Z",
-      "updatedAt": "2026-10-28T10:20:00.000Z"
-    },
-    {
-      "id": 12,
-      "ticketId": 45,
-      "actionDateTime": "2026-10-28T14:30:00.000Z",
-      "description": "Inspected access point AP-04 in North Building. Reset PoE switch port.",
-      "result": "Access point rebooted successfully and SSIDs are broadcasting normally.",
-      "performedBy": {
-        "id": 3,
-        "name": "Sarah Connor",
-        "email": "sarah.connor@toktick.it",
-        "role": "IT_STAFF"
-      },
-      "followUpRequired": true,
-      "followUpNote": "Monitor Wi-Fi signal strength during peak hours tomorrow at 10:00 AM.",
-      "attachmentNotes": "Refer to ping-test-log.txt uploaded in Ticket Attachments.",
-      "createdAt": "2026-10-28T14:35:12.120Z",
-      "updatedAt": "2026-10-28T14:35:12.120Z"
-    }
-  ]
-}
-```
-
----
-
-### 3.3. Get Action Taken Detail
-Retrieve a single Action Taken record.
-
-- **Method:** `GET`
-- **Endpoint:** `/api/tickets/:ticketId/actions/:id`
-- **Access:** Authenticated `IT_STAFF`, `ADMINISTRATOR`, or Ticket Owner `REQUESTER`
-
----
-
-### 3.4. Update Action Taken
-Modify an existing Action Taken record. Note that `performedById` is immutable to preserve audit integrity; `updatedAt` is updated to current time.
-
-- **Method:** `PUT`
-- **Endpoint:** `/api/tickets/:ticketId/actions/:id`
-- **Access:** Authenticated `IT_STAFF` or `ADMINISTRATOR`
-
-#### Request Body Schema
-```json
-{
-  "actionDateTime": "2026-10-28T14:30:00.000Z",
-  "description": "Inspected access point AP-04. Replaced damaged RJ45 connector and rebooted PoE.",
-  "result": "Signal strength verified at -52 dBm across 5GHz band.",
-  "followUpRequired": false,
-  "followUpNote": null,
-  "attachmentNotes": "Added ap04-speedtest.png to Ticket Attachments."
-}
-```
-
-#### Response `200 OK`
-```json
-{
-  "message": "Action taken updated successfully",
-  "action": {
-    "id": 12,
-    "ticketId": 45,
-    "actionDateTime": "2026-10-28T14:30:00.000Z",
-    "description": "Inspected access point AP-04. Replaced damaged RJ45 connector and rebooted PoE.",
-    "result": "Signal strength verified at -52 dBm across 5GHz band.",
-    "performedBy": {
-      "id": 3,
-      "name": "Sarah Connor",
-      "email": "sarah.connor@toktick.it",
-      "role": "IT_STAFF"
-    },
-    "followUpRequired": false,
-    "followUpNote": null,
-    "attachmentNotes": "Added ap04-speedtest.png to Ticket Attachments.",
-    "createdAt": "2026-10-28T14:35:12.120Z",
-    "updatedAt": "2026-10-28T15:10:00.000Z"
-  }
-}
-```
+Every successful API create/content edit/assignment/transition appends CREATED/UPDATED/ASSIGNED/STATUS_CHANGED history in the same transaction. Failed validation/conflicts append nothing; history failure rolls back mutation. The first edit of a legacy action snapshots its previous values. See actions-taken-lifecycle-verification.md for design-before-schema decisions and migration evidence.
 
 ---
 
 ## 4. Dashboard Analytics Endpoints
 
+Contract synchronized with Issue #65 / Lab4.7 on 2026-10-30. Counts are computed in PostgreSQL, never supplied by the client. Each response uses one Repeatable Read transaction and one referenceTime.
+
 ### 4.1. Requester Dashboard Endpoint
-Returns concise operational metrics and recent tickets strictly scoped to the authenticated Requester.
 
-- **Method:** `GET`
-- **Endpoint:** `/api/dashboard/requester`
-- **Access:** Authenticated `REQUESTER`
+- **Method:** GET
+- **Endpoint:** /api/dashboard/requester
+- **Access:** authenticated REQUESTER with a signed session (cookie or Bearer token).
+- Every count and recent-list query uses requesterId from the session. Query/body IDs and legacy identity headers cannot override it.
+- No supported filters or custom limit; unknown parameters are ignored.
 
-#### Response `200 OK`
+#### Response 200 OK (empty scope)
+
 ```json
 {
-  "user": {
-    "id": 10,
-    "name": "Jennifer Aniston",
-    "email": "jennifer.a@toktick.it"
-  },
+  "referenceTime": "2026-10-30T12:00:00.000Z",
+  "windowStart": "2026-10-23T12:00:00.000Z",
   "metrics": {
-    "myOpenTickets": 3,
-    "waitingForRequester": 1,
-    "inProgress": 2,
-    "resolved": 5,
-    "closed": 12
+    "myOpenTickets": 0,
+    "waitingForRequester": 0,
+    "recentlyUpdated": 0,
+    "recentlyResolved": 0,
+    "inProgress": 0,
+    "resolved": 0,
+    "closed": 0
   },
-  "drillDownLinks": {
-    "myOpenTickets": "/tickets?statusGroup=open",
-    "waitingForRequester": "/tickets?status=WAITING_FOR_REQUESTER",
-    "inProgress": "/tickets?status=IN_PROGRESS",
-    "resolved": "/tickets?status=RESOLVED",
-    "closed": "/tickets?status=CLOSED"
-  },
-  "recentTickets": [
-    {
-      "id": 45,
-      "ticketNumber": "TKT-2026-00045",
-      "title": "Laptop battery drains quickly after OS update",
-      "status": "IN_PROGRESS",
-      "priority": "HIGH",
-      "categoryName": "Hardware",
-      "updatedAt": "2026-10-28T09:14:00.000Z"
-    },
-    {
-      "id": 42,
-      "ticketNumber": "TKT-2026-00042",
-      "title": "Request software access for Figma",
-      "status": "RESOLVED",
-      "priority": "MEDIUM",
-      "categoryName": "Software",
-      "updatedAt": "2026-10-27T17:30:00.000Z"
-    },
-    {
-      "id": 38,
-      "ticketNumber": "TKT-2026-00038",
-      "title": "Need second monitor for workstation",
-      "status": "RESOLVED",
-      "priority": "LOW",
-      "categoryName": "Hardware",
-      "updatedAt": "2026-10-25T11:05:00.000Z"
-    },
-    {
-      "id": 31,
-      "ticketNumber": "TKT-2026-00031",
-      "title": "Email not syncing on mobile Outlook",
-      "status": "RESOLVED",
-      "priority": "HIGH",
-      "categoryName": "Network & Email",
-      "updatedAt": "2026-10-24T08:20:00.000Z"
-    },
-    {
-      "id": 20,
-      "ticketNumber": "TKT-2026-00020",
-      "title": "Password reset for finance portal",
-      "status": "CLOSED",
-      "priority": "URGENT",
-      "categoryName": "Security",
-      "updatedAt": "2026-10-20T14:00:00.000Z"
-    }
-  ]
+  "recentTickets": []
 }
 ```
 
-#### Calculation Rules (BR-09, BR-10)
-- `myOpenTickets`: Total tickets where `requesterId = user.id` and `status IN ('NEW', 'OPEN', 'IN_PROGRESS', 'WAITING_FOR_REQUESTER', 'REOPENED')`.
-- `waitingForRequester`: Total tickets where `requesterId = user.id` and `status = 'WAITING_FOR_REQUESTER'`.
-- `inProgress`: Total tickets where `requesterId = user.id` and `status = 'IN_PROGRESS'`.
-- `resolved`: Total tickets where `requesterId = user.id` and `status = 'RESOLVED'`.
-- `closed`: Total tickets where `requesterId = user.id` and `status = 'CLOSED'`.
-- `recentTickets`: Up to 5 most recently updated tickets owned by user (`updatedAt DESC`).
+#### Calculation rules
 
----
+- myOpenTickets: statuses NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER and REOPENED.
+- waitingForRequester, inProgress, resolved, closed: all-time counts of the corresponding current status, restricted to the requester.
+- recentlyUpdated: updatedAt in the inclusive UTC interval [referenceTime - 7 * 24 hours, referenceTime]. Future timestamps are excluded.
+- recentlyResolved: currently RESOLVED tickets with updatedAt in that same interval. This is not a count of resolution events; no authoritative resolvedAt/history exists.
+- recentTickets: up to 5 latest tickets across all time, ordered updatedAt DESC then id DESC. Each item has exactly id, ticketNumber, title, status and updatedAt. Empty results are [].
 
-### 4.2. IT Staff Dashboard Endpoint
-Returns operational queue counts, daily deltas, status/priority breakdowns, and recent activity for IT Staff and Administrators.
+### 4.2. Staff Dashboard Endpoint
 
-- **Method:** `GET`
-- **Endpoint:** `/api/dashboard/staff`
-- **Access:** Authenticated `IT_STAFF` or `ADMINISTRATOR`
+- **Method:** GET
+- **Endpoint:** /api/dashboard/staff
+- **Access:** authenticated IT_STAFF or ADMINISTRATOR with a signed session.
+- Existing staff access policy permits every ticket. Assignment identity is always the session user's ID.
 
-#### Response `200 OK`
+#### Response 200 OK (empty aggregate example)
+
 ```json
 {
-  "user": {
-    "id": 2,
-    "name": "Michael Scott",
-    "role": "IT_STAFF"
-  },
+  "referenceTime": "2026-10-30T12:00:00.000Z",
+  "windowStart": "2026-10-23T12:00:00.000Z",
   "metrics": {
-    "newCount": 14,
-    "newDelta": "+2 from yesterday",
-    "openCount": 23,
-    "openDelta": "-1 from yesterday",
-    "inProgressCount": 18,
-    "inProgressDelta": "+4 from yesterday",
-    "waitingRequesterCount": 7,
-    "waitingRequesterDelta": "+1 from yesterday",
-    "myAssignedCount": 16,
-    "myAssignedDelta": "+1 from yesterday",
-    "unassignedCount": 9
-  },
-  "drillDownLinks": {
-    "new": "/staff/queue?status=NEW",
-    "open": "/staff/queue?status=OPEN",
-    "inProgress": "/staff/queue?status=IN_PROGRESS",
-    "waitingRequester": "/staff/queue?status=WAITING_FOR_REQUESTER",
-    "myAssigned": "/staff/queue?assignedToMe=true",
-    "unassigned": "/staff/queue?unassigned=true"
+    "unassignedCount": 0,
+    "myAssignedCount": 0,
+    "newCount": 0,
+    "openCount": 0,
+    "inProgressCount": 0,
+    "waitingRequesterCount": 0,
+    "newDelta": 0,
+    "openDelta": 0,
+    "inProgressDelta": 0,
+    "waitingRequesterDelta": 0,
+    "myAssignedDelta": 0
   },
   "breakdowns": {
     "byStatus": {
-      "NEW": 14,
-      "OPEN": 23,
-      "IN_PROGRESS": 18,
-      "WAITING_FOR_REQUESTER": 7,
-      "RESOLVED": 34,
-      "CLOSED": 88,
-      "REOPENED": 3,
-      "CANCELLED": 5
+      "NEW": 0,
+      "OPEN": 0,
+      "IN_PROGRESS": 0,
+      "WAITING_FOR_REQUESTER": 0,
+      "RESOLVED": 0,
+      "CLOSED": 0,
+      "REOPENED": 0,
+      "CANCELLED": 0
     },
     "byPriority": {
-      "URGENT": 4,
-      "HIGH": 15,
-      "MEDIUM": 28,
-      "LOW": 8
+      "LOW": 0,
+      "MEDIUM": 0,
+      "HIGH": 0,
+      "URGENT": 0
     }
   },
-  "recentTickets": [
-    {
-      "id": 54,
-      "ticketNumber": "TKT-2026-00054",
-      "title": "Laptop battery drains quickly",
-      "status": "IN_PROGRESS",
-      "itPriority": "HIGH",
-      "requesterName": "Jennifer Aniston",
-      "ownerName": "Michael Scott",
-      "updatedAt": "2026-10-28T09:14:00.000Z"
-    },
-    {
-      "id": 53,
-      "ticketNumber": "TKT-2026-00053",
-      "title": "Printer large drawing offline",
-      "status": "OPEN",
-      "itPriority": "MEDIUM",
-      "requesterName": "Jim Halpert",
-      "ownerName": null,
-      "updatedAt": "2026-10-28T08:12:00.000Z"
-    },
-    {
-      "id": 52,
-      "ticketNumber": "TKT-2026-00052",
-      "title": "Outlook freezing intermittently",
-      "status": "IN_PROGRESS",
-      "itPriority": "HIGH",
-      "requesterName": "Pam Beesly",
-      "ownerName": "Michael Scott",
-      "updatedAt": "2026-10-28T07:22:00.000Z"
-    },
-    {
-      "id": 51,
-      "ticketNumber": "TKT-2026-00051",
-      "title": "Phone not receiving calls",
-      "status": "OPEN",
-      "itPriority": "MEDIUM",
-      "requesterName": "Dwight Schrute",
-      "ownerName": null,
-      "updatedAt": "2026-10-27T16:01:00.000Z"
-    },
-    {
-      "id": 50,
-      "ticketNumber": "TKT-2026-00050",
-      "title": "VPN disconnects randomly",
-      "status": "RESOLVED",
-      "itPriority": "URGENT",
-      "requesterName": "Stanley Hudson",
-      "ownerName": "Michael Scott",
-      "updatedAt": "2026-10-27T15:04:00.000Z"
-    }
-  ]
+  "recentTickets": []
 }
 ```
 
----
+- unassignedCount: ownerId IS NULL across all statuses.
+- myAssignedCount: ownerId equals the authenticated user, across all statuses.
+- newCount, openCount, inProgressCount, waitingRequesterCount: current counts of NEW, OPEN, IN_PROGRESS and WAITING_FOR_REQUESTER.
+- byStatus includes all eight statuses with zero categories. byPriority includes all four **itPriority** values; it does not use requester priority.
+- recentTickets uses the same five-field projection, fixed limit and deterministic ordering as the Requester endpoint, under the shared staff scope.
 
-### 4.3. Administrator Dashboard Endpoint
-Reuses the IT Staff dashboard operational metrics and includes system user statistics.
+#### Daily deltas (BR-12)
 
-- **Method:** `GET`
-- **Endpoint:** `/api/dashboard/admin`
-- **Access:** Authenticated `ADMINISTRATOR`
+newDelta, openDelta, inProgressDelta, waitingRequesterDelta and myAssignedDelta are signed **numbers**, not presentation strings. The UI formats the label/sign.
 
-#### Response `200 OK`
+For each current status group (or current ownerId for myAssignedDelta), compare the number of tickets created today against those created yesterday:
+
+- Today: createdAt >= UTC midnight of referenceTime and createdAt <= referenceTime.
+- Yesterday: createdAt >= previous UTC midnight and createdAt < today's UTC midnight.
+- Delta = today - yesterday; if yesterday is zero, return neutral 0, preserving specification Decision 1.
+
+Status and owner are their **current snapshot values**. These are creation-cohort comparisons, not historical queue/status/assignment changes. Midnight belongs only to today; fractional seconds before midnight remain in yesterday. Future-created records are excluded. All queries share the response snapshot.
+
+### 4.3. Administrator account statistics on the staff endpoint
+
+ADMINISTRATOR callers of GET /api/dashboard/staff additionally receive:
+
 ```json
 {
-  "user": {
-    "id": 1,
-    "name": "David Wallace",
-    "role": "ADMINISTRATOR"
-  },
   "userMetrics": {
-    "totalUsers": 12,
-    "activeUsers": 10,
-    "inactiveUsers": 2,
-    "requesterCount": 6,
-    "itStaffCount": 4,
-    "adminCount": 2
-  },
-  "staffMetrics": {
-    "newCount": 14,
-    "newDelta": "+2 from yesterday",
-    "openCount": 23,
-    "openDelta": "-1 from yesterday",
-    "inProgressCount": 18,
-    "inProgressDelta": "+4 from yesterday",
-    "waitingRequesterCount": 7,
-    "waitingRequesterDelta": "+1 from yesterday",
-    "myAssignedCount": 0,
-    "unassignedCount": 9
-  },
-  "breakdowns": {
-    "byStatus": { ... },
-    "byPriority": { ... }
-  },
-  "recentTickets": [ ... ]
+    "totalUsers": 0,
+    "activeUsers": 0,
+    "inactiveUsers": 0,
+    "requesterCount": 0,
+    "itStaffCount": 0,
+    "adminCount": 0
+  }
 }
 ```
+
+All account/role totals include inactive accounts; activeUsers/inactiveUsers use isActive. IT_STAFF never receive userMetrics. Account rows, password hashes, passwords and session fields are never returned.
+
+There is no separate /api/dashboard/admin endpoint in this contract. Issue #65 explicitly combines the administrator view into /staff; this supersedes the earlier draft route and response examples. No user/staffMetrics wrapper or extra fields in ticket summaries are returned.
+
+### 4.4. Errors, timezone and drill-down
+
+- 401: missing/invalid signed session (inactive accounts are rejected by existing authentication).
+- 403: unauthorized role or password change required.
+- No supported input parameters require validation; fixed limits and scopes cannot be changed by query/body input.
+- 500: safe error/message response for unexpected failures, without database details.
+- Prisma timestamp columns contain UTC without a timezone; independent raw SQL comparisons against timestamptz parameters must use AT TIME ZONE 'UTC' to avoid session-timezone shifts.
+- UI drill-down is implemented by the later dashboard UI issue using the documented scope/status/owner filters and ticket IDs. API responses do not advertise unimplemented URLs or window filters. Recent-window counts must not be linked to a differently scoped list.
 
 ---
 
@@ -547,10 +277,10 @@ Triggered when the ticket has been modified by another user since `currentUpdate
 }
 ```
 
-#### Error Response `422 Unprocessable Entity` (Illegal Transition)
+#### Error Response `400 Bad Request` (Illegal Transition)
 ```json
 {
-  "error": "ILLEGAL_STATUS_TRANSITION",
+  "error": "INVALID_STATUS_TRANSITION",
   "message": "Cannot transition ticket from NEW to RESOLVED. Permitted transitions from NEW are: OPEN, IN_PROGRESS, CANCELLED.",
   "details": {
     "fromStatus": "NEW",
@@ -571,7 +301,7 @@ Triggered when the ticket has been modified by another user since `currentUpdate
 | `403 Forbidden` | `FORBIDDEN` | Requester attempts to update an Action Taken or access staff dashboard. |
 | `404 Not Found` | `NOT_FOUND` | Ticket ID or Action ID does not exist in the database. |
 | `409 Conflict` | `CONFLICT` | Concurrent modification detected (`updatedAt` mismatch). |
-| `422 Unprocessable Entity` | `VALIDATION_FAILED` | `followUpRequired` is true but `followUpNote` is empty. |
-| `422 Unprocessable Entity` | `INACTIVE_USER_REJECTED` | Assignee or actor account is inactive (`isActive: false`). |
-| `422 Unprocessable Entity` | `ILLEGAL_STATUS_TRANSITION` | Attempted status change violates state machine transition matrix. |
-| `500 Internal Server Error`| `INTERNAL_ERROR` | Unexpected unhandled database or server exception. |
+| `400 Bad Request` | `BAD_REQUEST` | `followUpRequired` is true but `followUpNote` is empty. |
+| `400 Bad Request` | `BAD_REQUEST` | Assignee is inactive or has a non-staff role; inactive actors are rejected by authentication with 401. |
+| `400 Bad Request` | `INVALID_STATUS_TRANSITION` | Attempted status change violates state machine transition matrix. |
+| `500 Internal Server Error`| `INTERNAL_SERVER_ERROR` | Unexpected unhandled database or server exception. |

@@ -967,12 +967,14 @@ export class ActionsApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
-async function actionsRequest<T>(ticketId: number, method = "GET", actionId?: string, input?: import("./types.js").ActionTakenInput): Promise<T> {
+async function actionsRequest<T>(ticketId: number, method = "GET", actionId?: string, input?: import("./types.js").ActionTakenInput, suffix = ""): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`/api/tickets/${ticketId}/actions${actionId ? `/${encodeURIComponent(actionId)}` : ""}`, {
+    res = await fetch(`/api/tickets/${ticketId}/actions${actionId ? `/${encodeURIComponent(actionId)}` : ""}${suffix}`, {
       method, credentials: "include", headers: getAuthHeaders({ "Content-Type": "application/json" }),
       body: input ? JSON.stringify({
+        ...(Object.hasOwn(input, "assigneeId") ? { assigneeId: input.assigneeId } : {}),
+        ...(input.currentUpdatedAt ? { currentUpdatedAt: input.currentUpdatedAt } : {}),
         actionDateTime: input.actionDateTime, description: input.description, result: input.result,
         followUpRequired: input.followUpRequired, followUpNote: input.followUpNote, attachmentNotes: input.attachmentNotes,
       }) : undefined,
@@ -980,6 +982,7 @@ async function actionsRequest<T>(ticketId: number, method = "GET", actionId?: st
   } catch { throw new Error("Unable to connect. Check your connection and try again."); }
   if (!res.ok) {
     const defaults: Record<number, string> = {
+      409: "Action changed. Reload actions and review the latest data before trying again.",
       400: "Check the action details and try again.", 401: "Your session has expired. Please sign in again.",
       403: "You do not have permission to access or modify these actions.", 404: "The ticket or action is no longer available.",
     };
@@ -996,4 +999,13 @@ export function createActionTaken(ticketId: number, input: import("./types.js").
 }
 export function updateActionTaken(ticketId: number, actionId: string, input: import("./types.js").ActionTakenInput) {
   return actionsRequest<{ action: import("./types.js").ActionTaken }>(ticketId, "PATCH", actionId, input);
+}
+
+export async function transitionActionTaken(ticketId: number, actionId: string, status: import("./types.js").ActionTakenStatus, currentUpdatedAt: string) {
+  const res = await fetch(`/api/tickets/${ticketId}/actions/${encodeURIComponent(actionId)}/status`, { method: "PATCH", credentials: "include", headers: getAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ status, currentUpdatedAt }) });
+  if (!res.ok) { const error = await res.json().catch(() => ({})); throw new ActionsApiError(res.status, res.status === 409 ? "Action changed. Reload actions and review the latest data." : error.message || "Unable to change action status."); }
+  return res.json() as Promise<{ action: import("./types.js").ActionTaken }>;
+}
+export function fetchActionHistory(ticketId: number, actionId: string) {
+  return actionsRequest<{ history: import("./types.js").ActionHistory[] }>(ticketId, "GET", actionId, undefined, "/history");
 }

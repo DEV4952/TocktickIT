@@ -1,3 +1,4 @@
+import { dashboardRouter } from "./routes/dashboard.js";
 import { changeTicketStatus, WorkflowError } from "./services/ticketWorkflow.js";
 import { actionsTakenRouter } from "./routes/actionsTaken.js";
 import express, { Request, Response, NextFunction } from "express";
@@ -2070,6 +2071,8 @@ app.patch("/api/staff/tickets/:id/status", requireRole("IT_STAFF", "ADMINISTRATO
 });
 
 app.use("/api/tickets/:id/actions", actionsTakenRouter);
+
+app.use("/api/dashboard", dashboardRouter);
 
 export default app;
 

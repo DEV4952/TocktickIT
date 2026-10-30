@@ -54,22 +54,24 @@ model Category {
 }
 
 model User {
-  id                 Int            @id @default(autoincrement())
-  email              String         @unique
-  passwordHash       String         @default("$2a$10$rN7nNl5rM/vG2h3W8m2Gqu0Wf1gQ8Qy1aG1e0tJ5M9z.tQZ/k7qO6")
+  id                 Int                  @id @default(autoincrement())
+  email              String               @unique
+  passwordHash       String               @default("$2a$10$rN7nNl5rM/vG2h3W8m2Gqu0Wf1gQ8Qy1aG1e0tJ5M9z.tQZ/k7qO6")
   name               String
   department         String?
   avatarUrl          String?
-  role               Role           @default(REQUESTER)
-  isActive           Boolean        @default(true)
-  mustChangePassword Boolean        @default(false)
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  tickets            Ticket[]       @relation("RequesterTickets")
-  assignedTickets    Ticket[]       @relation("AssignedTickets")
+  role               Role                 @default(REQUESTER)
+  isActive           Boolean              @default(true)
+  mustChangePassword Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  tickets            Ticket[]             @relation("RequesterTickets")
+  assignedTickets    Ticket[]             @relation("AssignedTickets")
   comments           Comment[]
   internalNotes      InternalNote[]
   actionsTaken       ActionTaken[]
+  assignedActions    ActionTaken[]        @relation("ActionAssignee")
+  actionHistory      ActionTakenHistory[]
 
   @@map("users")
 }
@@ -159,10 +161,22 @@ model Attachment {
   @@map("attachments")
 }
 
+enum ActionTakenStatus {
+  RECORDED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
 model ActionTaken {
   id       String @id @default(cuid())
   ticketId Int
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  status     ActionTakenStatus    @default(RECORDED)
+  assigneeId Int?
+  assignee   User?                @relation("ActionAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  history    ActionTakenHistory[]
 
   actionDateTime DateTime @default(now())
   description    String   @db.Text
@@ -178,9 +192,27 @@ model ActionTaken {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([assigneeId])
+  @@index([status])
   @@index([ticketId])
   @@index([performedById])
   @@index([actionDateTime])
   @@index([createdAt])
   @@map("actions_taken")
+}
+
+model ActionTakenHistory {
+  id        String      @id @default(cuid())
+  actionId  String
+  action    ActionTaken @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  actorId   Int
+  actor     User        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  event     String
+  before    Json?
+  after     Json
+  createdAt DateTime    @default(now())
+
+  @@index([actionId, createdAt])
+  @@index([actorId])
+  @@map("action_taken_history")
 }
