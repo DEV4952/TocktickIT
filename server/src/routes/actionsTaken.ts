@@ -1,3 +1,4 @@
+import { ActionError, actionPeople, actionVersion, createRecordedAction, mutateAction } from "../services/actionLifecycle.js";
 ﻿import { Router, Request, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
@@ -11,10 +12,8 @@ type ActionFields = {
   followUpNote: string | null;
   attachmentNotes: string | null;
 };
-class ActionError extends Error {
-  constructor(public status: number, message: string) { super(message); }
-}
-const performer = { performedBy: { select: { id: true, name: true, role: true } } };
+
+const performer = actionPeople;
 export const actionsTakenRouter = Router({ mergeParams: true });
 actionsTakenRouter.use(requireAuth, (req: Request, res: Response, next: NextFunction) => {
   // Actions require a real signed session, never the legacy Lab 2 identity headers.
@@ -37,7 +36,7 @@ function endpoint(handler: (req: Request, res: Response) => Promise<unknown>) {
         : error instanceof Prisma.PrismaClientKnownRequestError && ["P2025", "P2003"].includes(error.code) ? 404 : 500;
       if (status === 500) console.error("Actions Taken request failed:", error);
       res.status(status).json({
-        error: status === 400 ? "BAD_REQUEST" : status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "INTERNAL_SERVER_ERROR",
+        error: status === 409 ? "CONFLICT" : status === 400 ? "BAD_REQUEST" : status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : "INTERNAL_SERVER_ERROR",
         message: error instanceof ActionError ? error.message : status === 404 ? "Ticket or action not found." : "Failed to process actions taken.",
       });
     }
@@ -72,7 +71,7 @@ function actionInput(body: unknown, existing?: ActionFields): ActionFields {
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new ActionError(400, "Expected a JSON object.");
   const input = body as Record<string, unknown>;
   const fields = ["actionDateTime", "description", "result", "followUpRequired", "followUpNote", "attachmentNotes"] as const;
-  if (existing && !fields.some(field => Object.hasOwn(input, field))) throw new ActionError(400, "No editable fields supplied.");
+  if (existing && !Object.hasOwn(input, "assigneeId") && !fields.some(field => Object.hasOwn(input, field))) throw new ActionError(400, "No editable fields supplied.");
   const merged: Record<string, unknown> = { actionDateTime: new Date(), followUpNote: null, attachmentNotes: null };
   if (existing) for (const field of fields) merged[field] = existing[field];
   // Allowlist: ticketId, performedById, IDs, timestamps and nested relations are ignored.
@@ -106,9 +105,7 @@ actionsTakenRouter.get("/", endpoint(async (req, res) => {
 actionsTakenRouter.post("/", requireRole("IT_STAFF", "ADMINISTRATOR"), endpoint(async (req, res) => {
   const ticket = await accessibleTicket(req);
   const data = actionInput(req.body);
-  const action = await getPrisma().actionTaken.create({
-    data: { ...data, ticketId: ticket.id, performedById: req.user!.id }, include: performer,
-  });
+  const action = await createRecordedAction({ ...data, ticketId: ticket.id, performedById: req.user!.id }, Object.hasOwn(req.body, "assigneeId") ? req.body.assigneeId : req.user!.id, req.user!.id);
   return res.status(201).json({ message: "Action taken recorded successfully", action });
 }));
 actionsTakenRouter.patch("/:actionId", requireRole("IT_STAFF", "ADMINISTRATOR"), endpoint(async (req, res) => {
@@ -116,8 +113,20 @@ actionsTakenRouter.patch("/:actionId", requireRole("IT_STAFF", "ADMINISTRATOR"),
   const existing = await getPrisma().actionTaken.findFirst({ where: { id: req.params.actionId, ticketId: ticket.id } });
   if (!existing) throw new ActionError(404, "Action not found for this ticket.");
   const data = actionInput(req.body, existing);
-  const action = await getPrisma().actionTaken.update({
-    where: { id: existing.id, ticketId: ticket.id }, data, include: performer,
-  });
+  const version = Object.hasOwn(req.body, "currentUpdatedAt") ? actionVersion(req.body.currentUpdatedAt) : undefined;
+  const action = await mutateAction(existing.id, ticket.id, req.user!.id, { ...data, ...(Object.hasOwn(req.body, "assigneeId") ? { assigneeId: req.body.assigneeId } : {}) }, version);
   return res.json({ message: "Action taken updated successfully", action });
+}));
+
+actionsTakenRouter.patch("/:actionId/status", requireRole("IT_STAFF", "ADMINISTRATOR"), endpoint(async (req, res) => {
+  const ticket = await accessibleTicket(req);
+  const action = await mutateAction(req.params.actionId, ticket.id, req.user!.id, { status: req.body?.status }, actionVersion(req.body?.currentUpdatedAt), true);
+  return res.json({ message: "Action status updated successfully", action });
+}));
+actionsTakenRouter.get("/:actionId/history", endpoint(async (req, res) => {
+  const ticket = await accessibleTicket(req);
+  const action = await getPrisma().actionTaken.findFirst({ where: { id: req.params.actionId, ticketId: ticket.id } });
+  if (!action) throw new ActionError(404, "Action not found for this ticket.");
+  const history = await getPrisma().actionTakenHistory.findMany({ where: { actionId: action.id }, include: { actor: { select: { id: true, name: true, role: true } } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+  return res.json({ history });
 }));

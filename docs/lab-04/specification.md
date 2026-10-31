@@ -70,14 +70,14 @@ As mandated by Lab 4 Handout Section 4.2:
 - **FR-07 (Attachment Notes Reference):** The system shall support optional `attachmentNotes` on Actions Taken to reference relevant uploaded files or diagnostic screenshots without altering the underlying attachment storage system.
 
 ### 4.2. Ticket Workflow & Resolution Gating
-- **FR-08 (State Machine Transition Enforcement):** The system shall enforce permitted ticket status transitions among: `NEW`, `OPEN`, `IN_PROGRESS`, `WAITING_FOR_REQUESTER`, `RESOLVED`, `CLOSED`, `REOPENED`, and `CANCELLED`. Unauthorized or non-sequential jumps shall be rejected (`422 Unprocessable Entity`).
+- **FR-08 (State Machine Transition Enforcement):** The system shall enforce permitted ticket status transitions among: `NEW`, `OPEN`, `IN_PROGRESS`, `WAITING_FOR_REQUESTER`, `RESOLVED`, `CLOSED`, `REOPENED`, and `CANCELLED`. Unauthorized or non-sequential jumps shall be rejected (`400 Bad Request`).
 - **FR-09 (Advisory Requester Resolution):** The system shall treat Requester-submitted "Problem Appears Resolved" cues as advisory metadata (`problemAppearsResolved = true`), keeping the ticket status unchanged until an IT Staff member or Administrator formally transitions it to `RESOLVED` or `CLOSED`.
 - **FR-10 (Optimistic Concurrency Control):** The system shall require client submissions for ticket status updates to supply the known `currentUpdatedAt` timestamp. If the server's record has a newer timestamp, the update shall be rejected with HTTP `409 Conflict` containing the latest ticket state.
 
 ### 4.3. Role-Appropriate Dashboards
-- **FR-11 (Requester Dashboard Endpoint):** The system shall provide a dedicated endpoint (`GET /api/dashboard/requester`) returning pre-aggregated counts of the requester's tickets (`myOpenTickets`, `waitingForRequester`, `inProgress`, `resolved`, `closed`) and up to 5 most recently updated tickets.
-- **FR-12 (IT Staff Dashboard Endpoint):** The system shall provide a dedicated endpoint (`GET /api/dashboard/staff`) returning operational queue counts (`new`, `open`, `inProgress`, `waitingForRequester`, `myAssigned`, `unassigned`), daily delta indicators, status/priority distributions, and up to 5 recently updated tickets.
-- **FR-13 (Administrator Dashboard Endpoint):** The system shall provide an admin dashboard endpoint (`GET /api/dashboard/admin`) extending the staff dashboard with user-account counts (`totalUsers`, `activeUsers`, `requesterCount`, `staffCount`, `adminCount`).
+- **FR-11 (Requester Dashboard Endpoint):** GET /api/dashboard/requester returns session-owned counts (myOpenTickets, waitingForRequester, recentlyUpdated, recentlyResolved, inProgress, resolved, closed) and up to five recent five-field ticket summaries. Recent counts use an inclusive rolling seven-day UTC window; recentlyResolved means current RESOLVED tickets updated in that window, not resolution events.
+- **FR-12 (IT Staff Dashboard Endpoint):** GET /api/dashboard/staff returns authoritative newCount, openCount, inProgressCount, waitingRequesterCount, myAssignedCount and unassignedCount, numeric BR-12 daily deltas, complete status/IT-priority breakdowns and up to five recent ticket summaries. All queries share one Repeatable Read snapshot.
+- **FR-13 (Administrator Dashboard View):** ADMINISTRATOR callers of GET /api/dashboard/staff additionally receive userMetrics (totalUsers, activeUsers, inactiveUsers, requesterCount, itStaffCount, adminCount). IT_STAFF callers never receive account statistics. The earlier separate /api/dashboard/admin proposal is superseded by Issue #65.
 - **FR-14 (Authoritative Server Computation):** All dashboard metrics and card figures shall be computed directly by backend database aggregations, guaranteeing authoritative counts.
 - **FR-15 (Dashboard Drill-Down Navigation):** Every dashboard metric card and list item shall link to a filtered Ticket Queue or Ticket Detail view corresponding to that operational slice.
 
@@ -102,7 +102,7 @@ As mandated by Lab 4 Handout Section 4.2:
 | **BR-09** | **Requester Data Isolation** | Requester dashboard metrics and recent ticket queries are strictly filtered by `requesterId = session.userId`. Requesters never receive operational metrics of other users. |
 | **BR-10** | **Authoritative Calculations** | Dashboard card numbers must be calculated server-side from live database queries. Empty query results must display `0` rather than null or missing UI elements. |
 | **BR-11** | **Inactive User Safeguard** | Users with `isActive = false` cannot be assigned as Ticket Owners, recorded as action performers, or authenticated to perform modifications. |
-| **BR-12** | **Delta Time Boundary** | Metric card daily deltas (e.g., `+1 from yesterday`) compare records created within the current calendar day (00:00:00 UTC to now) against records created during the previous calendar day (00:00:00 to 23:59:59 UTC). |
+| **BR-12** | **Creation-Cohort Daily Deltas** | Using one UTC referenceTime, compare tickets created in [today UTC midnight, referenceTime] with [previous UTC midnight, today UTC midnight). Group by current status or current ownerId. Return today minus yesterday, with neutral numeric 0 if that group had no records yesterday (Decision 1). This does not reconstruct historical queue changes. |
 
 ---
 
@@ -199,29 +199,60 @@ erDiagram
 
 ### 7.2. Prisma Model Definition
 ```prisma
-model ActionTaken {
-  id               Int          @id @default(autoincrement())
-  ticketId         Int
-  ticket           Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  
-  actionDateTime   DateTime     @default(now())
-  description      String       @db.Text
-  result           String       @db.Text
-  
-  performedById    Int
-  performedBy      User         @relation(fields: [performedById], references: [id])
-  
-  followUpRequired Boolean      @default(false)
-  followUpNote     String?      @db.Text
-  attachmentNotes  String?      @db.Text
-  
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+enum ActionTakenStatus {
+  RECORDED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
 
+model ActionTaken {
+  id       String @id @default(cuid())
+  ticketId Int
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  status     ActionTakenStatus    @default(RECORDED)
+  assigneeId Int?
+  assignee   User?                @relation("ActionAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  history    ActionTakenHistory[]
+
+  actionDateTime DateTime @default(now())
+  description    String   @db.Text
+  result         String   @db.Text
+
+  performedById Int
+  performedBy   User @relation(fields: [performedById], references: [id], onDelete: Restrict)
+
+  followUpRequired Boolean @default(false)
+  followUpNote     String? @db.Text
+  attachmentNotes  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assigneeId])
+  @@index([status])
   @@index([ticketId])
   @@index([performedById])
   @@index([actionDateTime])
+  @@index([createdAt])
   @@map("actions_taken")
+}
+
+model ActionTakenHistory {
+  id        String      @id @default(cuid())
+  actionId  String
+  action    ActionTaken @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  actorId   Int
+  actor     User        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  event     String
+  before    Json?
+  after     Json
+  createdAt DateTime    @default(now())
+
+  @@index([actionId, createdAt])
+  @@index([actorId])
+  @@map("action_taken_history")
 }
 ```
 
@@ -269,11 +300,10 @@ Complete endpoint schemas, JSON payloads, and response codes are defined in [`do
 |---|---|---|---|---|
 | **Actions Taken** | `POST` | `/api/tickets/:ticketId/actions` | IT Staff, Admin | Create a new Action Taken line |
 | **Actions Taken** | `GET` | `/api/tickets/:ticketId/actions` | Owner Requester, IT Staff, Admin | List all Actions Taken for a ticket |
-| **Actions Taken** | `GET` | `/api/tickets/:ticketId/actions/:id` | Owner Requester, IT Staff, Admin | Get single Action Taken detail |
-| **Actions Taken** | `PUT` | `/api/tickets/:ticketId/actions/:id` | IT Staff, Admin | Update an Action Taken line |
+| **Actions Taken** | `GET` | `/api/tickets/:ticketId/actions/:id/history` | Owner Requester, IT Staff, Admin | Read append-only Action Taken history |
+| **Actions Taken** | `PATCH` | `/api/tickets/:ticketId/actions/:id` | IT Staff, Admin | Update an Action Taken line |
 | **Dashboard** | `GET` | `/api/dashboard/requester` | Requester | Authoritative Requester metrics and recent list |
 | **Dashboard** | `GET` | `/api/dashboard/staff` | IT Staff, Admin | Authoritative IT Staff operational metrics and recent list |
-| **Dashboard** | `GET` | `/api/dashboard/admin` | Admin | Staff dashboard data + user account summary |
 | **Workflow** | `PATCH` | `/api/staff/tickets/:id/status` | IT Staff, Admin | Transition ticket status with concurrency check (`409`) |
 | **Workflow** | `POST` | `/api/tickets/:id/resolve-indication`| Owner Requester | Submit advisory resolution flag (Preserved Lab 3) |
 
@@ -284,17 +314,17 @@ Complete endpoint schemas, JSON payloads, and response codes are defined in [`do
 | ID | Given | When | Then |
 |---|---|---|---|
 | **AC-01** | An authenticated IT Staff member and valid ticket | Staff posts valid Action Taken data (description, result, date-time) | The action is saved under the ticket with `performedById = session.userId` and returns `201 Created`. |
-| **AC-02** | An authenticated IT Staff member | Staff submits an action with `followUpRequired = true` and empty `followUpNote` | The server rejects the request with HTTP `422 Unprocessable Entity` citing mandatory follow-up note. |
+| **AC-02** | An authenticated IT Staff member | Staff submits an action with `followUpRequired = true` and empty `followUpNote` | The server rejects the request with HTTP `400 Bad Request` citing mandatory follow-up note. |
 | **AC-03** | An authenticated Requester | Requester attempts to `POST /api/tickets/:id/actions` | The server rejects the request with HTTP `403 Forbidden` and creates no record. |
 | **AC-04** | An authenticated Requester on an owned ticket | Requester navigates to Ticket Detail | The UI displays all Actions Taken lines recorded by IT Staff in read-only mode with action buttons omitted. |
 | **AC-05** | An authenticated IT Staff member | Staff updates an existing Action Taken record | Changes are persisted, `updatedAt` is refreshed, and the server returns `200 OK`. |
 | **AC-06** | An authenticated Requester | Requester calls `GET /api/dashboard/requester` | Only metrics and recent tickets owned by that requester (`requesterId = session.userId`) are returned. |
 | **AC-07** | An authenticated IT Staff member | Staff calls `GET /api/dashboard/staff` | The response returns accurate operational counts for `new`, `open`, `inProgress`, `waitingForRequester`, `myAssigned`, and `unassigned`. |
 | **AC-08** | An authenticated user on the Dashboard | User clicks on a metric card (e.g. "My Assigned") | The application navigates to the Ticket Queue filtered by that operational criterion. |
-| **AC-09** | An authenticated IT Staff member | Staff attempts an invalid status transition (e.g. `NEW` ➔ `RESOLVED`) | The server rejects the transition with HTTP `422 Unprocessable Entity` citing BR-06 violation. |
+| **AC-09** | An authenticated IT Staff member | Staff attempts an invalid status transition (e.g. `NEW` ➔ `RESOLVED`) | The server rejects the transition with HTTP `400 Bad Request` citing BR-06 violation. |
 | **AC-10** | Two IT Staff members viewing the same ticket | User A updates status, then User B attempts status update with stale `currentUpdatedAt` | User B's request is rejected with HTTP `409 Conflict` and the latest ticket state is returned. |
 | **AC-11** | An authenticated Requester | Requester clicks "Problem Appears Resolved" | The advisory flag `problemAppearsResolved` is set to `true`, but ticket `status` remains unchanged. |
-| **AC-12** | An IT Staff member | Attempting to create an action or assign a ticket to an inactive user (`isActive = false`) | The server rejects the transaction with HTTP `422 Unprocessable Entity`. |
+| **AC-12** | An IT Staff member | Attempting to create an action or assign a ticket to an inactive user (`isActive = false`) | The server rejects an inactive/non-staff assignee with HTTP `400 Bad Request`; inactive authenticated actors are rejected by authentication with HTTP 401. |
 | **AC-13** | Any authenticated user | Navigating between Requester, IT Staff, and Admin views | All Lab 1–3 functionality (Auth, Tickets, Comments, Notes, Attachments, User Admin) operates without regression. |
 
 ---
@@ -321,8 +351,28 @@ A sprint backlog item or technical increment in Sprint 4 is declared **Done** on
 
 ## 11. Assumptions and Architectural Decisions
 
-1. **Dashboard Daily Delta Boundary:** Daily deltas (`+1 from yesterday`) compare records created within the current UTC calendar day (00:00:00 to now) against records created during the previous UTC calendar day (00:00:00 to 23:59:59). If no previous records exist, delta renders neutral (`0`).
+1. **Dashboard Daily Delta Boundary:** Numeric delta fields compare current-status/current-owner creation cohorts using half-open UTC day boundaries as BR-12 defines; return neutral 0 when the previous cohort is empty. Display signs/labels in the UI. No historical status-change claim is made.
 2. **Action Taken Date-Time Flexibility:** Although `actionDateTime` defaults to the current server timestamp in the UI, technicians are permitted to supply a historical timestamp within the past 30 days to account for logging field work performed offline. Future timestamps (> 5 minutes ahead of server clock) are rejected.
 3. **Author Immutability vs Content Editing:** When an Action Taken is edited, the `performedById` remains permanently set to the original technician who executed the task, while `updatedAt` tracks the modification time, maintaining forensic auditability.
 4. **Advisory Resolution Lifecycle:** The `problemAppearsResolved` flag serves as an operational queue filter for IT Staff. It is cleared or retained according to staff discretion when the ticket is formally marked `RESOLVED`.
 5. **Dashboard Query Performance:** Dashboard aggregation queries utilize database index scans on `(status)`, `(ownerId)`, `(requesterId)`, and `(createdAt)`, avoiding expensive full table scans.
+
+### Lab4.7 dashboard contract synchronization (2026-10-30)
+
+Open means NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER or REOPENED. Requester scope always comes from the signed session. Recent count window is the inclusive rolling 7 days ending at referenceTime; recentlyResolved is a current-state/updatedAt approximation, not a resolution-event metric. Recent lists are all-time latest five, ordered updatedAt DESC/id DESC, returning exactly id, ticketNumber, title, status and updatedAt. Staff counts cover the existing shared queue; assignment uses ownerId, breakdown priority uses itPriority. Administrator role totals include inactive users. No separate admin endpoint or unsupported drill-down links are promised; see api-spec.md section 4 for the implemented shape and dashboard-api-verification.md for SQL evidence and the mocked global-empty-data limitation.
+
+### Rubric Part 6?7: Actions Taken assignment/lifecycle extension (2026-10-30)
+
+User-authorized expansion included with Lab4.7. This is an additive rubric-alignment feature. The contract in actions-taken-lifecycle-verification.md was written before schema changes.
+
+- **FR-AT-01:** Actions have independent nullable assigneeId and immutable authenticated performedById. Only active IT_STAFF/ADMINISTRATOR users can be assigned; null is unassigned. Ticket coordination owner is unchanged.
+- **FR-AT-02:** RECORDED ? IN_PROGRESS/COMPLETED/CANCELLED; IN_PROGRESS ? COMPLETED/CANCELLED; COMPLETED and CANCELLED are terminal and immutable. Staff/Admin only; start/complete require an active assignee. Requesters read only owned-ticket actions/history.
+- **FR-AT-03:** Successful create/edit/assignment/status changes append actor-attributed before/after history atomically. No history update/delete API exists. Latest content remains editable until terminal; earlier content is preserved in history rather than overwritten there.
+- **FR-AT-04:** Lifecycle PATCH requires currentUpdatedAt; stale updates return 409. Content PATCH accepts an optional version for backward compatibility; new UI supplies it. Failed requests append no events.
+- **BR-AT-01:** Existing records retain all prior fields, receive RECORDED and null assignment, and get no invented historical events/completion times. New API records default to creator assignment.
+- **BR-AT-02:** Action completion/cancellation never changes Ticket status, requester advisory feedback or Ticket owner. Ticket workflow rules remain as documented in ticket-workflow-verification.md.
+- **AC-AT-01:** Staff/Admin can assign active staff, start, complete and cancel permitted actions; inactive/requester assignees are rejected.
+- **AC-AT-02:** Requesters cannot mutate actions/history; original recorder is retained on reassignment; chronological history preserves earlier values.
+- **AC-AT-03:** Concurrent lifecycle writes yield one success and one conflict, with one new event, and audit failure rolls back the action change.
+
+Additive migration adds ActionTakenStatus, nullable assignee FK/index, default RECORDED status and ActionTakenHistory. History actor deletion is restricted; parent-action deletion cascades history as part of existing parent cleanup policy. Append-only here is an application/API guarantee, not a restriction on privileged SQL.

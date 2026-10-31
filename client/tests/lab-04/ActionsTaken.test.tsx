@@ -33,6 +33,7 @@ function deferred<T>() {
 }
 beforeEach(() => {
   vi.restoreAllMocks(); localStorage.clear();
+  vi.spyOn(api, "fetchAssignableStaffApi").mockResolvedValue([staff, original]);
   vi.spyOn(api, "fetchActionsTaken").mockResolvedValue({ ticketId: 101, ticketNumber: "TIC-101", totalActions: 1, actions: [action()] });
   vi.spyOn(api, "createActionTaken").mockResolvedValue({ action: action("new", { description: "Inspected network gateway" }) });
   vi.spyOn(api, "updateActionTaken").mockResolvedValue({ action: action("a", { result: "Updated result" }) });
@@ -97,13 +98,13 @@ describe("Lab 4.5 Actions Taken", () => {
     it(`${role} creates using only editable payload fields and updates the list`, async () => {
       view({ ...staff, role }); await openCreate(); fill();
       const dialog = screen.getByRole("dialog");
-      expect(within(dialog).getByText("Current Technician")).toBeInTheDocument();
+      expect(within(dialog).getByText("Current Technician", { selector: ".actions-performer" })).toBeInTheDocument();
       fireEvent.change(screen.getByLabelText("Attachment Notes"), { target: { value: "  See new-log.txt  " } });
       await userEvent.click(screen.getByRole("button", { name: "Save Action" }));
       await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
       const [id, payload] = vi.mocked(api.createActionTaken).mock.calls[0];
       expect(id).toBe(101);
-      expect(Object.keys(payload).sort()).toEqual(["actionDateTime", "description", "result", "followUpRequired", "followUpNote", "attachmentNotes"].sort());
+      expect(Object.keys(payload).sort()).toEqual(["actionDateTime", "description", "result", "followUpRequired", "followUpNote", "attachmentNotes", "assigneeId"].sort());
       expect(payload).toMatchObject({ description: "Inspected network gateway", result: "Connectivity restored", followUpRequired: false, followUpNote: null, attachmentNotes: "See new-log.txt" });
       expect(Number.isFinite(Date.parse(payload.actionDateTime))).toBe(true);
       expect(await screen.findByText("Inspected network gateway")).toBeInTheDocument();
@@ -112,8 +113,8 @@ describe("Lab 4.5 Actions Taken", () => {
       view({ ...staff, role });
       await userEvent.click(await screen.findByRole("button", { name: /^Edit action:/ }));
       const dialog = screen.getByRole("dialog");
-      expect(within(dialog).getByText("Original Technician")).toBeInTheDocument();
-      expect(within(dialog).queryByText("Current Technician")).not.toBeInTheDocument();
+      expect(within(dialog).getByText("Original Technician", { selector: ".actions-performer" })).toBeInTheDocument();
+      expect(within(dialog).queryByText("Current Technician", { selector: ".actions-performer" })).not.toBeInTheDocument();
       expect(screen.getByLabelText("Description")).toHaveValue("Inspected gateway\nChecked firewall");
       expect(screen.getByLabelText("Follow-up Note (required)")).toHaveValue("Monitor tomorrow");
       expect(screen.getByLabelText("Attachment Notes")).toHaveValue("See diagnostic-log.txt");

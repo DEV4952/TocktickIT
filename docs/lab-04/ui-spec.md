@@ -314,3 +314,11 @@ Triggered when an update is submitted with a stale `currentUpdatedAt` timestamp:
 3. **Form Error Association:** Form validation errors are explicitly tied to their input fields via `aria-describedby` and render in high-contrast red (`#dc3545`).
 4. **Non-Color Status Indicators:** Every status badge combines distinct text labels, background hues, and icon shapes so that color-blind users can distinguish statuses immediately.
 5. **No Layout Overflow:** All tables, long descriptions, and file attachment titles use `word-break: break-word` or `text-overflow: ellipsis` to prevent horizontal viewport blowout.
+
+## Actions Taken rubric extension (2026-10-30)
+
+Ticket Detail Actions Taken cards additionally show current action status and assignee separately from the original Performed By recorder. Create/Edit modal loads active IT Staff/Admin choices, offers Unassigned and keeps Performed By read-only. An unavailable current assignee is labelled unavailable; saving a chosen unavailable assignee is blocked. Loading/failure of choices prevents unsafe saves while preserving entered content.
+
+Staff/Admin controls follow RECORDED ? IN_PROGRESS/COMPLETED/CANCELLED and IN_PROGRESS ? COMPLETED/CANCELLED. Start/Complete require assignment; inactive assignment is authoritatively rejected by the backend. Completed/cancelled cards have no Edit or transition controls. Requesters see no write controls and may read public history only for accessible tickets.
+
+View history shows chronological actor/event/time entries and expandable before/after snapshots. No update/delete history control exists. History failures support retry. Transitions disable duplicate submissions; a 409 shows a reload instruction and locks transitions until explicit Reload actions. Modal 409 keeps values visible and disables further stale saves; cancel/close then reload retrieves the latest record. Existing wrapping cards, portal modal, focus trap and body-scroll rules remain; rendered visual checks/screenshots are still pending.

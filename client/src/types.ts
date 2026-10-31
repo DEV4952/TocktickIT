@@ -248,6 +248,9 @@ export interface UpdateAdminUserPayload {
 }
 
 export interface ActionTaken {
+  status?: ActionTakenStatus;
+  assigneeId?: number | null;
+  assignee?: Pick<User, "id" | "name" | "role"> | null;
   id: string;
   ticketId: number;
   actionDateTime: string;
@@ -263,6 +266,8 @@ export interface ActionTaken {
 }
 
 export interface ActionTakenInput {
+  assigneeId?: number | null;
+  currentUpdatedAt?: string;
   actionDateTime: string;
   description: string;
   result: string;
@@ -270,3 +275,6 @@ export interface ActionTakenInput {
   followUpNote: string | null;
   attachmentNotes: string | null;
 }
+
+export type ActionTakenStatus = "RECORDED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export interface ActionHistory { id: string; actionId: string; actorId: number; event: string; before: Record<string, unknown> | null; after: Record<string, unknown>; createdAt: string; actor: Pick<User, "id" | "name" | "role">; }
