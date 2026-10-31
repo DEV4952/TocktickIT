@@ -135,6 +135,7 @@ export interface PaginatedTicketsResponse {
 }
 
 export interface TicketQueryOptions {
+  statusGroup?: "open";
   page?: number;
   limit?: number;
   search?: string;
@@ -278,3 +279,17 @@ export interface ActionTakenInput {
 
 export type ActionTakenStatus = "RECORDED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 export interface ActionHistory { id: string; actionId: string; actorId: number; event: string; before: Record<string, unknown> | null; after: Record<string, unknown>; createdAt: string; actor: Pick<User, "id" | "name" | "role">; }
+
+export interface DashboardTicket { id: number; ticketNumber: string; title: string; status: TicketStatus; updatedAt: string; }
+export interface RequesterDashboardData {
+ referenceTime: string; windowStart: string;
+ metrics: { myOpenTickets: number; waitingForRequester: number; recentlyUpdated: number; recentlyResolved: number; inProgress: number; resolved: number; closed: number };
+ recentTickets: DashboardTicket[];
+}
+export interface StaffDashboardData {
+ referenceTime: string; windowStart: string;
+ metrics: { unassignedCount: number; myAssignedCount: number; newCount: number; openCount: number; inProgressCount: number; waitingRequesterCount: number; newDelta: number; openDelta: number; inProgressDelta: number; waitingRequesterDelta: number; myAssignedDelta: number };
+ breakdowns: { byStatus: Record<TicketStatus, number>; byPriority: Record<TicketPriority, number> };
+ recentTickets: DashboardTicket[];
+ userMetrics?: { totalUsers: number; activeUsers: number; inactiveUsers: number; requesterCount: number; itStaffCount: number; adminCount: number };
+}

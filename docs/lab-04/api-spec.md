@@ -305,3 +305,9 @@ Triggered when the ticket has been modified by another user since `currentUpdate
 | `400 Bad Request` | `BAD_REQUEST` | Assignee is inactive or has a non-staff role; inactive actors are rejected by authentication with 401. |
 | `400 Bad Request` | `INVALID_STATUS_TRANSITION` | Attempted status change violates state machine transition matrix. |
 | `500 Internal Server Error`| `INTERNAL_SERVER_ERROR` | Unexpected unhandled database or server exception. |
+
+## Lab4.8 queue drill-down compatibility addition (2026-10-31)
+
+GET /api/tickets accepts optional statusGroup=open for the exact dashboard active-status set: NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER, REOPENED. Only open is supported; an unsupported value or a simultaneous individual status filter is 400. Existing status filters now accept all eight TicketStatus values. Ownership remains derived from authenticated session; requesterId query values never override a REQUESTER identity. Old calls without statusGroup retain their behavior. No dashboard response change was necessary.
+
+Staff queue filters remain status and ownerId=me; My Assigned is all current-user-owned tickets across statuses. Recent metric links and Quick Actions use actual queue predicates, not invented aliases such as assignedToMe.

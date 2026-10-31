@@ -117,7 +117,7 @@ Complete UI layouts, Zen Green tokens, wireframes, and responsive behaviors are 
   - Administrator: `[Dashboard]`, `[Ticket Queue]`, `[User Management]`, `[Create Ticket]`, `[Profile Dropdown]`.
 - Active route highlighted with Zen Green indicator border (`--color-zen-primary-hover`).
 
-### 6.2. IT Staff Dashboard Screen (`/staff/dashboard`)
+### 6.2. IT Staff Dashboard Screen (`/dashboard`, IT_STAFF/ADMINISTRATOR)
 - **Header:** Welcome banner (`Welcome back, Michael!`) with dynamic date summary and manual `[ Refresh ]` trigger.
 - **Metric Cards (5 Cards):** `New`, `Open`, `In Progress`, `Waiting for Requester`, `My Assigned`.
   - Displays count value (32px bold) + delta subtext (`+2 from yesterday`).
@@ -125,7 +125,7 @@ Complete UI layouts, Zen Green tokens, wireframes, and responsive behaviors are 
 - **Recent Tickets List:** 5 most recently updated operational tickets with status pills, priority badges, and links to Ticket Detail.
 - **Quick Actions Panel:** Direct shortcuts for `Create Ticket`, `Search Tickets`, and `My Queue`.
 
-### 6.3. Requester Dashboard Screen (`/requester/dashboard` or `/dashboard`)
+### 6.3. Requester Dashboard Screen (`/dashboard`, REQUESTER)
 - **Header:** Personalized customer greeting (`Welcome, Jennifer!`).
 - **Metric Cards (4 Cards):** `My Open Tickets`, `In Progress`, `Resolved`, `Closed`. Each card provides a "View all" drill-down link to the filtered My Tickets view.
 - **My Recent Tickets:** Table/cards of the customer's 5 most recent requests.
@@ -376,3 +376,7 @@ User-authorized expansion included with Lab4.7. This is an additive rubric-align
 - **AC-AT-03:** Concurrent lifecycle writes yield one success and one conflict, with one new event, and audit failure rolls back the action change.
 
 Additive migration adds ActionTakenStatus, nullable assignee FK/index, default RECORDED status and ActionTakenHistory. History actor deletion is restricted; parent-action deletion cascades history as part of existing parent cleanup policy. Append-only here is an application/API guarantee, not a restriction on privileged SQL.
+
+### Lab4.8 implemented dashboard drill-downs (2026-10-31)
+
+Staff metric links use /staff/queue?status=NEW|OPEN|IN_PROGRESS|WAITING_FOR_REQUESTER; My Assigned and My Queue use /staff/queue?ownerId=me. Requester links use /tickets?statusGroup=open or exact IN_PROGRESS/RESOLVED/CLOSED statuses, under server-enforced session ownership. statusGroup=open reuses the dashboard open-status predicate; unsupported groups and simultaneous individual status/group filters return 400. The requester list now accepts all eight existing statuses. No dashboard response fields, schema or workflow rules changed.

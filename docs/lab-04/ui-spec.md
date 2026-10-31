@@ -27,12 +27,10 @@ TokTickIT Application (Zen Green Theme)
 │
 ├── Views & Screens:
 │   ├── /dashboard (Role-based entry: dynamically renders RequesterDashboard or StaffDashboard)
-│   ├── /requester/dashboard (Explicit Requester Dashboard)
-│   ├── /staff/dashboard (Explicit IT Staff / Admin Operational Dashboard)
 │   ├── /tickets (Requester Ticket List — Preserved from Labs 2 & 3)
 │   ├── /tickets/:id (Requester Ticket Detail + Public Comments + Actions Taken Read-Only)
 │   ├── /staff/queue (IT Staff Ticket Queue — Filterable, Sortable, Paginated)
-│   ├── /staff/tickets/:id (IT Staff Ticket Detail + Actions Taken CRUD + Notes & Comments)
+│   ├── /tickets/:id (Shared Ticket Detail for permitted IT Staff/Admin + Actions Taken CRUD + Notes & Comments)
 │   └── /admin/users (Admin User Management — Preserved from Lab 3)
 ```
 *\*Note: Authenticated users landing on `/` or `/dashboard` are routed directly to their role-appropriate dashboard.*
@@ -84,7 +82,7 @@ All styling strictly adheres to the established Zen Green CSS tokens:
 
 ---
 
-## 3. Screen 1: IT Staff Dashboard (`/staff/dashboard`)
+## 3. Screen 1: IT Staff Dashboard (`/dashboard` ? IT_STAFF/ADMINISTRATOR)
 
 ### 3.1. Wireframe (Matching Lab 4 Handout Page 5)
 ```text
@@ -129,16 +127,16 @@ All styling strictly adheres to the established Zen Green CSS tokens:
   - `Open`: routes to `/staff/queue?status=OPEN`.
   - `In Progress`: routes to `/staff/queue?status=IN_PROGRESS`.
   - `Waiting for Requester`: routes to `/staff/queue?status=WAITING_FOR_REQUESTER`.
-  - `My Assigned`: routes to `/staff/queue?assignedToMe=true`.
+  - `My Assigned`: routes to `/staff/queue?ownerId=me`.
 - **Recent Tickets Row Interaction:** Clicking any row navigates to that ticket's detailed operational screen (`/staff/tickets/:id`).
 - **Quick Action Triggers:**
   - `Create Ticket`: opens `/tickets/new`.
   - `Search Tickets`: navigates to `/staff/queue` with the search bar auto-focused.
-  - `My Queue`: routes to `/staff/queue?assignedToMe=true`.
+  - `My Queue`: routes to `/staff/queue?ownerId=me`.
 
 ---
 
-## 4. Screen 2: Requester Dashboard (`/requester/dashboard`)
+## 4. Screen 2: Requester Dashboard (`/dashboard` ? REQUESTER)
 
 ### 4.1. Wireframe (Matching Lab 4 Handout Page 6)
 ```text
@@ -322,3 +320,11 @@ Ticket Detail Actions Taken cards additionally show current action status and as
 Staff/Admin controls follow RECORDED ? IN_PROGRESS/COMPLETED/CANCELLED and IN_PROGRESS ? COMPLETED/CANCELLED. Start/Complete require assignment; inactive assignment is authoritatively rejected by the backend. Completed/cancelled cards have no Edit or transition controls. Requesters see no write controls and may read public history only for accessible tickets.
 
 View history shows chronological actor/event/time entries and expandable before/after snapshots. No update/delete history control exists. History failures support retry. Transitions disable duplicate submissions; a 409 shows a reload instruction and locks transitions until explicit Reload actions. Modal 409 keeps values visible and disables further stale saves; cancel/close then reload retrieves the latest record. Existing wrapping cards, portal modal, focus trap and body-scroll rules remain; rendered visual checks/screenshots are still pending.
+
+## Lab4.8 implemented navigation contract (2026-10-31)
+
+/dashboard renders the dashboard for the authenticated role; / also starts authenticated users on their dashboard. The legacy Lab2 requester-selector fallback retains its existing workspace when no signed-in auth user exists. One shared dashboard route avoids duplicate role routes. Dashboard links exist in desktop/mobile navigation with aria-current. The unfiltered staff navigation label is Ticket Queue; My Assigned and the My Queue quick action both use ownerId=me with no hidden status restriction.
+
+Requester My Open Tickets uses statusGroup=open (NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER, REOPENED) and a dedicated matching queue filter option. Other metric links use their exact status. Recent ticket links use /tickets/:id for all permitted roles. Queue search/status/priority/category and staff owner filters are read from URL state; filters survive direct entry, remount and back/forward. Profile data, route selection and authorization are independent of user-controlled identity parameters.
+
+Skeletons have reserved metric/recent-section space; zero/error/empty states are distinct. Cards and Quick Actions are native links, wrapping recent cards include status text and browser-local dates, and layout uses responsive minmax grids with long-word wrapping. Rendered 375/768/1280 checks remain unverified because browser access host is unavailable; see dashboard-ui-verification.md.
