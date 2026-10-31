@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useUrlFilter } from "../navigation.js";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRequester } from "../context/RequesterContext.js";
 import { fetchTickets, fetchCategories } from "../api.js";
 import { TicketSummary, PaginationMetadata, TicketMetrics, Category } from "../types.js";
@@ -30,6 +31,9 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
 
   const activeUser = authUser || currentRequester;
 
+  const requestEpoch = useRef(0);
+  useEffect(() => () => { requestEpoch.current++; }, []);
+
   // Data States
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
   const [pagination, setPagination] = useState<PaginationMetadata>({
@@ -52,11 +56,11 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
   const [categories, setCategories] = useState<Category[]>([]);
 
   // Query & Filter States
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("ALL");
-  const [priority, setPriority] = useState("ALL");
-  const [categoryId, setCategoryId] = useState("ALL");
+  const [searchInput, setSearchInput] = useState(() => new URLSearchParams(window.location.search).get("search") || "");
+  const [search, setSearch] = useUrlFilter("search", "");
+  const [status, setStatus] = useUrlFilter("status", "ALL");
+  const [priority, setPriority] = useUrlFilter("priority", "ALL");
+  const [categoryId, setCategoryId] = useUrlFilter("categoryId", "ALL");
   const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt" | "priority" | "ticketNumber" | "title">("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
@@ -68,6 +72,8 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
 
   // Modal State
   const [selectedTicketId, setSelectedTicketId] = useState<string | number | null>(null);
+
+  useEffect(() => setSearchInput(search), [search]);
 
   // Load Categories on mount
   useEffect(() => {
@@ -89,6 +95,7 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
   // Fetch Tickets
   const loadTickets = useCallback(async () => {
     if (!activeUser) return;
+    const epoch = ++requestEpoch.current;
     setIsLoading(true);
     setError(null);
     try {
@@ -96,19 +103,22 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
         page,
         limit,
         search,
-        status,
+        status: status === "OPEN_GROUP" ? "ALL" : status,
+        ...(status === "OPEN_GROUP" ? { statusGroup: "open" } : {}),
         priority,
         categoryId,
         sortBy,
         sortOrder,
       });
+      if (epoch !== requestEpoch.current) return;
       setTickets(response.data);
       setPagination(response.pagination);
       setMetrics(response.metrics);
     } catch (err) {
+      if (epoch !== requestEpoch.current) return;
       setError(err instanceof Error ? err.message : "Unable to load tickets.");
     } finally {
-      setIsLoading(false);
+      if (epoch === requestEpoch.current) setIsLoading(false);
     }
   }, [activeUser, page, limit, search, status, priority, categoryId, sortBy, sortOrder]);
 
@@ -290,6 +300,11 @@ export function MyTicketsScreen({ onNavigateToNewTicket, onViewTicket }: MyTicke
               data-testid="filter-status-select"
             >
               <option value="ALL">Status: All</option>
+              <option value="OPEN_GROUP">My Open Tickets (all active statuses)</option>
+              <option value="NEW">New</option>
+              <option value="WAITING_FOR_REQUESTER">Waiting for Requester</option>
+              <option value="REOPENED">Reopened</option>
+              <option value="CANCELLED">Cancelled</option>
               <option value="OPEN">Open</option>
               <option value="IN_PROGRESS">In Progress</option>
               <option value="RESOLVED">Resolved</option>
