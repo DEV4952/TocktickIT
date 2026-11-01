@@ -108,7 +108,7 @@ As mandated by Lab 4 Handout Section 4.2:
 
 ## 6. UI Specification Summary
 
-Complete UI layouts, Zen Green tokens, wireframes, and responsive behaviors are detailed in [`docs/lab-04/ui-spec.md`](file:///c:/toktickit/docs/lab-04/ui-spec.md).
+Complete UI layouts, Zen Green tokens, wireframes, and responsive behaviors are detailed in [`docs/lab-04/ui-spec.md`](ui-spec.md).
 
 ### 6.1. Navigation & App Shell
 - **Role-Aware Header:**
@@ -294,7 +294,7 @@ The database seed script (`server/prisma/seed.ts`) executes safely and repeatedl
 
 ## 8. REST API Contract Summary
 
-Complete endpoint schemas, JSON payloads, and response codes are defined in [`docs/lab-04/api-spec.md`](file:///c:/toktickit/docs/lab-04/api-spec.md).
+Complete endpoint schemas, JSON payloads, and response codes are defined in [`docs/lab-04/api-spec.md`](api-spec.md).
 
 | Group | Method | Endpoint | Allowed Roles | Description |
 |---|---|---|---|---|
@@ -332,7 +332,7 @@ Complete endpoint schemas, JSON payloads, and response codes are defined in [`do
 ## 10. Product Definition of Done (DoD)
 
 A sprint backlog item or technical increment in Sprint 4 is declared **Done** only when all of the following conditions are satisfied:
-1. **Specification Alignment:** Implementation satisfies all Functional Requirements (`FR-01` to `FR-17`) and Business Rules (`BR-01` to `BR-12`).
+1. **Specification Alignment:** Implementation satisfies all approved numbered Functional Requirements and Business Rules, including the original FR/BR ranges and the authorized FR-DASH, BR-DASH and BR-AT additions.
 2. **Spec Precedence:** Engineering contract and specifications (`specification.md`, `ui-spec.md`, `api-spec.md`) exist and are approved on a feature branch prior to implementation pull request merges.
 3. **Database & Schema Hygiene:** Prisma migrations apply cleanly without warnings, schema preserves backward compatibility, and the seed script runs idempotently.
 4. **Backend Security & Concurrency:** All endpoints enforce session authentication, role checks, inactive account safeguards, and optimistic concurrency locks on the server.
@@ -380,3 +380,12 @@ Additive migration adds ActionTakenStatus, nullable assignee FK/index, default R
 ### Lab4.8 implemented dashboard drill-downs (2026-10-31)
 
 Staff metric links use /staff/queue?status=NEW|OPEN|IN_PROGRESS|WAITING_FOR_REQUESTER; My Assigned and My Queue use /staff/queue?ownerId=me. Requester links use /tickets?statusGroup=open or exact IN_PROGRESS/RESOLVED/CLOSED statuses, under server-enforced session ownership. statusGroup=open reuses the dashboard open-status predicate; unsupported groups and simultaneous individual status/group filters return 400. The requester list now accepts all eight existing statuses. No dashboard response fields, schema or workflow rules changed.
+
+
+## Dashboard rubric completion (2026-11-01)
+
+- **FR-DASH-01 / AC-DASH-01:** IT Staff and Administrators see My Actions Taken: all-time total, all four current Action statuses and the latest five actions recorded by their signed-in account. Counts use immutable performedById, not assigneeId or Ticket ownerId. Each recent action opens its accessible Ticket Detail. Zero is a successful result; authentication/loading/failure never fabricates zero.
+- **FR-DASH-02 / AC-DASH-02:** Requesters see Attention Required: the total and latest five owned Tickets whose current status is WAITING_FOR_REQUESTER, with Ticket Detail and a View all link applying the same status/ownership predicate. No matching tickets produces an explicit empty state.
+- **BR-DASH-01:** Recorder summaries include RECORDED, IN_PROGRESS, COMPLETED and CANCELLED across all dates. Recent actions order actionDateTime DESC, createdAt DESC, id ASC. Reassignment must not change recorder ownership.
+- **BR-DASH-02:** Attention-required means waiting for that Requester response, not a staff Action follow-up flag. Scope always comes from signed session; query/body identity overrides are ignored. Lists order updatedAt DESC/id DESC, limit5; totals are unbounded.
+- **BR-DASH-03:** Both additions use the existing repeatable-read dashboard snapshot and minimal public projections. No schema, migration, role-policy or new endpoint is needed.

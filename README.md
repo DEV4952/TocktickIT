@@ -118,24 +118,34 @@ npm run dev
 
 ## Running Automated Tests
 
-TokTickIT features a complete test-driven suite with **193 automated tests** across Server and Client with 100% pass rate and zero regressions.
+Lab4 hardening verified 443 backend tests and 220 frontend tests on the feature branch; this is not final-main release acceptance. Current results and limitations are in [tests.md](docs/lab-04/tests.md#release-verification). Browser evidence and accessibility findings are in [ui-spec.md](docs/lab-04/ui-spec.md#lab410-visual-accessibility-audit).
 
-### Run Lab 3 Tests (Combined Server + Client)
-```bash
-npm run test:lab3
-```
-*Runs 64 server integration tests and 32 client component tests specific to Lab 3 (96 tests total).*
+### Safe full backend regression (Windows/PowerShell)
 
-### Run All Backend Tests (Server)
-```bash
-cd server
-npm test
-```
-*Executes all Supertest + Vitest integration tests for Auth, RBAC, Staff Queue, Comments, Notes, User Management, and Lab 2 APIs (120 tests).*
+Legacy Labs2-3 tests modify fixed seed accounts and delete fixture data. They are blocked on development/production databases. Use a disposable PostgreSQL cluster; the helper requires locally installed PostgreSQL binaries (default PostgreSQL18 path, overridable with -PostgresBin).
 
-### Run All Frontend Tests (Client)
-```bash
-cd client
-npm test
+```powershell
+# Repository root; install root/server/client dependencies first.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lab4-test-environment.ps1 -Action Server
 ```
-*Executes all Vitest + React Testing Library tests for Login, Password Change, Staff Queue, Staff Detail, User Management, and Requester workflows (73 tests).*
+
+The helper creates/reuses only the verified workspace QA cluster, bound to 127.0.0.1:55439, migrates and seeds lab4_qa_test, then runs all backend tests. It checks the actual data_directory; the Vitest guard checks URL, explicit opt-in and database marker before importing legacy suites. It never resets/truncates the development database. Generated QA data stays ignored under artifacts/lab-04/e2e-results/. Do not expose this trust-authentication QA cluster on a network.
+
+### Frontend, real browser E2E and hardening audit
+
+```powershell
+npm.cmd --prefix client run test
+$env:E2E_DATABASE_URL = 'postgresql://lab4qa@127.0.0.1:55439/lab4_qa_test'
+$env:E2E_BROWSER_CHANNEL = 'chrome'
+$env:E2E_RUN_LABEL = 'local-e2e'
+npm.cmd run test:e2e:lab4
+$env:E2E_RUN_LABEL = 'local-qa'
+npm.cmd run test:qa:lab4
+npm.cmd run typecheck:e2e:lab4
+npm.cmd --prefix server run build
+npm.cmd --prefix client run build
+# Stop only the workspace disposable QA server when finished:
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lab4-test-environment.ps1 -Action Stop
+```
+
+The three Lab4.9 specs stay separate from the Lab4.10 audit. QA covers 375x812, 768x1024 and 1440x900 with real keyboard and axe checks; its explicitly injected service failures are visual safe-failure tests, not mocked evidence of backend correctness. Use installed Chrome, or install Playwright Chromium and omit E2E_BROWSER_CHANNEL. Do not run other DB-writing suites concurrently with browser checks of global queue counts.

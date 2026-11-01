@@ -15,7 +15,7 @@ export async function requesterDashboard(requesterId: number) {
   const owned = { requesterId };
   const recent = { ...owned, updatedAt: { gte: windowStart, lte: referenceTime } };
   return getPrisma().$transaction(async tx => {
-    const [myOpenTickets, waitingForRequester, recentlyUpdated, recentlyResolved, inProgress, resolved, closed, recentTickets] = await Promise.all([
+    const [myOpenTickets, waitingForRequester, recentlyUpdated, recentlyResolved, inProgress, resolved, closed, recentTickets, attentionRequiredTickets] = await Promise.all([
       tx.ticket.count({ where: { ...owned, status: { in: OPEN_STATUSES } } }),
       tx.ticket.count({ where: { ...owned, status: "WAITING_FOR_REQUESTER" } }),
       tx.ticket.count({ where: recent }),
@@ -24,11 +24,12 @@ export async function requesterDashboard(requesterId: number) {
       tx.ticket.count({ where: { ...owned, status: "RESOLVED" } }),
       tx.ticket.count({ where: { ...owned, status: "CLOSED" } }),
       tx.ticket.findMany({ where: owned, select: recentSelect, orderBy: [{ updatedAt: "desc" }, { id: "desc" }], take: RECENT_LIMIT }),
+      tx.ticket.findMany({ where: { ...owned, status: "WAITING_FOR_REQUESTER" }, select: recentSelect, orderBy: [{ updatedAt: "desc" }, { id: "desc" }], take: RECENT_LIMIT }),
     ]);
     return {
       referenceTime, windowStart,
       metrics: { myOpenTickets, waitingForRequester, recentlyUpdated, recentlyResolved, inProgress, resolved, closed },
-      recentTickets,
+      recentTickets, attentionRequiredTickets,
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
@@ -47,6 +48,15 @@ export async function staffDashboard(userId: number, isAdministrator: boolean) {
     ]);
     const byStatus = Object.fromEntries(Object.values(TicketStatus).map(status => [status, 0])) as Record<TicketStatus, number>;
     const byPriority = Object.fromEntries(Object.values(TicketPriority).map(priority => [priority, 0])) as Record<TicketPriority, number>;
+    // Recorder scope is intentionally different from Ticket ownership/Action assignment.
+    const [actionGroups, recentActions] = await Promise.all([
+      tx.actionTaken.groupBy({ by: ["status"], where: { performedById: userId }, _count: { _all: true } }),
+      tx.actionTaken.findMany({ where: { performedById: userId },
+        select: { id: true, description: true, status: true, actionDateTime: true, ticket: { select: { id: true, ticketNumber: true, title: true } } },
+        orderBy: [{ actionDateTime: "desc" }, { createdAt: "desc" }, { id: "asc" }], take: RECENT_LIMIT }),
+    ]);
+    const actionCounts = { RECORDED: 0, IN_PROGRESS: 0, COMPLETED: 0, CANCELLED: 0 };
+    for (const group of actionGroups) actionCounts[group.status] = group._count._all;
     for (const group of statuses) byStatus[group.status] = group._count._all;
     for (const group of priorities) byPriority[group.itPriority] = group._count._all;
     // BR-12 is a creation-cohort comparison using CURRENT status/owner;
@@ -76,6 +86,7 @@ export async function staffDashboard(userId: number, isAdministrator: boolean) {
       referenceTime, windowStart,
       metrics: { unassignedCount, myAssignedCount, newCount: byStatus.NEW, openCount: byStatus.OPEN, inProgressCount: byStatus.IN_PROGRESS, waitingRequesterCount: byStatus.WAITING_FOR_REQUESTER, newDelta: statusDelta("NEW"), openDelta: statusDelta("OPEN"), inProgressDelta: statusDelta("IN_PROGRESS"), waitingRequesterDelta: statusDelta("WAITING_FOR_REQUESTER"), myAssignedDelta: delta(todayAssigned, yesterdayAssigned) },
       breakdowns: { byStatus, byPriority }, recentTickets,
+      myActionsTaken: { total: Object.values(actionCounts).reduce((sum, count) => sum + count, 0), byStatus: actionCounts, recentActions },
       ...(isAdministrator ? { userMetrics } : {}),
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });

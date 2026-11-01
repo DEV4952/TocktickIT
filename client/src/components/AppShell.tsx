@@ -84,11 +84,11 @@ export function AppShell() {
         style={{ backgroundColor: "var(--color-zen-primary, #0f5132)" }}
         aria-label="Main Navigation"
       >
-        <div className="container-fluid px-0 d-flex align-items-center justify-content-between flex-nowrap">
-          <span
-            className="navbar-brand fw-bold d-flex align-items-center gap-1 gap-sm-2 cursor-pointer text-white me-2 flex-shrink-0"
+        <div className="container-fluid px-0 d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <button type="button"
+            className="border-0 bg-transparent navbar-brand fw-bold d-flex align-items-center gap-1 gap-sm-2 cursor-pointer text-white me-2 flex-shrink-0"
             onClick={handleNavigateWorkspace}
-            role="button"
+            title="Open ticket workspace"
           >
             <span
               className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
@@ -105,7 +105,7 @@ export function AppShell() {
             <span className="badge bg-white text-success small fw-normal ms-1 d-none d-sm-inline-block">
               {authUser?.role || "Lab 3"}
             </span>
-          </span>
+          </button>
 
           {/* Desktop Navigation Links */}
           <div className="d-flex align-items-center gap-2 ms-3 d-none d-md-flex">
@@ -168,10 +168,12 @@ export function AppShell() {
             )}
 
             {/* User Profile Pill */}
-            <div
-              className="d-flex align-items-center gap-2 bg-white text-dark rounded-pill px-2 px-sm-3 py-1 shadow-sm cursor-pointer"
+            <button type="button"
+              className="border-0 d-flex align-items-center gap-2 bg-white text-dark rounded-pill px-2 px-sm-3 py-1 shadow-sm cursor-pointer"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              role="button"
+              title="Account menu"
+              aria-expanded={showProfileMenu}
+              onKeyDown={event => { if (event.key === "Escape") setShowProfileMenu(false); }}
               data-testid="requester-pill"
             >
               <div
@@ -191,7 +193,7 @@ export function AppShell() {
               <span className={`badge ${roleBadgeClass} ms-1 d-none d-xs-inline-block small`}>
                 {roleLabel}
               </span>
-            </div>
+            </button>
 
             {/* Profile Dropdown Menu */}
             {showProfileMenu && (

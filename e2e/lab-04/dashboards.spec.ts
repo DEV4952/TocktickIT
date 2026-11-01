@@ -10,10 +10,10 @@ async function dashboard(page: Page) {
  await page.goto("/dashboard"); await expect(page.locator('.dashboard')).toHaveAttribute("aria-busy", "false");
 }
 async function recent(page: Page, expected: Awaited<ReturnType<FixtureData["recent"]>>) {
- await expect(page.locator('.dashboard-recent-list a')).toHaveCount(expected.length);
- expect(await page.locator('.dashboard-recent-list a').evaluateAll(links => links.map(link => link.getAttribute("href")))).toEqual(expected.map(ticket => `/tickets/${ticket.id}`));
+ await expect(page.locator('section[aria-labelledby="dashboard-recent-title"] .dashboard-recent-list a')).toHaveCount(expected.length);
+ expect(await page.locator('section[aria-labelledby="dashboard-recent-title"] .dashboard-recent-list a').evaluateAll(links => links.map(link => link.getAttribute("href")))).toEqual(expected.map(ticket => `/tickets/${ticket.id}`));
  for (const ticket of expected) {
-  const link = page.locator(`.dashboard-recent-list a[href="/tickets/${ticket.id}"]`);
+  const link = page.locator(`section[aria-labelledby="dashboard-recent-title"] .dashboard-recent-list a[href="/tickets/${ticket.id}"]`);
   await expect(link).toContainText(ticket.ticketNumber); await expect(link).toContainText(ticket.status.replaceAll("_", " "));
  }
 }
@@ -26,6 +26,13 @@ async function drill(page: Page, label: string, count: number, pathname: string,
 test("Staff Dashboard SQL metrics, recent ordering, card filters and Quick Actions", async ({ data, roles }, info) => {
  await prepare(data); const page = roles.staff; await login(page, data.staff, data.password); await dashboard(page);
  const counts = await data.staffCounts();
+ const actionSection=page.getByRole('region',{name:'My Actions Taken',exact:true});
+ await expect(actionSection.getByText('You have not recorded any actions yet.',{exact:true})).toBeVisible();
+ for(const status of ['RECORDED','IN_PROGRESS','COMPLETED','CANCELLED'] as const) await data.p.actionTaken.create({data:{ticketId:data.tickets[0].id,performedById:data.staff.id,status,description:data.prefix+' dashboard '+status,result:'Synthetic verified result'}});
+ await dashboard(page);
+ await expect(actionSection.getByText('Total recorded',{exact:true}).locator('..')).toContainText('4');
+ const ownActions=await data.p.actionTaken.findMany({where:{performedById:data.staff.id},orderBy:[{actionDateTime:'desc'},{createdAt:'desc'},{id:'asc'}],take:5});
+ for(const action of ownActions) await expect(actionSection.getByRole('link',{name:new RegExp(action.description)})).toHaveAttribute('href','/tickets/'+action.ticketId);
  for (const [label, count] of Object.entries(counts)) await expect(page.getByRole("link", { name: `${label}: ${count} tickets`, exact: true })).toBeVisible();
  await recent(page, await data.recent()); await capture(page, info, "staff-dashboard", data.prefix, ".dashboard");
  for (const [label, status] of [["New", "NEW"], ["Open", "OPEN"], ["In Progress", "IN_PROGRESS"], ["Waiting for Requester", "WAITING_FOR_REQUESTER"]]) {
@@ -52,6 +59,13 @@ test("Staff Dashboard SQL metrics, recent ordering, card filters and Quick Actio
 test("Requester Dashboard owned SQL metrics, filtered lists, navigation and cross-owner denial", async ({ data, roles }, info) => {
  await prepare(data); const page = roles.requester; await login(page, data.requester, data.password); await dashboard(page);
  const counts = await data.requesterCounts();
+ const attention=page.getByRole('region',{name:'Attention Required',exact:true});
+ const waiting=data.tickets.find(ticket=>ticket.requesterId===data.requester.id && ticket.status==='WAITING_FOR_REQUESTER')!;
+ await expect(attention.getByRole('link',{name:new RegExp(waiting.ticketNumber)})).toHaveAttribute('href','/tickets/'+waiting.id);
+ await attention.getByRole('link',{name:'View all tickets needing your response',exact:true}).click();
+ await expect(page.getByTestId('filter-status-select')).toHaveValue('WAITING_FOR_REQUESTER');
+ await expect(page.getByTestId('ticket-row-'+waiting.id)).toBeVisible();
+ await dashboard(page);
  for (const [label, count] of Object.entries(counts)) await expect(page.getByRole("link", { name: `${label}: ${count} tickets`, exact: true })).toBeVisible();
  await recent(page, await data.recent(data.requester.id)); await capture(page, info, "requester-dashboard", data.prefix, ".dashboard");
  const owned = data.tickets.filter(ticket => ticket.requesterId === data.requester.id);

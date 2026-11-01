@@ -519,3 +519,56 @@ Captured from the real application using headless Chrome and UUID E2E fixtures, 
 | Requester Actions Taken read-only | [Desktop](../../artifacts/lab-04/screenshots/actions-taken/requester-read-only-desktop.png) |
 
 These selected screenshots do not establish tablet/mobile coverage, modal validation coverage or final accessibility acceptance. Original report label: submission-screenshots.
+
+
+<a id="lab410-visual-accessibility-audit"></a>
+
+## Lab4.10 visual and accessibility audit
+
+Final audit uses real Chrome at Mobile375x812, Tablet768x1024 and Desktop1440x900, with isolated UUID fixtures. All three passed the final axe/keyboard/layout/runtime assertions. See [release-verification.md](release-verification.md) for actual revisions, safe database setup, findings, commands and pending release requirements. Full-page images may exceed the viewport height; dialog images are component crops. Grey blocks mask unrelated data/assignee choices. They are intentional and are not UI defects.
+
+| Checklist | Evidence / final status |
+| --- | --- |
+| Zen Green contrast and consistent spacing | Darker existing tokens for small text and controls; nav contrast corrected; final axe scans passed |
+| Heading/landmark/control names | Semantic Ticket heading; native brand/account buttons; triage labels; metric names match visible text; communication controls form a named pressed-button group |
+| Keyboard and visible focus | Real Enter/Tab/Shift+Tab/Escape, assignee/date order, cycle boundaries, opener restoration and account menu; modal background inert |
+| Modal scrolling | Long edit values and focus of last field; explicit scroll into view clears footer; Tab reaches Cancel; create validation alert visible |
+| Editable/read-only role behavior | Staff controls and Requester read-only actions captured; real permission guard and drill-down applied |
+| Long content and overflow | Long title, unbroken action text, notes and performer names; zero document horizontal overflow at target widths and320px probe; twelve-digit typography probe restored real data afterwards |
+| Empty/loading/error/populated | Requester empty, both populated, Staff loading, injected503 safe failure/retry on both, forbidden navigation |
+| Workflow feedback | Real stale409 shows alert and blocks status changes until explicit latest-version reload |
+| Runtime | No unexplained console errors, page exceptions or application HTTP failures; intentional503/409 and any navigation aborts retained/classified |
+| Manual visual inspection | Representative dashboard, list, create/edit and conflict PNGs inspected; scroll areas are intentionally clipped at their boundary and scrollable |
+| Remaining human/device checks | Physical devices, other browser engines, screen-reader-user testing and actual browser zoom unperformed; automated scans alone do not establish full accessibility compliance |
+
+### Screenshot inventory
+
+All links below are the final hardening set; original four Lab4.9 desktop images remain historical.
+
+| Screen/state | Mobile375x812 | Tablet768x1024 | Desktop1440x900 |
+| --- | --- | --- | --- |
+| staff populated | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-mobile-375x812-populated.png) | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-tablet-768x1024-populated.png) | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-desktop-1440x900-populated.png) |
+| staff loading | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-mobile-375x812-loading.png) | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-tablet-768x1024-loading.png) | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-desktop-1440x900-loading.png) |
+| staff safe-failure | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-mobile-375x812-safe-failure.png) | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-tablet-768x1024-safe-failure.png) | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-desktop-1440x900-safe-failure.png) |
+| staff drilldown | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-mobile-375x812-drilldown.png) | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-tablet-768x1024-drilldown.png) | [PNG](../../artifacts/lab-04/screenshots/staff-dashboard/staff-desktop-1440x900-drilldown.png) |
+| requester empty | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-mobile-375x812-empty.png) | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-tablet-768x1024-empty.png) | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-desktop-1440x900-empty.png) |
+| requester populated | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-mobile-375x812-populated.png) | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-tablet-768x1024-populated.png) | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-desktop-1440x900-populated.png) |
+| requester safe-failure | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-mobile-375x812-safe-failure.png) | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-tablet-768x1024-safe-failure.png) | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-desktop-1440x900-safe-failure.png) |
+| requester forbidden | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-mobile-375x812-forbidden.png) | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-tablet-768x1024-forbidden.png) | [PNG](../../artifacts/lab-04/screenshots/requester-dashboard/requester-desktop-1440x900-forbidden.png) |
+| actions empty | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-mobile-375x812-empty.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-tablet-768x1024-empty.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-desktop-1440x900-empty.png) |
+| actions list | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-mobile-375x812-list.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-tablet-768x1024-list.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-desktop-1440x900-list.png) |
+| actions keyboard-focus | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-mobile-375x812-keyboard-focus.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-tablet-768x1024-keyboard-focus.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-desktop-1440x900-keyboard-focus.png) |
+| actions create-validation | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-mobile-375x812-create-validation.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-tablet-768x1024-create-validation.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-desktop-1440x900-create-validation.png) |
+| actions edit | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-mobile-375x812-edit.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-tablet-768x1024-edit.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-desktop-1440x900-edit.png) |
+| actions edit-scrolled | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-mobile-375x812-edit-scrolled.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-tablet-768x1024-edit-scrolled.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-desktop-1440x900-edit-scrolled.png) |
+| actions workflow-conflict | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-mobile-375x812-workflow-conflict.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-tablet-768x1024-workflow-conflict.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-desktop-1440x900-workflow-conflict.png) |
+| actions read-only | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-mobile-375x812-read-only.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-tablet-768x1024-read-only.png) | [PNG](../../artifacts/lab-04/screenshots/actions-taken/actions-desktop-1440x900-read-only.png) |
+
+
+## Completed dashboard rubric sections
+
+Staff/Admin My Actions Taken is a separate section from Ticket metrics: total and four status values in a wrapping definition list, latest five recorder actions with status/date and links to Ticket Detail. It explicitly labels recorder scope across all dates; no fake queue filter or total-as-Tickets link is introduced. A successful empty scope says You have not recorded any actions yet.
+
+Requester Attention Required shows the signed-in owner's waiting-for-response count, latest five WAITING_FOR_REQUESTER summaries with textual status/date and links, and View all tickets needing your response -> /tickets?status=WAITING_FOR_REQUESTER. Empty, loading, failure and account-change handling follows the shared dashboard state, so stale identity data is hidden immediately.
+
+Both use existing Zen sections, wrapping recent-list layout, semantic headings/regions and native links. The latest qa-submission screenshots replace earlier viewport/state images with these new sections included.

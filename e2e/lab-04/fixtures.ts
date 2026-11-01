@@ -80,7 +80,7 @@ export async function capture(page: Page, testInfo: TestInfo, name: string, pref
  const target = selector ? page.locator(selector) : page.locator("body");
  const mask = [page.locator('#login-email'), page.locator('#login-password'), page.locator('#action-assignee'), page.locator('.dashboard-recent-list li').filter({ hasNot: page.getByText(prefix, { exact: false }) }), page.getByTestId('staff-ticket-table'), page.getByTestId('staff-queue-mobile-list')];
  const file = testInfo.outputPath(`${name}.png`);
- await target.screenshot({ path: file, mask, animations: "disabled" });
+ await target.screenshot({ path: file, mask, maskColor: "#e2e8f0", animations: "disabled" });
  await testInfo.attach(name, { path: file, contentType: "image/png" });
 }
 export const test = base.extend<{ data: FixtureData; roles: { requester: Page; staff: Page; other: Page } }>({

@@ -3,11 +3,13 @@ import { vi } from "vitest";
 import { AuthContext, AuthContextType } from "../../src/context/AuthContext.js";
 import type { Role, RequesterDashboardData, StaffDashboardData } from "../../src/types.js";
 export const requesterData: RequesterDashboardData = {
+ attentionRequiredTickets: [{id:43,ticketNumber:"TIC-43",title:"Please provide diagnostic log",status:"WAITING_FOR_REQUESTER",updatedAt:"2026-10-30T10:00:00.000Z"}],
  referenceTime: "2026-10-31T10:00:00.000Z", windowStart: "2026-10-24T10:00:00.000Z",
  metrics: { myOpenTickets: 11, waitingForRequester: 2, recentlyUpdated: 3, recentlyResolved: 4, inProgress: 5, resolved: 7, closed: 13 },
  recentTickets: [{ id: 42, ticketNumber: "TIC-42", title: "Network issue", status: "IN_PROGRESS", updatedAt: "2026-10-30T10:00:00.000Z" }],
 };
 export const staffData: StaffDashboardData = {
+ myActionsTaken: {total:3,byStatus:{RECORDED:1,IN_PROGRESS:1,COMPLETED:1,CANCELLED:0},recentActions:[{id:"action-fixture",description:"Verified VPN restoration",status:"COMPLETED",actionDateTime:"2026-10-30T10:00:00.000Z",ticket:{id:42,ticketNumber:"TIC-42",title:"Network issue"}}]},
  referenceTime: requesterData.referenceTime, windowStart: requesterData.windowStart,
  metrics: { newCount: 21, openCount: 22, inProgressCount: 23, waitingRequesterCount: 24, myAssignedCount: 25, unassignedCount: 26, newDelta: 1, openDelta: -1, inProgressDelta: 0, waitingRequesterDelta: 0, myAssignedDelta: 2 },
  breakdowns: { byStatus: { NEW: 21, OPEN: 22, IN_PROGRESS: 23, WAITING_FOR_REQUESTER: 24, RESOLVED: 1, CLOSED: 1, REOPENED: 1, CANCELLED: 1 }, byPriority: { LOW: 1, MEDIUM: 1, HIGH: 1, URGENT: 1 } },

@@ -34,19 +34,22 @@ function ActionForm({ ticketId, action, user, onClose, onSaved }: {
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
+    const background = document.getElementById("root");
+    const wasInert = background?.inert;
+    if (background) background.inert = true;
     document.body.style.overflow = "hidden";
     dateInput.current?.focus();
     function keyboard(event: KeyboardEvent) {
       if (event.key === "Escape") { event.preventDefault(); if (!busy.current) onClose(); }
       if (event.key === "Tab") {
-        const elements = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
+        const elements = Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
         const first = elements[0], last = elements[elements.length - 1];
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }
     }
     document.addEventListener("keydown", keyboard);
-    return () => { document.body.style.overflow = overflow; document.removeEventListener("keydown", keyboard); opener?.focus(); };
+    return () => { if (background) background.inert = Boolean(wasInert); document.body.style.overflow = overflow; document.removeEventListener("keydown", keyboard); opener?.focus(); };
   }, []);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
