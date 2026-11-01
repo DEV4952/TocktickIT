@@ -176,6 +176,7 @@ export async function fetchTickets(
     limit?: number;
     search?: string;
     status?: string;
+    statusGroup?: "open";
     priority?: string;
     categoryId?: number | string;
     sortBy?: string;
@@ -186,6 +187,7 @@ export async function fetchTickets(
   if (options.page) queryParams.set("page", String(options.page));
   if (options.limit) queryParams.set("limit", String(options.limit));
   if (options.search && options.search.trim()) queryParams.set("search", options.search.trim());
+  if (options.statusGroup) queryParams.set("statusGroup", options.statusGroup);
   if (options.status && options.status !== "ALL") queryParams.set("status", options.status);
   if (options.priority && options.priority !== "ALL") queryParams.set("priority", options.priority);
   if (options.categoryId && options.categoryId !== "ALL") queryParams.set("categoryId", String(options.categoryId));
@@ -620,9 +622,14 @@ export async function updateTicketPriorityApi(
 /**
  * Update ticket status with transition validation (BR-09).
  */
+export class TicketWorkflowApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
 export async function updateTicketStatusApi(
   ticketIdOrNumber: number | string,
   status: string,
+  currentUpdatedAt: string,
   resolutionSummary?: string
 ) {
   let res: Response;
@@ -631,7 +638,7 @@ export async function updateTicketStatusApi(
       method: "PATCH",
       credentials: "include",
       headers: getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ status, resolutionSummary }),
+      body: JSON.stringify({ status, currentUpdatedAt, resolutionSummary }),
     });
   } catch {
     throw new Error("Unable to update ticket status. Please check your connection.");
@@ -645,7 +652,7 @@ export async function updateTicketStatusApi(
     } catch {
       // ignore
     }
-    throw new Error(errorMsg);
+    throw new TicketWorkflowApiError(res.status, errorMsg);
   }
 
   return await res.json();
@@ -957,3 +964,61 @@ export async function resetAdminUserPasswordApi(id: number, initialPassword: str
 
   return await res.json();
 }
+
+export class ActionsApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
+async function actionsRequest<T>(ticketId: number, method = "GET", actionId?: string, input?: import("./types.js").ActionTakenInput, suffix = ""): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/tickets/${ticketId}/actions${actionId ? `/${encodeURIComponent(actionId)}` : ""}${suffix}`, {
+      method, credentials: "include", headers: getAuthHeaders({ "Content-Type": "application/json" }),
+      body: input ? JSON.stringify({
+        ...(Object.hasOwn(input, "assigneeId") ? { assigneeId: input.assigneeId } : {}),
+        ...(input.currentUpdatedAt ? { currentUpdatedAt: input.currentUpdatedAt } : {}),
+        actionDateTime: input.actionDateTime, description: input.description, result: input.result,
+        followUpRequired: input.followUpRequired, followUpNote: input.followUpNote, attachmentNotes: input.attachmentNotes,
+      }) : undefined,
+    });
+  } catch { throw new Error("Unable to connect. Check your connection and try again."); }
+  if (!res.ok) {
+    const defaults: Record<number, string> = {
+      409: "Action changed. Reload actions and review the latest data before trying again.",
+      400: "Check the action details and try again.", 401: "Your session has expired. Please sign in again.",
+      403: "You do not have permission to access or modify these actions.", 404: "The ticket or action is no longer available.",
+    };
+    const data = await res.json().catch(() => ({}));
+    throw new ActionsApiError(res.status, defaults[res.status] ? `${defaults[res.status]}${res.status === 400 && data.message ? ` ${data.message}` : ""}` : data.message || "Unable to load or save actions. Please try again.");
+  }
+  return res.json();
+}
+export function fetchActionsTaken(ticketId: number) {
+  return actionsRequest<{ ticketId: number; ticketNumber: string; totalActions: number; actions: import("./types.js").ActionTaken[] }>(ticketId);
+}
+export function createActionTaken(ticketId: number, input: import("./types.js").ActionTakenInput) {
+  return actionsRequest<{ action: import("./types.js").ActionTaken }>(ticketId, "POST", undefined, input);
+}
+export function updateActionTaken(ticketId: number, actionId: string, input: import("./types.js").ActionTakenInput) {
+  return actionsRequest<{ action: import("./types.js").ActionTaken }>(ticketId, "PATCH", actionId, input);
+}
+
+export async function transitionActionTaken(ticketId: number, actionId: string, status: import("./types.js").ActionTakenStatus, currentUpdatedAt: string) {
+  const res = await fetch(`/api/tickets/${ticketId}/actions/${encodeURIComponent(actionId)}/status`, { method: "PATCH", credentials: "include", headers: getAuthHeaders({ "Content-Type": "application/json" }), body: JSON.stringify({ status, currentUpdatedAt }) });
+  if (!res.ok) { const error = await res.json().catch(() => ({})); throw new ActionsApiError(res.status, res.status === 409 ? "Action changed. Reload actions and review the latest data." : error.message || "Unable to change action status."); }
+  return res.json() as Promise<{ action: import("./types.js").ActionTaken }>;
+}
+export function fetchActionHistory(ticketId: number, actionId: string) {
+  return actionsRequest<{ history: import("./types.js").ActionHistory[] }>(ticketId, "GET", actionId, undefined, "/history");
+}
+
+export class DashboardApiError extends Error { constructor(public status: number, message: string) { super(message); } }
+async function dashboardRequest<T>(role: "requester" | "staff"): Promise<T> {
+ let res: Response;
+ try { res = await fetch(`/api/dashboard/${role}`, { credentials: "include", headers: getAuthHeaders() }); }
+ catch { throw new Error("Unable to connect to the dashboard. Check your connection and try again."); }
+ if (!res.ok) { const body = await res.json().catch(() => ({})); throw new DashboardApiError(res.status, body.message || "Unable to load dashboard."); }
+ return res.json();
+}
+export function fetchRequesterDashboard() { return dashboardRequest<import("./types.js").RequesterDashboardData>("requester"); }
+export function fetchStaffDashboard() { return dashboardRequest<import("./types.js").StaffDashboardData>("staff"); }

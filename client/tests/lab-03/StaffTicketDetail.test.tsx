@@ -146,7 +146,7 @@ describe("Lab 3 — StaffTicketDetail Component Tests (AC-06 / AC-07 / UI-04 / U
     fireEvent.change(statusSelect, { target: { value: "IN_PROGRESS" } });
 
     await waitFor(() => {
-      expect(api.updateTicketStatusApi).toHaveBeenCalledWith(101, "IN_PROGRESS");
+      expect(api.updateTicketStatusApi).toHaveBeenCalledWith(101, "IN_PROGRESS", mockTicket.updatedAt);
     });
   });
 

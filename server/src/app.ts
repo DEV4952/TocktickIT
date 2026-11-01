@@ -1,3 +1,7 @@
+import { OPEN_STATUSES } from "./services/dashboard.js";
+import { dashboardRouter } from "./routes/dashboard.js";
+import { changeTicketStatus, WorkflowError } from "./services/ticketWorkflow.js";
+import { actionsTakenRouter } from "./routes/actionsTaken.js";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -569,7 +573,7 @@ app.post("/api/tickets", requireAuth, async (req: Request, res: Response) => {
 // Issue 6 — Query Paginated Tickets (My Tickets)
 // GET /api/tickets
 // ---------------------------------------------------------------------------
-const VALID_STATUSES = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
+const VALID_STATUSES = ["NEW", "OPEN", "IN_PROGRESS", "WAITING_FOR_REQUESTER", "RESOLVED", "CLOSED", "REOPENED", "CANCELLED"] as const;
 const VALID_SORT_FIELDS = ["createdAt", "updatedAt", "priority", "ticketNumber", "title"] as const;
 const VALID_SORT_ORDERS = ["asc", "desc"] as const;
 const ALLOWED_PAGE_LIMITS = [5, 10, 20, 50];
@@ -601,12 +605,14 @@ app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
       if (!VALID_STATUSES.includes(statusUpper as any)) {
         return res.status(400).json({
           error: "BAD_REQUEST",
-          message: "Invalid status parameter. Allowed values: OPEN, IN_PROGRESS, RESOLVED, CLOSED, ALL",
+          message: "Invalid status parameter. Use a valid TicketStatus or ALL",
         });
       }
       statusFilter = statusUpper as (typeof VALID_STATUSES)[number];
     }
 
+    if (req.query.statusGroup !== undefined && req.query.statusGroup !== "open") return res.status(400).json({ error: "BAD_REQUEST", message: "Invalid statusGroup; only open is supported." });
+    if (req.query.statusGroup === "open" && statusFilter) return res.status(400).json({ error: "BAD_REQUEST", message: "Use status or statusGroup, not both." });
     // Priority filter
     let priorityFilter: (typeof VALID_PRIORITIES)[number] | undefined = undefined;
     if (req.query.priority && req.query.priority !== "ALL") {
@@ -662,6 +668,8 @@ app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
 
     if (statusFilter) {
       whereClause.status = statusFilter;
+    } else if (req.query.statusGroup === "open") {
+      whereClause.status = { in: OPEN_STATUSES };
     }
 
     if (priorityFilter) {
@@ -1711,16 +1719,6 @@ app.post("/api/admin/users/:id/reset-password", requireRole("ADMINISTRATOR"), as
 // Lab 3 — IT Staff Ticket Queue & Operational Triage Endpoints (Issue #6 / FR-06, FR-07, FR-08, FR-09)
 // ---------------------------------------------------------------------------
 
-const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
-  NEW: ["OPEN", "IN_PROGRESS", "CANCELLED"],
-  OPEN: ["IN_PROGRESS", "WAITING_FOR_REQUESTER", "RESOLVED", "CANCELLED"],
-  IN_PROGRESS: ["WAITING_FOR_REQUESTER", "RESOLVED", "CANCELLED"],
-  WAITING_FOR_REQUESTER: ["IN_PROGRESS", "RESOLVED", "CANCELLED"],
-  RESOLVED: ["CLOSED", "REOPENED"],
-  CLOSED: ["REOPENED"],
-  REOPENED: ["IN_PROGRESS", "RESOLVED"],
-  CANCELLED: [],
-};
 
 function formatStaffTicket(t: any) {
   return {
@@ -2066,74 +2064,20 @@ app.patch("/api/staff/tickets/:id/priority", requireRole("IT_STAFF", "ADMINISTRA
 // PATCH /api/staff/tickets/:id/status - Enforce lifecycle state machine transitions (BR-09)
 app.patch("/api/staff/tickets/:id/status", requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
   try {
-    const idParam = req.params.id;
-    const isNumericId = /^\d+$/.test(idParam);
-    const whereQuery: any = isNumericId ? { id: parseInt(idParam, 10) } : { ticketNumber: idParam };
-
-    const { status, resolutionSummary } = req.body;
-    const allowedStatuses = [
-      "NEW",
-      "OPEN",
-      "IN_PROGRESS",
-      "WAITING_FOR_REQUESTER",
-      "RESOLVED",
-      "CLOSED",
-      "REOPENED",
-      "CANCELLED",
-    ];
-
-    if (!status || !allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        error: "INVALID_STATUS",
-        message: "Invalid status value.",
-      });
-    }
-
-    const prisma = getPrisma();
-    const existingTicket = await prisma.ticket.findFirst({ where: whereQuery });
-    if (!existingTicket) {
-      return res.status(404).json({ error: "NOT_FOUND", message: "Ticket not found" });
-    }
-
-    const currentStatus = existingTicket.status;
-    const validTransitions = VALID_STATUS_TRANSITIONS[currentStatus] || [];
-
-    if (!validTransitions.includes(status)) {
-      return res.status(400).json({
-        error: "INVALID_STATUS_TRANSITION",
-        message: `Disallowed status transition from ${currentStatus} to ${status}.`,
-      });
-    }
-
-    const updated = await prisma.ticket.update({
-      where: { id: existingTicket.id },
-      data: { status: status as any },
-      include: {
-        category: true,
-        requester: { select: { id: true, name: true, email: true, department: true } },
-        owner: { select: { id: true, name: true, email: true, role: true } },
-      },
-    });
-
-    if (resolutionSummary && typeof resolutionSummary === "string" && resolutionSummary.trim()) {
-      await prisma.comment.create({
-        data: {
-          ticketId: existingTicket.id,
-          authorId: req.user!.id,
-          body: `[Resolution Summary]: ${resolutionSummary.trim()}`,
-        },
-      });
-    }
-
-    return res.status(200).json({
-      ticket: formatStaffTicket(updated),
-      message: "Ticket status updated successfully",
-    });
+    const updated = await changeTicketStatus(req.params.id, req.body, req.user!.id);
+    return res.status(200).json({ ticket: formatStaffTicket(updated), message: "Ticket status updated successfully" });
   } catch (error) {
+    if (error instanceof WorkflowError) {
+      return res.status(error.status).json({ error: error.code, message: error.message, ...(error.latest ? { ticket: formatStaffTicket(error.latest) } : {}) });
+    }
     console.error("Failed to update ticket status:", error);
     return res.status(500).json({ error: "INTERNAL_SERVER_ERROR", message: "Failed to update ticket status" });
   }
 });
+
+app.use("/api/tickets/:id/actions", actionsTakenRouter);
+
+app.use("/api/dashboard", dashboardRouter);
 
 export default app;
 

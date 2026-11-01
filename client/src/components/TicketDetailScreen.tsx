@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { permittedTransitions } from "../ticketWorkflow.js";
+import { ActionsTaken } from "./ActionsTaken.js";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRequester } from "../context/RequesterContext.js";
 import {
   fetchTicketById,
@@ -28,9 +30,11 @@ interface TicketDetailScreenProps {
 
 export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScreenProps) {
   let authUser = null;
+  let authLoading = true;
   try {
     const auth = useAuth();
     authUser = auth?.user;
+    authLoading = auth?.isLoading ?? true;
   } catch {
     // Fallback
   }
@@ -64,11 +68,15 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   const [removeSuccess, setRemoveSuccess] = useState<string | null>(null);
 
   // Operational Triage State (Issue #6)
-  const isStaff = authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR";
+  const isStaff = !authLoading && (authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR");
   const [assignees, setAssignees] = useState<any[]>([]);
   const [triageLoading, setTriageLoading] = useState(false);
   const [triageFeedback, setTriageFeedback] = useState<string | null>(null);
   const [triageError, setTriageError] = useState<string | null>(null);
+
+  const statusBusy = useRef(false);
+  const [workflowConflict, setWorkflowConflict] = useState(false);
+  const [refreshingWorkflow, setRefreshingWorkflow] = useState(false);
 
   // Communication States (Issue #7)
   const [commTab, setCommTab] = useState<"comments" | "notes">("comments");
@@ -107,8 +115,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       const res = await claimTicketApi(ticket.id);
       setTicket((prev: any) => ({
         ...prev,
-        ownerId: res.ticket.ownerId,
-        owner: res.ticket.owner,
+        ...res.ticket,
       }));
       setTriageFeedback("Ticket successfully claimed!");
       setTimeout(() => setTriageFeedback(null), 3000);
@@ -129,8 +136,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       const res = await reassignTicketApi(ticket.id, newOwnerId);
       setTicket((prev: any) => ({
         ...prev,
-        ownerId: res.ticket.ownerId,
-        owner: res.ticket.owner,
+        ...res.ticket,
       }));
       setTriageFeedback("Ticket ownership successfully updated!");
       setTimeout(() => setTriageFeedback(null), 3000);
@@ -150,7 +156,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       const res = await updateTicketPriorityApi(ticket.id, newPriority);
       setTicket((prev: any) => ({
         ...prev,
-        itPriority: res.ticket.itPriority,
+        ...res.ticket,
       }));
       setTriageFeedback("IT Priority successfully updated!");
       setTimeout(() => setTriageFeedback(null), 3000);
@@ -162,23 +168,29 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!ticket) return;
-    setTriageLoading(true);
-    setTriageError(null);
-    setTriageFeedback(null);
+    if (!ticket || triageLoading || statusBusy.current || workflowConflict || !permittedTransitions(ticket.status, authUser?.role).includes(newStatus as Ticket["status"])) return;
+    statusBusy.current = true;
+    setTriageLoading(true); setTriageError(null); setTriageFeedback(null);
     try {
-      const res = await updateTicketStatusApi(ticket.id, newStatus);
-      setTicket((prev: any) => ({
-        ...prev,
-        status: res.ticket.status,
-      }));
-      setTriageFeedback(`Status transitioned to ${newStatus}!`);
-      setTimeout(() => setTriageFeedback(null), 3000);
+      const res = await updateTicketStatusApi(ticket.id, newStatus, ticket.updatedAt);
+      setTicket(prev => prev ? { ...prev, ...res.ticket } : null);
+      setTriageFeedback("Status updated successfully.");
     } catch (err: any) {
-      setTriageError(err.message || "Disallowed status transition.");
-    } finally {
-      setTriageLoading(false);
-    }
+      if (err.status === 409) {
+        setWorkflowConflict(true);
+        setTriageError("Another update occurred. Your change was not saved. Load the latest ticket and review it before changing status again.");
+      } else setTriageError(err.message || "Unable to change ticket status.");
+    } finally { statusBusy.current = false; setTriageLoading(false); }
+  };
+  const refreshWorkflow = async () => {
+    if (!ticket || refreshingWorkflow) return;
+    setRefreshingWorkflow(true);
+    try {
+      const latest = await fetchTicketById(ticket.id, activeUser!.id);
+      setTicket(latest); setWorkflowConflict(false); setTriageError(null);
+      setTriageFeedback("Latest ticket loaded. Review its status and details before choosing a transition.");
+    } catch (err: any) { setTriageError(err.message || "Unable to load the latest ticket. Please try again."); }
+    finally { setRefreshingWorkflow(false); }
   };
 
   // Load ticket & attachment data
@@ -191,6 +203,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
     try {
       const ticketData = await fetchTicketById(ticketIdOrNumber, activeUser.id);
       setTicket(ticketData);
+      setWorkflowConflict(false);
 
       // Load full attachment metadata list
       try {
@@ -481,6 +494,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   // ---------------------------------------------------------------------------
   return (
     <div className="d-flex flex-column gap-4" data-testid="ticket-detail-screen">
+      <h1 className="visually-hidden">Ticket {ticket.ticketNumber}</h1>
       {/* Header Navigation & Summary Slide */}
       <div className="zen-section-slide" data-testid="ticket-header-slide">
         <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center pb-3 mb-3 border-bottom gap-3">
@@ -572,9 +586,9 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       {isStaff && (
         <div className="card p-3 p-md-4 border-success bg-success-subtle shadow-sm rounded-3" data-testid="operational-triage-card">
           <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <h6 className="fw-bold text-success-emphasis mb-0 d-flex align-items-center gap-2">
+            <h2 className="h6 fw-bold text-success-emphasis mb-0 d-flex align-items-center gap-2">
               <span>IT Staff Operational Triage Controls</span>
-            </h6>
+            </h2>
             {ticket.ownerId !== authUser?.id && (
               <button
                 type="button"
@@ -589,20 +603,22 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           </div>
 
           {triageFeedback && (
-            <div className="alert alert-success py-2 px-3 small mb-3">✓ {triageFeedback}</div>
+            <div role="status" className="alert alert-success py-2 px-3 small mb-3">✓ {triageFeedback}</div>
           )}
           {triageError && (
-            <div className="alert alert-danger py-2 px-3 small mb-3" data-testid="triage-error-banner">
+            <div role="alert" className="alert alert-danger py-2 px-3 small mb-3" data-testid="triage-error-banner">
               {triageError}
+              {workflowConflict && <button type="button" className="btn btn-outline-secondary btn-sm d-block mt-2" disabled={refreshingWorkflow} onClick={refreshWorkflow}>{refreshingWorkflow ? "Loading latest ticket?" : "Load latest ticket"}</button>}
             </div>
           )}
 
           <div className="row g-3">
             {/* Owner Selection */}
             <div className="col-12 col-md-4">
-              <label className="form-label small fw-semibold text-dark">Ticket Owner</label>
+              <label htmlFor="triage-owner" className="form-label small fw-semibold text-dark">Ticket Owner</label>
               <select
                 className="form-select form-select-sm"
+                id="triage-owner"
                 value={ticket.ownerId ? String(ticket.ownerId) : "unassigned"}
                 onChange={(e) => handleReassign(e.target.value)}
                 disabled={triageLoading}
@@ -619,9 +635,10 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
             {/* IT Priority */}
             <div className="col-12 col-md-4">
-              <label className="form-label small fw-semibold text-dark">IT Priority (Triage)</label>
+              <label htmlFor="triage-priority" className="form-label small fw-semibold text-dark">IT Priority (Triage)</label>
               <select
                 className="form-select form-select-sm"
+                id="triage-priority"
                 value={ticket.itPriority || ticket.priority || "MEDIUM"}
                 onChange={(e) => handlePriorityChange(e.target.value)}
                 disabled={triageLoading}
@@ -636,59 +653,17 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
             {/* Status Transition */}
             <div className="col-12 col-md-4">
-              <label className="form-label small fw-semibold text-dark">Status Transition</label>
+              <label htmlFor="workflow-status" className="form-label small fw-semibold text-dark">Status Transition</label>
               <select
                 className="form-select form-select-sm"
+                id="workflow-status"
                 value={ticket.status}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                disabled={triageLoading}
+                disabled={triageLoading || workflowConflict || refreshingWorkflow || !permittedTransitions(ticket.status, authUser?.role).length}
                 data-testid="detail-status-select"
               >
                 <option value={ticket.status}>{ticket.status} (Current)</option>
-                {ticket.status === "NEW" && (
-                  <>
-                    <option value="OPEN">➔ OPEN</option>
-                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
-                    <option value="CANCELLED">➔ CANCELLED</option>
-                  </>
-                )}
-                {ticket.status === "OPEN" && (
-                  <>
-                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
-                    <option value="WAITING_FOR_REQUESTER">➔ WAITING_FOR_REQUESTER</option>
-                    <option value="RESOLVED">➔ RESOLVED</option>
-                    <option value="CANCELLED">➔ CANCELLED</option>
-                  </>
-                )}
-                {ticket.status === "IN_PROGRESS" && (
-                  <>
-                    <option value="WAITING_FOR_REQUESTER">➔ WAITING_FOR_REQUESTER</option>
-                    <option value="RESOLVED">➔ RESOLVED</option>
-                    <option value="CANCELLED">➔ CANCELLED</option>
-                  </>
-                )}
-                {ticket.status === "WAITING_FOR_REQUESTER" && (
-                  <>
-                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
-                    <option value="RESOLVED">➔ RESOLVED</option>
-                    <option value="CANCELLED">➔ CANCELLED</option>
-                  </>
-                )}
-                {ticket.status === "RESOLVED" && (
-                  <>
-                    <option value="CLOSED">➔ CLOSED</option>
-                    <option value="REOPENED">➔ REOPENED</option>
-                  </>
-                )}
-                {ticket.status === "CLOSED" && (
-                  <option value="REOPENED">➔ REOPENED</option>
-                )}
-                {ticket.status === "REOPENED" && (
-                  <>
-                    <option value="IN_PROGRESS">➔ IN_PROGRESS</option>
-                    <option value="RESOLVED">➔ RESOLVED</option>
-                  </>
-                )}
+                {permittedTransitions(ticket.status, authUser?.role).map(status => <option key={status} value={status}>? {status}</option>)}
               </select>
             </div>
           </div>
@@ -699,9 +674,9 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       <div className="card zen-card p-4" data-testid="ticket-content-card">
         <div className="mb-4">
           <span className="text-muted small text-uppercase fw-semibold d-block mb-1">Ticket Summary</span>
-          <h4 className="fw-bold text-dark mb-0" data-testid="ticket-info-summary">
+          <h2 className="h4 fw-bold text-dark mb-0" data-testid="ticket-info-summary">
             {ticket.title}
-          </h4>
+          </h2>
         </div>
 
         <div>
@@ -724,36 +699,40 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
         </div>
       )}
 
+      <ActionsTaken key={`${ticket.id}:${authUser?.id || "guest"}`} ticketId={ticket.id} />
+
       {/* Communication Section: Public Comments & Internal Notes (Issue #7) */}
       <div className="card zen-card p-4 shadow-sm" data-testid="ticket-communication-card">
         {isStaff ? (
-          <ul className="nav nav-tabs card-header-tabs mb-3 border-bottom" role="tablist">
-            <li className="nav-item">
+          <div className="nav nav-tabs card-header-tabs mb-3 border-bottom" role="group" aria-label="Ticket communication">
+            <div className="nav-item">
               <button
                 type="button"
                 className={`nav-link ${commTab === "comments" ? "active fw-bold text-success border-bottom-0" : "text-muted"}`}
                 onClick={() => setCommTab("comments")}
+                aria-pressed={commTab === "comments"}
                 data-testid="tab-public-comments"
               >
                 Public Comments ({comments.length})
               </button>
-            </li>
-            <li className="nav-item">
+            </div>
+            <div className="nav-item">
               <button
                 type="button"
                 className={`nav-link ${commTab === "notes" ? "active fw-bold text-warning-emphasis border-bottom-0 bg-warning-subtle" : "text-muted"}`}
                 onClick={() => setCommTab("notes")}
+                aria-pressed={commTab === "notes"}
                 data-testid="tab-internal-notes"
               >
                 Internal Notes ({notes.length})
               </button>
-            </li>
-          </ul>
+            </div>
+          </div>
         ) : (
           <div className="pb-3 mb-3 border-bottom d-flex justify-content-between align-items-center">
-            <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2" data-testid="public-comments-header">
+            <h2 className="h5 fw-bold text-dark mb-0 d-flex align-items-center gap-2" data-testid="public-comments-header">
               <span>Public Comments ({comments.length})</span>
-            </h5>
+            </h2>
             <span className="text-muted small">Visible to all ticket participants</span>
           </div>
         )}

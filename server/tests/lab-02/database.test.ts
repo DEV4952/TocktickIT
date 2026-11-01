@@ -1,116 +1,90 @@
-import { describe, it, expect, afterAll } from "vitest";
+﻿import "dotenv/config";
+import { randomUUID } from "node:crypto";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { getPrisma } from "../../src/prisma.js";
 
 describe("Lab 2 — Ticketing Database Schema & Lifecycle", () => {
   const prisma = getPrisma();
+  const namespace = `lab2-db-${randomUUID()}`;
+  let categoryId: number | undefined;
+  let requesterId: number | undefined;
+  let ticketId: number | undefined;
+
+  beforeAll(async () => {
+    // Own fixtures: never assume mutable seed tickets retain their original state.
+    categoryId = (await prisma.category.create({ data: { name: namespace } })).id;
+    requesterId = (await prisma.user.create({ data: {
+      name: "Database Test Requester", email: `${namespace}@example.test`,
+      passwordHash: "unused-test-password-hash", role: "REQUESTER",
+    } })).id;
+    ticketId = (await prisma.ticket.create({ data: {
+      ticketNumber: namespace, title: "VPN database relation fixture",
+      description: "Isolated database schema and lifecycle fixture",
+      categoryId, requesterId, priority: "HIGH", status: "OPEN", relatedSystem: "Cisco AnyConnect VPN",
+      attachments: { create: [
+        { fileName: "active.log", fileSize: 1024, fileType: "text/plain", fileUrl: "/uploads/attachments/fixture-active.log" },
+        { fileName: "removed.log", fileSize: 1024, fileType: "text/plain", fileUrl: "/uploads/attachments/fixture-removed.log", isDeleted: true, deletedAt: new Date() },
+      ] },
+    } })).id;
+  });
 
   afterAll(async () => {
-    await prisma.$disconnect();
+    try {
+      // Delete only IDs returned by this suite's create calls; ticket cascades attachments.
+      if (ticketId !== undefined) await prisma.ticket.delete({ where: { id: ticketId } });
+      if (requesterId !== undefined) await prisma.user.delete({ where: { id: requesterId } });
+      if (categoryId !== undefined) await prisma.category.delete({ where: { id: categoryId } });
+    } finally { await prisma.$disconnect(); }
   });
 
   describe("Ticket & Relations", () => {
     it("fetches tickets with category, requester, and active attachments", async () => {
-      const ticket = await prisma.ticket.findFirst({
-        where: { ticketNumber: "TIC-20260901-0001" },
-        include: {
-          category: true,
-          requester: true,
-          attachments: {
-            where: { isDeleted: false },
-          },
-        },
+      const ticket = await prisma.ticket.findUniqueOrThrow({
+        where: { id: ticketId! },
+        include: { category: true, requester: true, attachments: { where: { isDeleted: false } } },
       });
-
-      expect(ticket).not.toBeNull();
-      expect(ticket?.title).toBe("Cannot connect to internal VPN gateway");
-      expect(ticket?.category.name).toBe("Network");
-      expect(ticket?.requester.email).toBe("alex.rivera@toktick.it");
-      expect(ticket?.priority).toBe("HIGH");
-      expect(ticket?.status).toBe("OPEN");
-      expect(ticket?.relatedSystem).toBe("Cisco AnyConnect VPN");
-      expect(ticket?.attachments.length).toBeGreaterThanOrEqual(1);
-      expect(ticket?.attachments[0].isDeleted).toBe(false);
+      expect(ticket.title).toBe("VPN database relation fixture");
+      expect(ticket.category.id).toBe(categoryId);
+      expect(ticket.category.name).toBe(namespace);
+      expect(ticket.requester.id).toBe(requesterId);
+      expect(ticket.requester.email).toBe(`${namespace}@example.test`);
+      expect(ticket.priority).toBe("HIGH");
+      expect(ticket.status).toBe("OPEN");
+      expect(ticket.relatedSystem).toBe("Cisco AnyConnect VPN");
+      expect(ticket.attachments).toHaveLength(1);
+      expect(ticket.attachments[0]).toMatchObject({ fileName: "active.log", isDeleted: false });
     });
 
     it("enforces unique ticket number constraint", async () => {
-      const category = await prisma.category.findFirst();
-      const user = await prisma.user.findFirst({ where: { isActive: true } });
-
-      expect(category).not.toBeNull();
-      expect(user).not.toBeNull();
-
-      await expect(
-        prisma.ticket.create({
-          data: {
-            ticketNumber: "TIC-20260901-0001", // Duplicate number
-            title: "Duplicate ticket test",
-            description: "Testing unique constraint on ticketNumber",
-            categoryId: category!.id,
-            requesterId: user!.id,
-          },
-        })
-      ).rejects.toThrow();
+      await expect(prisma.ticket.create({ data: {
+        ticketNumber: namespace, title: "Duplicate ticket test",
+        description: "Testing unique constraint on ticketNumber", categoryId: categoryId!, requesterId: requesterId!,
+      } })).rejects.toMatchObject({ code: "P2002" });
     });
   });
 
   describe("Attachment Lifecycle (Active / Soft-Removed)", () => {
     it("supports soft-removing attachments with isDeleted and deletedAt timestamp", async () => {
-      const ticket = await prisma.ticket.findFirst({
-        where: { ticketNumber: "TIC-20260901-0003" },
-        include: {
-          attachments: true,
-        },
-      });
-
-      expect(ticket).not.toBeNull();
-      const softDeleted = ticket?.attachments.find((a) => a.isDeleted);
+      const attachments = await prisma.attachment.findMany({ where: { ticketId: ticketId! } });
+      const softDeleted = attachments.find(a => a.isDeleted);
       expect(softDeleted).toBeDefined();
-      expect(softDeleted?.isDeleted).toBe(true);
       expect(softDeleted?.deletedAt).toBeInstanceOf(Date);
-
-      // Verify active-only filtering excludes soft-deleted attachments
-      const activeOnly = await prisma.attachment.findMany({
-        where: {
-          ticketId: ticket!.id,
-          isDeleted: false,
-        },
-      });
-      expect(activeOnly.some((a) => a.id === softDeleted?.id)).toBe(false);
+      const activeOnly = await prisma.attachment.findMany({ where: { ticketId: ticketId!, isDeleted: false } });
+      expect(activeOnly.some(a => a.id === softDeleted?.id)).toBe(false);
     });
 
     it("allows transitioning an active attachment to soft-deleted", async () => {
-      const ticket = await prisma.ticket.findFirst({
-        where: { ticketNumber: "TIC-20260901-0002" },
-      });
-      expect(ticket).not.toBeNull();
-
-      // Create a new attachment
-      const newAttachment = await prisma.attachment.create({
-        data: {
-          fileName: "temporary-debug.log",
-          fileSize: 4096,
-          fileType: "text/plain",
-          fileUrl: "/uploads/attachments/temporary-debug.log",
-          ticketId: ticket!.id,
-          isDeleted: false,
-        },
-      });
-      expect(newAttachment.isDeleted).toBe(false);
-      expect(newAttachment.deletedAt).toBeNull();
-
-      // Soft-delete the attachment
-      const deleted = await prisma.attachment.update({
-        where: { id: newAttachment.id },
-        data: {
-          isDeleted: true,
-          deletedAt: new Date(),
-        },
-      });
-      expect(deleted.isDeleted).toBe(true);
-      expect(deleted.deletedAt).not.toBeNull();
-
-      // Clean up test record
-      await prisma.attachment.delete({ where: { id: newAttachment.id } });
+      const attachment = await prisma.attachment.create({ data: {
+        fileName: "temporary-debug.log", fileSize: 4096, fileType: "text/plain",
+        fileUrl: "/uploads/attachments/temporary-debug.log", ticketId: ticketId!,
+      } });
+      try {
+        expect(attachment.isDeleted).toBe(false);
+        expect(attachment.deletedAt).toBeNull();
+        const deleted = await prisma.attachment.update({ where: { id: attachment.id }, data: { isDeleted: true, deletedAt: new Date() } });
+        expect(deleted.isDeleted).toBe(true);
+        expect(deleted.deletedAt).toBeInstanceOf(Date);
+      } finally { await prisma.attachment.delete({ where: { id: attachment.id } }); }
     });
   });
 });

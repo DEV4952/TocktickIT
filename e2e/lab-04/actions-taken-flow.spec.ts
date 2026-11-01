@@ -1,0 +1,35 @@
+﻿import { test, expect, login, openTicket, saveAction, capture } from "./fixtures";
+test("IT Staff creates/edits an action; the owning Requester sees persisted read-only details", async ({ data, roles }, info) => {
+ const ticket = await data.ticket("Actions Taken journey", "OPEN", data.staff.id);
+ const description = `${data.prefix} inspected gateway`;
+ const editedResult = "Edited E2E result persists after refresh";
+ await login(roles.staff, data.staff, data.password);
+ await openTicket(roles.staff, ticket.id);
+ await saveAction(roles.staff, description, true);
+ let entry = roles.staff.locator('.actions-entry').filter({ has: roles.staff.getByText(description, { exact: true }) });
+ await expect(entry.getByText("Performed By", { exact: true }).locator("..")).toContainText(data.staff.name);
+ await entry.getByRole("button", { name: /^Edit action:/ }).click();
+ const dialog = roles.staff.getByRole("dialog", { name: "Edit Action Taken" });
+ await expect(dialog.getByLabel("Assigned To")).toBeEnabled();
+ await expect(dialog.getByLabel("Description", { exact: true })).toHaveValue(description);
+ await expect(dialog.getByLabel("Follow-up Note (required)")).toHaveValue("Monitor the synthetic connection tomorrow");
+ await dialog.getByLabel("Result", { exact: true }).fill(editedResult);
+ await dialog.getByLabel("Attachment Notes").fill("Edited attachment reference: synthetic-e2e-log.txt");
+ await dialog.getByRole("button", { name: "Save Action", exact: true }).click(); await expect(dialog).toBeHidden();
+ await roles.staff.reload();
+ entry = roles.staff.locator('.actions-entry').filter({ has: roles.staff.getByText(description, { exact: true }) });
+ await expect(entry.getByText(editedResult, { exact: true })).toBeVisible();
+ await expect(entry.getByText("Performed By", { exact: true }).locator("..")).toContainText(data.staff.name);
+ const saved = await data.p.actionTaken.findFirstOrThrow({ where: { ticketId: ticket.id } });
+ expect(saved.performedById).toBe(data.staff.id); expect(saved.result).toBe(editedResult); expect(saved.followUpRequired).toBe(true);
+ await capture(roles.staff, info, "staff-created-edited-action", data.prefix, ".actions-section");
+ await login(roles.requester, data.requester, data.password); await openTicket(roles.requester, ticket.id);
+ const readOnly = roles.requester.locator('.actions-section');
+ await expect(readOnly.getByText(editedResult, { exact: true })).toBeVisible();
+ await expect(readOnly.getByText("Edited attachment reference: synthetic-e2e-log.txt", { exact: true })).toBeVisible();
+ await expect(readOnly.getByText("Monitor the synthetic connection tomorrow", { exact: true })).toBeVisible();
+ await expect(readOnly.getByRole("button", { name: /Add Action|Edit action|Start action|Complete action|Cancel action/ })).toHaveCount(0);
+ await expect(roles.requester.getByRole("dialog")).toHaveCount(0);
+ await capture(roles.requester, info, "requester-action-read-only", data.prefix, ".actions-section");
+});
+

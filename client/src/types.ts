@@ -135,6 +135,7 @@ export interface PaginatedTicketsResponse {
 }
 
 export interface TicketQueryOptions {
+  statusGroup?: "open";
   page?: number;
   limit?: number;
   search?: string;
@@ -245,4 +246,53 @@ export interface UpdateAdminUserPayload {
   department?: string;
   role?: Role;
   isActive?: boolean;
+}
+
+export interface ActionTaken {
+  status?: ActionTakenStatus;
+  assigneeId?: number | null;
+  assignee?: Pick<User, "id" | "name" | "role"> | null;
+  id: string;
+  ticketId: number;
+  actionDateTime: string;
+  description: string;
+  result: string;
+  performedById: number;
+  performedBy: Pick<User, "id" | "name" | "role">;
+  followUpRequired: boolean;
+  followUpNote: string | null;
+  attachmentNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActionTakenInput {
+  assigneeId?: number | null;
+  currentUpdatedAt?: string;
+  actionDateTime: string;
+  description: string;
+  result: string;
+  followUpRequired: boolean;
+  followUpNote: string | null;
+  attachmentNotes: string | null;
+}
+
+export type ActionTakenStatus = "RECORDED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export interface ActionHistory { id: string; actionId: string; actorId: number; event: string; before: Record<string, unknown> | null; after: Record<string, unknown>; createdAt: string; actor: Pick<User, "id" | "name" | "role">; }
+
+export interface DashboardTicket { id: number; ticketNumber: string; title: string; status: TicketStatus; updatedAt: string; }
+export interface MyActionsTakenSummary { total: number; byStatus: Record<ActionTakenStatus, number>; recentActions: Array<{ id: string; description: string; status: ActionTakenStatus; actionDateTime: string; ticket: { id: number; ticketNumber: string; title: string } }>; }
+export interface RequesterDashboardData {
+ referenceTime: string; windowStart: string;
+ metrics: { myOpenTickets: number; waitingForRequester: number; recentlyUpdated: number; recentlyResolved: number; inProgress: number; resolved: number; closed: number };
+ recentTickets: DashboardTicket[];
+ attentionRequiredTickets: DashboardTicket[];
+}
+export interface StaffDashboardData {
+ myActionsTaken: MyActionsTakenSummary;
+ referenceTime: string; windowStart: string;
+ metrics: { unassignedCount: number; myAssignedCount: number; newCount: number; openCount: number; inProgressCount: number; waitingRequesterCount: number; newDelta: number; openDelta: number; inProgressDelta: number; waitingRequesterDelta: number; myAssignedDelta: number };
+ breakdowns: { byStatus: Record<TicketStatus, number>; byPriority: Record<TicketPriority, number> };
+ recentTickets: DashboardTicket[];
+ userMetrics?: { totalUsers: number; activeUsers: number; inactiveUsers: number; requesterCount: number; itStaffCount: number; adminCount: number };
 }
