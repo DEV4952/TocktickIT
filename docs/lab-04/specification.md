@@ -334,8 +334,8 @@ Complete endpoint schemas, JSON payloads, and response codes are defined in [`do
 A sprint backlog item or technical increment in Sprint 4 is declared **Done** only when all of the following conditions are satisfied:
 1. **Specification Alignment:** Implementation satisfies all approved numbered Functional Requirements and Business Rules, including the original FR/BR ranges and the authorized FR-DASH, BR-DASH and BR-AT additions.
 2. **Spec Precedence:** Engineering contract and specifications (`specification.md`, `ui-spec.md`, `api-spec.md`) exist and are approved on a feature branch prior to implementation pull request merges.
-3. **Database & Schema Hygiene:** Prisma migrations apply cleanly without warnings, schema preserves backward compatibility, and the seed script runs idempotently.
-4. **Backend Security & Concurrency:** All endpoints enforce session authentication, role checks, inactive account safeguards, and optimistic concurrency locks on the server.
+3. **Database & Schema Hygiene:** Prisma migrations apply successfully without destructive data loss, schema preserves backward compatibility, the seed runs idempotently, and tooling warnings/limitations are documented.
+4. **Backend Security & Concurrency:** Applicable business endpoints enforce session authentication, role/access checks and inactive-account safeguards. Ticket/Action lifecycle writes enforce the documented optimistic concurrency checks; content-edit compatibility follows api-spec.md.
 5. **Comprehensive Automated Testing:**
    - Server API & workflow tests pass (`server/tests/lab-04/*.api.test.ts`).
    - Client UI & dashboard tests pass (`client/.../lab-04/*.test.tsx`).
@@ -345,7 +345,7 @@ A sprint backlog item or technical increment in Sprint 4 is declared **Done** on
    - Adheres strictly to the Zen Green design tokens.
    - Fully responsive on Desktop (1440px), Tablet (768px), and Mobile (375px).
    - Clean keyboard focus management, zero horizontal scrollbars, and accessible form labels.
-7. **Git & Peer Review Traceability:** All commits follow conventional commit messages on feature branches, reviewed and approved via Pull Requests into `lab4-staging` documented in `reviewer.md`, and merged into `master`/`main`.
+7. **Git & Peer Review Traceability:** All commits follow conventional commit messages on feature branches, reviewed and approved via Pull Requests into `lab4-staging` documented in `reviewer.md`, and merged into the confirmed release target `main` after authorization.
 
 ---
 

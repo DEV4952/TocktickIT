@@ -25,12 +25,11 @@
 - If `mustChangePassword === true`, requests to business endpoints return `403 Forbidden` with error code `PASSWORD_CHANGE_REQUIRED`.
 
 ### 1.3. Standard Error Envelope
-All error responses adhere to a consistent contract:
+Lab4 error responses use the documented error code and message. Additional details are optional and are not guaranteed on every error:
 ```json
 {
   "error": "ERROR_CODE",
-  "message": "Human-readable explanation of failure condition.",
-  "details": []
+  "message": "Human-readable explanation of failure condition."
 }
 ```
 
@@ -42,12 +41,13 @@ All error responses adhere to a consistent contract:
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | `/api/tickets/:ticketId/actions` | `POST` | ❌ 403 | ❌ 403 | ✅ 201 | ✅ 201 | ❌ 401 |
 | `/api/tickets/:ticketId/actions` | `GET` | ✅ 200 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
-| `/api/tickets/:ticketId/actions/:id` | `GET` | ✅ 200 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
+| `/api/tickets/:ticketId/actions/:actionId/history` | `GET` | 200 | 403 | 200 | 200 | 401 |
 | `/api/tickets/:ticketId/actions/:id` | `PATCH` | ❌ 403 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
+| `/api/tickets/:ticketId/actions/:actionId/status` | `PATCH` | 403 | 403 | 200 | 200 | 401 |
 | `/api/dashboard/requester` | `GET` | ✅ 200 | ✅ 200* | ❌ 403 | ❌ 403 | ❌ 401 |
 | `/api/dashboard/staff` | `GET` | ❌ 403 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
 | `/api/staff/tickets/:id/status` | `PATCH` | ❌ 403 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
-| `/api/tickets/:id/resolve-indication`| `POST` | ✅ 200 | ❌ 403 | ✅ 200 | ✅ 200 | ❌ 401 |
+| `/api/tickets/:id/resolve-indication`| `POST` | ✅ 200 | 404 (ownership hidden) | ✅ 200 | ✅ 200 | ❌ 401 |
 
 *\*Note: `/api/dashboard/requester` aggregates strictly data owned by the authenticated requester (`requesterId = session.userId`).*
 
