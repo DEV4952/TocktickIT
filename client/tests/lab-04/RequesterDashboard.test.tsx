@@ -24,7 +24,7 @@ describe("Lab4.8 Requester Dashboard", () => {
   expect(screen.getByRole("status")).toHaveTextContent("Loading dashboard"); expect(screen.queryByRole("link", { name: /0 tickets/ })).not.toBeInTheDocument(); expect(screen.queryByText(/No recent tickets/)).not.toBeInTheDocument();
  });
  it("renders successful zeros and a helpful empty list", async () => {
-  vi.mocked(api.fetchRequesterDashboard).mockResolvedValue({ ...requesterData, metrics: { myOpenTickets: 0, inProgress: 0, resolved: 0, closed: 0, waitingForRequester: 0, recentlyUpdated: 0, recentlyResolved: 0 }, recentTickets: [] });
+  vi.mocked(api.fetchRequesterDashboard).mockResolvedValue({ ...requesterData, metrics: { myOpenTickets: 0, inProgress: 0, resolved: 0, closed: 0, waitingForRequester: 0, recentlyUpdated: 0, recentlyResolved: 0 }, attentionRequiredTickets: [], recentTickets: [] });
   render(<Provider><RequesterDashboard /></Provider>); expect(await screen.findAllByRole("link", { name: /: 0 tickets$/ })).toHaveLength(4); expect(screen.getByText(/No recent tickets/)).toBeInTheDocument(); expect(screen.getByRole("link", { name: "Create a ticket" })).toHaveAttribute("href", "/tickets/new");
  });
  it("handles error/retry without replacing failure with zeros", async () => {
@@ -58,4 +58,18 @@ describe("Lab4.8 Requester Dashboard", () => {
   const title = "LongUnbrokenTitle".repeat(60); vi.mocked(api.fetchRequesterDashboard).mockResolvedValue({ ...requesterData, metrics: { ...requesterData.metrics, myOpenTickets: 123456789 }, recentTickets: [{ ...requesterData.recentTickets[0], title }] });
   render(<Provider><RequesterDashboard /></Provider>); expect(await screen.findByRole("link", { name: "My Open Tickets: 123456789 tickets" })).toBeInTheDocument(); expect(screen.getByText(title)).toBeInTheDocument();
  });
+});
+it('shows attention-required ticket details/count and exact waiting drill-down',async()=>{
+ render(<Provider><RequesterDashboard /></Provider>);const region=await screen.findByRole('region',{name:'Attention Required'});
+ expect(region).toHaveTextContent('2 tickets waiting for your response.');
+ expect(within(region).getByRole('link',{name:/TIC-43 Please provide diagnostic log/})).toHaveAttribute('href','/tickets/43');
+ await userEvent.click(within(region).getByRole('link',{name:'View all tickets needing your response'}));
+ expect(window.location.pathname+window.location.search).toBe('/tickets?status=WAITING_FOR_REQUESTER');
+});
+it('renders an explicit empty attention state and hides it when authorization changes',async()=>{
+ vi.mocked(api.fetchRequesterDashboard).mockResolvedValue({...requesterData,metrics:{...requesterData.metrics,waitingForRequester:0},attentionRequiredTickets:[]});
+ const result=render(<Provider><RequesterDashboard /></Provider>);
+ expect(await screen.findByText('No tickets currently require your response.')).toBeInTheDocument();
+ result.rerender(<Provider role="IT_STAFF"><RequesterDashboard /></Provider>);
+ expect(screen.queryByRole('region',{name:'Attention Required'})).not.toBeInTheDocument();
 });

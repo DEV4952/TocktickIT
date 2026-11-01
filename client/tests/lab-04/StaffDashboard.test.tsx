@@ -31,7 +31,7 @@ describe("Lab4.8 Staff Dashboard", () => {
   expect(screen.getByRole("link", { name: "Create Ticket" })).toHaveAttribute("href", "/tickets/new"); expect(screen.getByRole("link", { name: "Search Tickets" })).toHaveAttribute("href", "/staff/queue"); expect(screen.getByRole("link", { name: "My Queue" })).toHaveAttribute("href", "/staff/queue?ownerId=me");
  });
  it("shows a successful zero scope and empty state, not a load failure", async () => {
-  vi.mocked(api.fetchStaffDashboard).mockResolvedValue({ ...staffData, metrics: Object.fromEntries(Object.keys(staffData.metrics).map(key => [key, 0])) as typeof staffData.metrics, recentTickets: [] });
+  vi.mocked(api.fetchStaffDashboard).mockResolvedValue({ ...staffData, metrics: Object.fromEntries(Object.keys(staffData.metrics).map(key => [key, 0])) as typeof staffData.metrics, myActionsTaken: {total:0,byStatus:{RECORDED:0,IN_PROGRESS:0,COMPLETED:0,CANCELLED:0},recentActions:[]}, recentTickets: [] });
   render(<Provider role="IT_STAFF"><StaffDashboard /></Provider>); expect(await screen.findAllByRole("link", { name: /: 0 tickets$/ })).toHaveLength(5); expect(screen.getByText(/No recent tickets/)).toBeInTheDocument();
  });
  it("shows loading placeholders without zero counts", () => {
@@ -148,4 +148,19 @@ describe("Dashboard API clients with mocked fetch", () => {
   vi.restoreAllMocks(); vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => ({ message: "Denied" }) }));
   await expect(api.fetchStaffDashboard()).rejects.toMatchObject({ status: 403, message: "Denied" });
  });
+});
+for(const role of ['IT_STAFF','ADMINISTRATOR'] as const) it(`${role} sees recorder-scoped action totals, statuses and ticket drill-down`,async()=>{
+ render(<Provider role={role}><StaffDashboard /></Provider>);
+ const region=await screen.findByRole('region',{name:'My Actions Taken'});
+ expect(within(region).getByText('Total recorded').parentElement).toHaveTextContent('3');
+ expect(within(region).getByText('CANCELLED').parentElement).toHaveTextContent('0');
+ expect(within(region).getByRole('link',{name:/Verified VPN restoration/})).toHaveAttribute('href','/tickets/42');
+});
+it('clears previous recorder summary on account change and renders successful empty results',async()=>{
+ const result=render(<Provider role="IT_STAFF"><StaffDashboard /></Provider>);await screen.findByText('Verified VPN restoration');
+ const next=pending<typeof staffData>();vi.mocked(api.fetchStaffDashboard).mockReturnValueOnce(next.promise);
+ result.rerender(<Provider role="IT_STAFF" id={2}><StaffDashboard /></Provider>);
+ expect(screen.queryByText('Verified VPN restoration')).not.toBeInTheDocument();
+ await act(async()=>next.resolve({...staffData,myActionsTaken:{total:0,byStatus:{RECORDED:0,IN_PROGRESS:0,COMPLETED:0,CANCELLED:0},recentActions:[]}}));
+ expect(await screen.findByText('You have not recorded any actions yet.')).toBeInTheDocument();
 });

@@ -494,6 +494,7 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
   // ---------------------------------------------------------------------------
   return (
     <div className="d-flex flex-column gap-4" data-testid="ticket-detail-screen">
+      <h1 className="visually-hidden">Ticket {ticket.ticketNumber}</h1>
       {/* Header Navigation & Summary Slide */}
       <div className="zen-section-slide" data-testid="ticket-header-slide">
         <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center pb-3 mb-3 border-bottom gap-3">
@@ -585,9 +586,9 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       {isStaff && (
         <div className="card p-3 p-md-4 border-success bg-success-subtle shadow-sm rounded-3" data-testid="operational-triage-card">
           <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <h6 className="fw-bold text-success-emphasis mb-0 d-flex align-items-center gap-2">
+            <h2 className="h6 fw-bold text-success-emphasis mb-0 d-flex align-items-center gap-2">
               <span>IT Staff Operational Triage Controls</span>
-            </h6>
+            </h2>
             {ticket.ownerId !== authUser?.id && (
               <button
                 type="button"
@@ -602,10 +603,10 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           </div>
 
           {triageFeedback && (
-            <div className="alert alert-success py-2 px-3 small mb-3">✓ {triageFeedback}</div>
+            <div role="status" className="alert alert-success py-2 px-3 small mb-3">✓ {triageFeedback}</div>
           )}
           {triageError && (
-            <div className="alert alert-danger py-2 px-3 small mb-3" data-testid="triage-error-banner">
+            <div role="alert" className="alert alert-danger py-2 px-3 small mb-3" data-testid="triage-error-banner">
               {triageError}
               {workflowConflict && <button type="button" className="btn btn-outline-secondary btn-sm d-block mt-2" disabled={refreshingWorkflow} onClick={refreshWorkflow}>{refreshingWorkflow ? "Loading latest ticket?" : "Load latest ticket"}</button>}
             </div>
@@ -614,9 +615,10 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
           <div className="row g-3">
             {/* Owner Selection */}
             <div className="col-12 col-md-4">
-              <label className="form-label small fw-semibold text-dark">Ticket Owner</label>
+              <label htmlFor="triage-owner" className="form-label small fw-semibold text-dark">Ticket Owner</label>
               <select
                 className="form-select form-select-sm"
+                id="triage-owner"
                 value={ticket.ownerId ? String(ticket.ownerId) : "unassigned"}
                 onChange={(e) => handleReassign(e.target.value)}
                 disabled={triageLoading}
@@ -633,9 +635,10 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
 
             {/* IT Priority */}
             <div className="col-12 col-md-4">
-              <label className="form-label small fw-semibold text-dark">IT Priority (Triage)</label>
+              <label htmlFor="triage-priority" className="form-label small fw-semibold text-dark">IT Priority (Triage)</label>
               <select
                 className="form-select form-select-sm"
+                id="triage-priority"
                 value={ticket.itPriority || ticket.priority || "MEDIUM"}
                 onChange={(e) => handlePriorityChange(e.target.value)}
                 disabled={triageLoading}
@@ -671,9 +674,9 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       <div className="card zen-card p-4" data-testid="ticket-content-card">
         <div className="mb-4">
           <span className="text-muted small text-uppercase fw-semibold d-block mb-1">Ticket Summary</span>
-          <h4 className="fw-bold text-dark mb-0" data-testid="ticket-info-summary">
+          <h2 className="h4 fw-bold text-dark mb-0" data-testid="ticket-info-summary">
             {ticket.title}
-          </h4>
+          </h2>
         </div>
 
         <div>
@@ -701,33 +704,35 @@ export function TicketDetailScreen({ ticketIdOrNumber, onBack }: TicketDetailScr
       {/* Communication Section: Public Comments & Internal Notes (Issue #7) */}
       <div className="card zen-card p-4 shadow-sm" data-testid="ticket-communication-card">
         {isStaff ? (
-          <ul className="nav nav-tabs card-header-tabs mb-3 border-bottom" role="tablist">
-            <li className="nav-item">
+          <div className="nav nav-tabs card-header-tabs mb-3 border-bottom" role="group" aria-label="Ticket communication">
+            <div className="nav-item">
               <button
                 type="button"
                 className={`nav-link ${commTab === "comments" ? "active fw-bold text-success border-bottom-0" : "text-muted"}`}
                 onClick={() => setCommTab("comments")}
+                aria-pressed={commTab === "comments"}
                 data-testid="tab-public-comments"
               >
                 Public Comments ({comments.length})
               </button>
-            </li>
-            <li className="nav-item">
+            </div>
+            <div className="nav-item">
               <button
                 type="button"
                 className={`nav-link ${commTab === "notes" ? "active fw-bold text-warning-emphasis border-bottom-0 bg-warning-subtle" : "text-muted"}`}
                 onClick={() => setCommTab("notes")}
+                aria-pressed={commTab === "notes"}
                 data-testid="tab-internal-notes"
               >
                 Internal Notes ({notes.length})
               </button>
-            </li>
-          </ul>
+            </div>
+          </div>
         ) : (
           <div className="pb-3 mb-3 border-bottom d-flex justify-content-between align-items-center">
-            <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2" data-testid="public-comments-header">
+            <h2 className="h5 fw-bold text-dark mb-0 d-flex align-items-center gap-2" data-testid="public-comments-header">
               <span>Public Comments ({comments.length})</span>
-            </h5>
+            </h2>
             <span className="text-muted small">Visible to all ticket participants</span>
           </div>
         )}

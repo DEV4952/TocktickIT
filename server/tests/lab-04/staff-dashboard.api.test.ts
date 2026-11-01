@@ -148,10 +148,29 @@ describe("Lab 4.7 staff dashboard API", () => {
     expect(res.body.metrics.myAssignedDelta).toBe(assigned[0].yesterday ? assigned[0].today - assigned[0].yesterday : 0);
     expect((await get(admin)).body.metrics.myAssignedDelta).toBe(0);
   });
+  it("scopes action totals/statuses to the authenticated recorder, not assignee or ticket owner", async () => {
+    const ticket=await fixtures.ticket(requester.id,"OPEN",REFERENCE,other.id); transientIds.push(ticket.id);
+    for(const status of ["RECORDED","IN_PROGRESS","COMPLETED","CANCELLED"] as const) await p.actionTaken.create({data:{ticketId:ticket.id,performedById:staff.id,assigneeId:other.id,status,description:"Recorder scope fixture",result:"Verified result"}});
+    await p.actionTaken.create({data:{ticketId:ticket.id,performedById:other.id,assigneeId:staff.id,status:"COMPLETED",description:"Foreign recorder",result:"Verified result"}});
+    const expected=await p.$queryRaw<Array<{status:string;count:number}>>(Prisma.sql`SELECT status,COUNT(*)::int AS count FROM actions_taken WHERE "performedById"=${staff.id} GROUP BY status`);
+    const body=(await get(staff, '?userId='+other.id+'&performedById='+other.id)).body.myActionsTaken;
+    expect(body.total).toBe(expected.reduce((sum,row)=>sum+row.count,0));
+    for(const status of ["RECORDED","IN_PROGRESS","COMPLETED","CANCELLED"]) expect(body.byStatus[status]).toBe(expected.find(row=>row.status===status)?.count||0);
+    expect(body.recentActions.some((row:{description:string})=>row.description==='Foreign recorder')).toBe(false);
+    expect((await get(admin)).body.myActionsTaken).toEqual({total:0,byStatus:{RECORDED:0,IN_PROGRESS:0,COMPLETED:0,CANCELLED:0},recentActions:[]});
+  });
+  it("limits action summaries to five with stable date/creation/id order and safe projections",async()=>{
+    const ticket=await fixtures.ticket(requester.id,"OPEN",REFERENCE); transientIds.push(ticket.id);
+    for(let index=0;index<7;index++) await p.actionTaken.create({data:{ticketId:ticket.id,performedById:staff.id,description:"Bounded recorder list "+index,result:"Private result",actionDateTime:REFERENCE,createdAt:REFERENCE}});
+    const expected=await p.$queryRaw<Array<{id:string}>>(Prisma.sql`SELECT id FROM actions_taken WHERE "performedById"=${staff.id} ORDER BY "actionDateTime" DESC,"createdAt" DESC,id ASC LIMIT 5`);
+    const list=(await get(staff)).body.myActionsTaken.recentActions;
+    expect(list.map((row:{id:string})=>row.id)).toEqual(expected.map(row=>row.id)); expect(list).toHaveLength(5);
+    for(const row of list){expect(Object.keys(row).sort()).toEqual(['actionDateTime','description','id','status','ticket']);expect(Object.keys(row.ticket).sort()).toEqual(['id','ticketNumber','title']);}
+  });
   it("returns every zero category and empty list for an isolated empty aggregate snapshot (mocked)", async () => {
     // DB role cannot CREATE DATABASE/SCHEMA, and staff policy is global. Never
     // empty the shared DB or add a production filter just to simulate this case.
-    const snapshot = { ticket: { count: vi.fn().mockResolvedValue(0), groupBy: vi.fn().mockResolvedValue([]), findMany: vi.fn().mockResolvedValue([]) },
+    const snapshot = { actionTaken: { groupBy: vi.fn().mockResolvedValue([]), findMany: vi.fn().mockResolvedValue([]) }, ticket: { count: vi.fn().mockResolvedValue(0), groupBy: vi.fn().mockResolvedValue([]), findMany: vi.fn().mockResolvedValue([]) },
       user: { count: vi.fn().mockResolvedValue(0), groupBy: vi.fn().mockResolvedValue([]) } };
     vi.spyOn(database, "getPrisma").mockReturnValue(new Proxy(p, { get: (target, key) => key === "$transaction" ? async (callback: (tx: unknown) => Promise<unknown>) => callback(snapshot) : Reflect.get(target, key) }));
     for (const u of [staff, admin]) {

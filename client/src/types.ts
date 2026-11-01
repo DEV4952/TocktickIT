@@ -281,12 +281,15 @@ export type ActionTakenStatus = "RECORDED" | "IN_PROGRESS" | "COMPLETED" | "CANC
 export interface ActionHistory { id: string; actionId: string; actorId: number; event: string; before: Record<string, unknown> | null; after: Record<string, unknown>; createdAt: string; actor: Pick<User, "id" | "name" | "role">; }
 
 export interface DashboardTicket { id: number; ticketNumber: string; title: string; status: TicketStatus; updatedAt: string; }
+export interface MyActionsTakenSummary { total: number; byStatus: Record<ActionTakenStatus, number>; recentActions: Array<{ id: string; description: string; status: ActionTakenStatus; actionDateTime: string; ticket: { id: number; ticketNumber: string; title: string } }>; }
 export interface RequesterDashboardData {
  referenceTime: string; windowStart: string;
  metrics: { myOpenTickets: number; waitingForRequester: number; recentlyUpdated: number; recentlyResolved: number; inProgress: number; resolved: number; closed: number };
  recentTickets: DashboardTicket[];
+ attentionRequiredTickets: DashboardTicket[];
 }
 export interface StaffDashboardData {
+ myActionsTaken: MyActionsTakenSummary;
  referenceTime: string; windowStart: string;
  metrics: { unassignedCount: number; myAssignedCount: number; newCount: number; openCount: number; inProgressCount: number; waitingRequesterCount: number; newDelta: number; openDelta: number; inProgressDelta: number; waitingRequesterDelta: number; myAssignedDelta: number };
  breakdowns: { byStatus: Record<TicketStatus, number>; byPriority: Record<TicketPriority, number> };

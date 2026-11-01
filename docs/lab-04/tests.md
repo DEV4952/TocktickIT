@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary & Testing Strategy
 
-This document establishes the **Test-Driven Design (Test DD)** deliverable and **Traceability Matrix** for TokTickIT Sprint 4. Adhering to strict Test-Driven Development principles, this test plan is designed before implementation code is written. It provides 100% verifiable traceability from the Sprint 4 Engineering Contract ([`docs/lab-04/specification.md`](file:///c:/toktickit/docs/lab-04/specification.md)), Business Rules (`BR-01` to `BR-12`), and Acceptance Criteria (`AC-01` to `AC-13`) to automated test suites.
+This document establishes the **Test-Driven Design (Test DD)** deliverable and **Traceability Matrix** for TokTickIT Sprint 4. Adhering to strict Test-Driven Development principles, this test plan is designed before implementation code is written. It provides 100% verifiable traceability from the Sprint 4 Engineering Contract ([`docs/lab-04/specification.md`](specification.md)), Business Rules (`BR-01` to `BR-12`), and Acceptance Criteria (`AC-01` to `AC-13`) to automated test suites.
 
 ### Testing Pyramid Architecture
 ```text
@@ -102,10 +102,10 @@ The following matrix establishes explicit, observable mapping from every Require
 | **E2E-04** | E2E | AC-08 | Dashboard drill-down end-to-end | Clicks "My Assigned" card ➔ lands on Ticket Queue filtered to current user tickets | `e2e/lab-04/dashboards.spec.ts` | Passed on Lab4.9 feature branch; see tests.md#verification-e2e |
 | **E2E-05** | E2E | AC-09, AC-11 | Requester advisory solved ➔ IT formal resolution | Requester clicks solved flag; IT Staff inspects ticket, updates status to `RESOLVED` | `e2e/lab-04/ticket-resolution.spec.ts` | Passed on Lab4.9 feature branch; see tests.md#verification-e2e |
 | **E2E-06** | E2E | AC-10 | Concurrent update conflict handling | Two browser contexts open same ticket; User A updates; User B receives 409 Conflict modal | `e2e/lab-04/ticket-resolution.spec.ts` | Planned |
-| **REG-01** | REG | AC-13, FR-16 | Lab 1 Foundation regression | Health checks, Category seed, and environment configurations pass without error | `server/tests/lab-01/` | Planned |
-| **REG-02** | REG | AC-13, FR-16 | Lab 2 Requester ticketing regression | Requester ticket submission, list, attachments, and categories pass cleanly | `server/tests/lab-02/` & `client/tests/lab-02/` | Planned |
-| **REG-03** | REG | AC-13, FR-16 | Lab 3 Authentication & RBAC regression | Login, logout, password change, staff queue triage, comments, and internal notes pass | `server/tests/lab-03/` & `client/tests/lab-03/` | Planned |
-| **REG-04** | REG | AC-13, FR-16 | Lab 3 Admin user management regression | Admin user CRUD, active toggling, password reset, and safety locks pass cleanly | `server/tests/lab-03/` & `client/tests/lab-03/` | Planned |
+| **REG-01** | REG | AC-13, FR-16 | Lab 1 Foundation regression | Health checks, Category seed, and environment configurations pass without error | `server/tests/lab-01/` | Passed on Lab4.10 feature working tree; final-main run pending |
+| **REG-02** | REG | AC-13, FR-16 | Lab 2 Requester ticketing regression | Requester ticket submission, list, attachments, and categories pass cleanly | `server/tests/lab-02/` & `client/tests/lab-02/` | Passed on Lab4.10 feature working tree; final-main run pending |
+| **REG-03** | REG | AC-13, FR-16 | Lab 3 Authentication & RBAC regression | Login, logout, password change, staff queue triage, comments, and internal notes pass | `server/tests/lab-03/` & `client/tests/lab-03/` | Passed on Lab4.10 feature working tree; final-main run pending |
+| **REG-04** | REG | AC-13, FR-16 | Lab 3 Admin user management regression | Admin user CRUD, active toggling, password reset, and safety locks pass cleanly | `server/tests/lab-03/` & `client/tests/lab-03/` | Passed on Lab4.10 feature working tree; final-main run pending |
 
 ---
 
@@ -818,3 +818,15 @@ Read-only preservation checks compared SHA-256 digests of every original row bef
 Inspected a generated failure trace ZIP: zero nonempty network files and zero resource snapshots. Inspected the selected Staff Dashboard PNG: synthetic fixture recent rows and global aggregate counts only.
 
 Not run: headed, tablet/mobile, other browsers, production/main-branch E2E, full Labs1-3 regression, and browser-level concurrent-conflict journey (legacy E2E-06 plan). These are not part of this issue's required three journeys and are not claimed as passing. This verification does not establish every final rubric criterion or replace final main-branch tests/review approvals. The AI-use and reviewer documents require the author/reviewer to supply their own reflection and review evidence.
+
+
+<a id="release-verification"></a>
+
+## Lab4.10 isolated full regression and release verification
+
+Full Labs1-4 tests passed on feature/lab4-visual-qa based on e1c98ca: server 440/440 (20 files), client 215/215 (20 files), original real-browser Lab4 E2E 4/4. See [release-verification.md](release-verification.md) for the environment, complete per-Lab matrix, console/axe/keyboard checks, commands, historical debug failures, safety guard and release blockers. Legacy Lab2/3 database suites now refuse development targets during setup; use scripts/lab4-test-environment.ps1. No tests were skipped or removed. These results do not satisfy final-main AC-02 before authorized integration and re-verification. The browser audit is separate from the original three-spec Lab4.9 command: npm run test:qa:lab4.
+
+
+## Dashboard rubric completion: latest results
+
+AC-DASH-01 (recorder summary) and AC-DASH-02 (owned waiting-for-response list) are implemented. Current full backend443/443 and frontend220/220 passed; Lab4 subsets323 API and138 UI tests. The dashboard API pair contains32 tests, including independent SQL recorder counts/order/projection and attention ownership/limit/count-to-drill-down. New UI checks exercise Staff/Admin totals, zero/account-change hiding and Requester empty/role/drill-down behavior. The existing dashboards.spec.ts now verifies populated recorder links and real Requester waiting-filter rows. Latest release-verification.md supersedes earlier hardening totals440/215 and the earlier feature-gap note. The first rerun had a disposable leftover-fixture category failure (442/443), corrected by exact-ID cleanup and full rerun, as documented there.

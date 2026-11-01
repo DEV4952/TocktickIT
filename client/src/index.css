@@ -389,9 +389,9 @@ body {
 .actions-modal-header, .actions-modal-footer { display: flex; gap: 1rem; align-items: center; padding: 1rem 1.25rem; flex-shrink: 0; }
 .actions-modal-header { justify-content: space-between; border-bottom: 1px solid var(--color-border); }
 .actions-modal form { display: flex; flex-direction: column; min-height: 0; }
-.actions-modal-body { padding: 1.25rem; overflow-y: auto; min-height: 0; }
+.actions-modal-body { padding: 1.25rem; overflow-y: auto; min-height: 0; scroll-padding-block: .5rem; }
 .actions-modal-footer { justify-content: flex-end; border-top: 1px solid var(--color-border); }
-.actions-modal input, .actions-modal textarea { min-width: 0; max-width: 100%; }
+.actions-modal input, .actions-modal textarea { min-width: 0; max-width: 100%; scroll-margin-block: .5rem; }
 .actions-modal textarea { overflow-wrap: anywhere; }
 @media (max-width: 575px) {
   .actions-section { padding: 1rem; }
@@ -418,3 +418,17 @@ body {
 .dashboard-account-counts { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 0; }
 .dashboard-account-counts dd { font-size: 1.5rem; margin: 0; }
 @media (max-width: 575px) { .dashboard-ticket-link { flex-direction: column; align-items: flex-start; } .dashboard-ticket-meta { align-items: flex-start; flex-shrink: 1; } .dashboard-metrics { grid-template-columns: minmax(0, 1fr); } }
+
+/* Lab4 hardening: use the existing darker Zen token for small success text. */
+.text-success { color: var(--color-primary) !important; }
+:where(a, button, input, select, textarea):focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+
+.dashboard-metric-link { display: flex; flex-direction: column; gap: .5rem; flex: 1; color: inherit; text-decoration: none; }
+.dashboard-metric-link:hover { color: var(--color-primary-hover); }
+
+.text-muted { color: var(--color-text-muted) !important; }
+.btn-outline-success { --bs-btn-color: var(--color-primary); --bs-btn-border-color: var(--color-primary); }
+.btn-outline-secondary { --bs-btn-color: var(--color-text-muted); }
+.navbar :focus-visible { outline-color: #fff; }
+
+.navbar .text-white-50 { color: var(--zen-green-100) !important; }

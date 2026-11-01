@@ -14,10 +14,12 @@
     "check:actions": "node scripts/check-actions.js",
     "test:e2e:lab4": "playwright test --config playwright.lab4.config.ts",
     "test:e2e:lab4:headed": "playwright test --config playwright.lab4.config.ts --headed",
-    "typecheck:e2e:lab4": "tsc -p e2e/tsconfig.json"
+    "typecheck:e2e:lab4": "tsc -p e2e/tsconfig.json",
+    "test:qa:lab4": "playwright test --config playwright.lab4-qa.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "axe-core": "^4.14.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   }

@@ -108,6 +108,19 @@ describe("Lab 4.7 requester dashboard API", () => {
     await fixtures.ticket(empty.id, "CLOSED", new Date(START.getTime() - 1));
     const res = await get(empty); expect(res.body.metrics.recentlyUpdated).toBe(0); expect(res.body.recentTickets).toHaveLength(1);
   });
+  it("attention-required is owned WAITING_FOR_REQUESTER only, bounded/stable and matches drill-down",async()=>{
+    const tickets:number[]=[];
+    try {
+      for(let index=0;index<7;index++) tickets.push((await fixtures.ticket(requester.id,"WAITING_FOR_REQUESTER",REFERENCE)).id);
+      tickets.push((await fixtures.ticket(other.id,"WAITING_FOR_REQUESTER",REFERENCE)).id);
+      const body=(await get(requester,'?requesterId='+other.id)).body;
+      const expected=await p.$queryRaw(Prisma.sql`SELECT id,"ticketNumber",title,status,"updatedAt" FROM tickets WHERE "requesterId"=${requester.id} AND status::text='WAITING_FOR_REQUESTER' ORDER BY "updatedAt" DESC,id DESC LIMIT 5`);
+      expect(body.attentionRequiredTickets).toEqual(JSON.parse(JSON.stringify(expected)));expect(body.attentionRequiredTickets).toHaveLength(5);
+      const list=await request(app).get('/api/tickets?status=WAITING_FOR_REQUESTER').set('Authorization',auth(requester));
+      expect(list.body.pagination.total).toBe(body.metrics.waitingForRequester);
+      expect((await get(empty)).body.attentionRequiredTickets).toEqual([]);
+    } finally {for(const id of tickets) await fixtures.removeTicket(id);}
+  });
   it("allows the existing signed session cookie", async () => {
     expect((await request(app).get('/api/dashboard/requester').set("Cookie", `${SESSION_COOKIE_NAME}=${createSessionToken(requester)}`)).status).toBe(200);
   });

@@ -311,3 +311,12 @@ Triggered when the ticket has been modified by another user since `currentUpdate
 GET /api/tickets accepts optional statusGroup=open for the exact dashboard active-status set: NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER, REOPENED. Only open is supported; an unsupported value or a simultaneous individual status filter is 400. Existing status filters now accept all eight TicketStatus values. Ownership remains derived from authenticated session; requesterId query values never override a REQUESTER identity. Old calls without statusGroup retain their behavior. No dashboard response change was necessary.
 
 Staff queue filters remain status and ownerId=me; My Assigned is all current-user-owned tickets across statuses. Recent metric links and Quick Actions use actual queue predicates, not invented aliases such as assignedToMe.
+
+
+## Dashboard additive contract: rubric completion
+
+Existing /api/dashboard/staff additionally returns required myActionsTaken: {total, byStatus: {RECORDED, IN_PROGRESS, COMPLETED, CANCELLED}, recentActions}. Recorder scope is performedById = signed-in user ID, all time; assignment and Ticket ownership are not substitutes. recentActions is limited to5, ordered actionDateTime DESC/createdAt DESC/id ASC; each object contains exactly id, description, status, actionDateTime and ticket:{id,ticketNumber,title}. No result, follow-up notes, passwords, actor objects or hashes are included. Empty counts/categories are0 and list is[]. Administrator uses their own recorder ID.
+
+Existing /api/dashboard/requester additionally returns required attentionRequiredTickets, using the existing public Ticket summary projection (id,ticketNumber,title,status,updatedAt). It is owned-only WAITING_FOR_REQUESTER, latest5 by updatedAt DESC/id DESC. metrics.waitingForRequester remains the unbounded count. View all uses /api/tickets?status=WAITING_FOR_REQUESTER with the same signed-session ownership.
+
+Existing authentication, RBAC, error handling, recent list and metric contracts remain. New fields participate in the same RepeatableRead transaction. Earlier response examples omit these newly added fields; this section defines the current additions.
