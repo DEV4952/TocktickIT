@@ -88,6 +88,22 @@ describe("Lab 4.7 requester dashboard API", () => {
     expect(await p.actionTaken.count({ where: { ticketId: ownIds[0] } })).toBe(2);
     const res = await get(requester); expect(res.body.metrics.myOpenTickets).toBe(7); expect(res.body.metrics.recentlyUpdated).toBe(9);
   });
+  it("open-card drill-down applies the exact dashboard predicate and preserves ownership", async () => {
+    const dashboard = await get(requester);
+    const res = await request(app).get('/api/tickets?statusGroup=open&limit=50&requesterId=' + other.id).set("Authorization", auth(requester));
+    expect(res.status).toBe(200); expect(res.body.pagination.total).toBe(dashboard.body.metrics.myOpenTickets);
+    expect(res.body.data).toHaveLength(7);
+    for (const row of res.body.data) { expect(ownIds).toContain(row.id); expect(["NEW", "OPEN", "IN_PROGRESS", "WAITING_FOR_REQUESTER", "REOPENED"]).toContain(row.status); }
+  });
+  it("rejects invalid/conflicting status groups and accepts all real individual statuses", async () => {
+    for (const query of ['statusGroup=invalid', 'statusGroup=open&status=RESOLVED']) {
+      expect((await request(app).get('/api/tickets?' + query).set("Authorization", auth(requester))).status).toBe(400);
+    }
+    for (const status of ['NEW', 'OPEN', 'IN_PROGRESS', 'WAITING_FOR_REQUESTER', 'RESOLVED', 'CLOSED', 'REOPENED', 'CANCELLED']) {
+      const res = await request(app).get('/api/tickets?status=' + status).set("Authorization", auth(requester)); expect(res.status).toBe(200);
+      expect(res.body.data.every((row: { status: string }) => row.status === status)).toBe(true);
+    }
+  });
   it("retains latest-five summaries for old tickets, outside the metric window", async () => {
     await fixtures.ticket(empty.id, "CLOSED", new Date(START.getTime() - 1));
     const res = await get(empty); expect(res.body.metrics.recentlyUpdated).toBe(0); expect(res.body.recentTickets).toHaveLength(1);

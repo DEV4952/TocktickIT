@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useUrlFilter } from "../navigation.js";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext.js";
 import { fetchStaffTickets, fetchCategories, claimTicketApi } from "../api.js";
 import { Category, TicketStatus, TicketPriority } from "../types.js";
@@ -10,6 +11,9 @@ interface StaffTicketQueueScreenProps {
 
 export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: StaffTicketQueueScreenProps) {
   const { user } = useAuth();
+
+  const requestEpoch = useRef(0);
+  useEffect(() => () => { requestEpoch.current++; }, []);
 
   // State
   const [tickets, setTickets] = useState<any[]>([]);
@@ -28,11 +32,11 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
   const [categories, setCategories] = useState<Category[]>([]);
 
   // Filter States
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [priorityFilter, setPriorityFilter] = useState("ALL");
-  const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [ownerFilter, setOwnerFilter] = useState("ALL");
+  const [search, setSearch] = useUrlFilter("search", "");
+  const [statusFilter, setStatusFilter] = useUrlFilter("status", "ALL");
+  const [priorityFilter, setPriorityFilter] = useUrlFilter("priority", "ALL");
+  const [categoryFilter, setCategoryFilter] = useUrlFilter("categoryId", "ALL");
+  const [ownerFilter, setOwnerFilter] = useUrlFilter("ownerId", "ALL");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -58,6 +62,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
   // Fetch Tickets
   const loadTickets = useCallback(
     async (targetPage = pagination.page) => {
+      const epoch = ++requestEpoch.current;
       setIsLoading(true);
       setErrorMessage(null);
       try {
@@ -73,6 +78,7 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           sortDir,
         });
 
+        if (epoch !== requestEpoch.current) return;
         setTickets(res.data || []);
         setPagination({
           page: res.pagination?.page || targetPage,
@@ -84,9 +90,10 @@ export function StaffTicketQueueScreen({ onViewTicket, onNavigateToNewTicket }: 
           setCounts(res.counts);
         }
       } catch (err: any) {
+        if (epoch !== requestEpoch.current) return;
         setErrorMessage(err.message || "Unable to load tickets from server.");
       } finally {
-        setIsLoading(false);
+        if (epoch === requestEpoch.current) setIsLoading(false);
       }
     },
     [pagination.limit, pagination.page, search, statusFilter, priorityFilter, categoryFilter, ownerFilter, sortBy, sortDir]

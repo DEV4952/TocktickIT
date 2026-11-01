@@ -1,7 +1,7 @@
 ﻿import { Prisma, TicketPriority, TicketStatus } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 
-const OPEN_STATUSES: TicketStatus[] = ["NEW", "OPEN", "IN_PROGRESS", "WAITING_FOR_REQUESTER", "REOPENED"];
+export const OPEN_STATUSES: TicketStatus[] = ["NEW", "OPEN", "IN_PROGRESS", "WAITING_FOR_REQUESTER", "REOPENED"];
 const RECENT_DAYS = 7;
 const RECENT_LIMIT = 5;
 const recentSelect = { id: true, ticketNumber: true, title: true, status: true, updatedAt: true } as const;

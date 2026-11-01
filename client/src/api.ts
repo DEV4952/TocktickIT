@@ -176,6 +176,7 @@ export async function fetchTickets(
     limit?: number;
     search?: string;
     status?: string;
+    statusGroup?: "open";
     priority?: string;
     categoryId?: number | string;
     sortBy?: string;
@@ -186,6 +187,7 @@ export async function fetchTickets(
   if (options.page) queryParams.set("page", String(options.page));
   if (options.limit) queryParams.set("limit", String(options.limit));
   if (options.search && options.search.trim()) queryParams.set("search", options.search.trim());
+  if (options.statusGroup) queryParams.set("statusGroup", options.statusGroup);
   if (options.status && options.status !== "ALL") queryParams.set("status", options.status);
   if (options.priority && options.priority !== "ALL") queryParams.set("priority", options.priority);
   if (options.categoryId && options.categoryId !== "ALL") queryParams.set("categoryId", String(options.categoryId));
@@ -1009,3 +1011,14 @@ export async function transitionActionTaken(ticketId: number, actionId: string, 
 export function fetchActionHistory(ticketId: number, actionId: string) {
   return actionsRequest<{ history: import("./types.js").ActionHistory[] }>(ticketId, "GET", actionId, undefined, "/history");
 }
+
+export class DashboardApiError extends Error { constructor(public status: number, message: string) { super(message); } }
+async function dashboardRequest<T>(role: "requester" | "staff"): Promise<T> {
+ let res: Response;
+ try { res = await fetch(`/api/dashboard/${role}`, { credentials: "include", headers: getAuthHeaders() }); }
+ catch { throw new Error("Unable to connect to the dashboard. Check your connection and try again."); }
+ if (!res.ok) { const body = await res.json().catch(() => ({})); throw new DashboardApiError(res.status, body.message || "Unable to load dashboard."); }
+ return res.json();
+}
+export function fetchRequesterDashboard() { return dashboardRequest<import("./types.js").RequesterDashboardData>("requester"); }
+export function fetchStaffDashboard() { return dashboardRequest<import("./types.js").StaffDashboardData>("staff"); }

@@ -400,3 +400,21 @@ body {
   .actions-modal { max-height: calc(100dvh - 1rem); }
   .actions-modal-header, .actions-modal-body, .actions-modal-footer { padding: 1rem; }
 }
+
+.dashboard { min-width: 0; }
+.dashboard-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 1rem; }
+.dashboard-metric { min-height: 154px; padding: 1.25rem; display: flex; flex-direction: column; gap: .5rem; color: var(--color-text-main); text-decoration: none; min-width: 0; overflow-wrap: anywhere; }
+.dashboard-metric:hover { border-color: var(--color-primary); color: var(--color-primary-hover); }
+.dashboard-metric strong { font-size: clamp(1.75rem, 4vw, 2.5rem); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.dashboard a:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
+.dashboard-skeleton { display: block; width: 60%; min-height: 3rem; background: var(--color-border-subtle); border-radius: .5rem; }
+.dashboard-recent { min-height: 240px; }
+.dashboard-recent-list { list-style: none; margin: 0; padding: 0; }
+.dashboard-recent-list li + li { border-top: 1px solid var(--color-border); }
+.dashboard-ticket-link { display: flex; gap: 1rem; justify-content: space-between; align-items: center; padding: 1rem 0; color: var(--color-text-main); text-decoration: none; overflow-wrap: anywhere; }
+.dashboard-ticket-link > span { min-width: 0; }
+.dashboard-ticket-link:hover strong { color: var(--color-primary); text-decoration: underline; }
+.dashboard-ticket-meta { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; flex-shrink: 0; font-size: .8rem; color: var(--color-text-muted); }
+.dashboard-account-counts { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin-bottom: 0; }
+.dashboard-account-counts dd { font-size: 1.5rem; margin: 0; }
+@media (max-width: 575px) { .dashboard-ticket-link { flex-direction: column; align-items: flex-start; } .dashboard-ticket-meta { align-items: flex-start; flex-shrink: 1; } .dashboard-metrics { grid-template-columns: minmax(0, 1fr); } }

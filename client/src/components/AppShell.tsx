@@ -1,4 +1,8 @@
-import React, { useState } from "react";
+import { useLocation, navigate } from "../navigation.js";
+import { StaffDashboard } from "./StaffDashboard.js";
+import { RequesterDashboard } from "./RequesterDashboard.js";
+import { AppLink } from "./DashboardShared.js";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext.js";
 import { useRequester } from "../context/RequesterContext.js";
 import { CreateTicketScreen } from "./CreateTicketScreen.js";
@@ -10,10 +14,12 @@ import { UserManagementScreen } from "./UserManagementScreen.js";
 
 export function AppShell() {
   let authUser = null;
+  let authLoading = false;
   let logoutFn = async () => {};
   try {
     const auth = useAuth();
     authUser = auth.user;
+    authLoading = auth.isLoading;
     logoutFn = auth.logout;
   } catch {
     // Fallback
@@ -30,25 +36,30 @@ export function AppShell() {
   }
 
   const activeUser = authUser || currentRequester;
-  const [activeTab, setActiveTab] = useState<"workspace" | "new-ticket" | "change-password" | "users">("workspace");
-  const [selectedTicketId, setSelectedTicketId] = useState<string | number | null>(null);
+  const location = useLocation();
+  const routeTab = () => (location.pathname === "/dashboard" || (location.pathname === "/" && authUser)) ? "dashboard" : location.pathname === "/tickets/new" ? "new-ticket" : location.pathname === "/change-password" ? "change-password" : location.pathname === "/admin/users" ? "users" : "workspace";
+  const activeTab = routeTab();
+  const match = /^\/tickets\/(?!new$)([^/]+)$/.exec(location.pathname);
+  const selectedTicketId = match ? decodeURIComponent(match[1]) : null;
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
+  const returnTo = useRef<string | null>(null);
+  useEffect(() => {
+    if (["/dashboard", "/tickets", "/staff/queue"].includes(location.pathname)) returnTo.current = location.pathname + location.search;
+  }, [location.pathname, location.search]);
+  if (authLoading) return <p role="status">Loading session...</p>;
   if (!activeUser) return null;
 
   const handleNavigateWorkspace = () => {
-    setSelectedTicketId(null);
-    setActiveTab("workspace");
+    navigate(authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR" ? "/staff/queue" : "/tickets");
   };
 
   const handleNavigateNewTicket = () => {
-    setSelectedTicketId(null);
-    setActiveTab("new-ticket");
+    navigate("/tickets/new");
   };
 
   const handleNavigateUsers = () => {
-    setSelectedTicketId(null);
-    setActiveTab("users");
+    navigate("/admin/users");
   };
 
   const isStaffOrAdmin = authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR";
@@ -98,6 +109,7 @@ export function AppShell() {
 
           {/* Desktop Navigation Links */}
           <div className="d-flex align-items-center gap-2 ms-3 d-none d-md-flex">
+            {authUser && <AppLink href="/dashboard" className={`btn btn-sm ${activeTab === "dashboard" ? "bg-white text-success fw-bold" : "text-white"}`} aria-current={activeTab === "dashboard" ? "page" : undefined}>Dashboard</AppLink>}
             <button
               type="button"
               className={`btn btn-sm ${
@@ -106,10 +118,11 @@ export function AppShell() {
                   : "text-white-50 hover-white"
               }`}
               onClick={handleNavigateWorkspace}
+              aria-current={activeTab === "workspace" && selectedTicketId === null ? "page" : undefined}
               data-testid="nav-workspace-tab"
               style={{ borderRadius: "6px" }}
             >
-              {authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR" ? "My Queue" : "My Tickets"}
+              {authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR" ? "Ticket Queue" : "My Tickets"}
             </button>
             <button
               type="button"
@@ -194,7 +207,7 @@ export function AppShell() {
                   className="dropdown-item px-3 py-2 small d-flex align-items-center gap-2 text-dark"
                   onClick={() => {
                     setShowProfileMenu(false);
-                    setActiveTab("change-password");
+                    navigate("/change-password");
                   }}
                   data-testid="nav-change-password-btn"
                 >
@@ -233,14 +246,16 @@ export function AppShell() {
 
       {/* Mobile Sub-Navigation Tabs */}
       <div className="d-flex d-md-none bg-white border-bottom px-3 py-2 gap-2 justify-content-between align-items-center shadow-sm" data-testid="mobile-nav-bar">
-        <div className="btn-group btn-group-sm w-100" role="group">
+        <div className="btn-group btn-group-sm w-100 flex-wrap" role="group">
+          {authUser && <AppLink href="/dashboard" className={`btn ${activeTab === "dashboard" ? "btn-success" : "btn-light border"}`} aria-current={activeTab === "dashboard" ? "page" : undefined}>Dashboard</AppLink>}
           <button
             type="button"
             className={`btn ${activeTab === "workspace" && selectedTicketId === null ? "btn-success text-white fw-semibold" : "btn-light text-muted border"}`}
             onClick={handleNavigateWorkspace}
+            aria-current={activeTab === "workspace" && selectedTicketId === null ? "page" : undefined}
             data-testid="mobile-nav-workspace-tab"
           >
-            {authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR" ? "My Queue" : "My Tickets"}
+            {authUser?.role === "IT_STAFF" || authUser?.role === "ADMINISTRATOR" ? "Ticket Queue" : "My Tickets"}
           </button>
           <button
             type="button"
@@ -265,7 +280,7 @@ export function AppShell() {
 
       {/* Main Workspace */}
       <main className="container py-3 py-md-4 flex-grow-1">
-        {activeTab === "change-password" ? (
+        {(location.pathname.startsWith("/staff/") && !isStaffOrAdmin) || (activeTab === "users" && authUser?.role !== "ADMINISTRATOR") ? <div role="alert" className="alert alert-danger">You do not have permission to access this page.</div> : activeTab === "dashboard" ? (isStaffOrAdmin ? <StaffDashboard /> : <RequesterDashboard />) : activeTab === "change-password" ? (
           <ChangePasswordScreen />
         ) : activeTab === "users" && authUser?.role === "ADMINISTRATOR" ? (
           <UserManagementScreen />
@@ -274,7 +289,7 @@ export function AppShell() {
             {selectedTicketId !== null ? (
               <TicketDetailScreen
                 ticketIdOrNumber={selectedTicketId}
-                onBack={() => setSelectedTicketId(null)}
+                onBack={() => { navigate(returnTo.current || (isStaffOrAdmin ? "/staff/queue" : "/tickets")); }}
               />
             ) : activeTab === "new-ticket" ? (
               <div className="row justify-content-center">
@@ -283,8 +298,8 @@ export function AppShell() {
                 </div>
               </div>
             ) : (
-              <StaffTicketQueueScreen
-                onViewTicket={(id) => setSelectedTicketId(id)}
+              <StaffTicketQueueScreen key={`${activeUser.id}:${authUser?.role}`}
+                onViewTicket={(id) => { navigate(`/tickets/${encodeURIComponent(String(id))}`); }}
                 onNavigateToNewTicket={handleNavigateNewTicket}
               />
             )}
@@ -370,14 +385,14 @@ export function AppShell() {
               {selectedTicketId !== null ? (
                 <TicketDetailScreen
                   ticketIdOrNumber={selectedTicketId}
-                  onBack={() => setSelectedTicketId(null)}
+                  onBack={() => { navigate(returnTo.current || (isStaffOrAdmin ? "/staff/queue" : "/tickets")); }}
                 />
               ) : activeTab === "new-ticket" ? (
                 <CreateTicketScreen onCancel={handleNavigateWorkspace} />
               ) : (
-                <MyTicketsScreen
+                <MyTicketsScreen key={`${activeUser.id}:${authUser?.role}`}
                   onNavigateToNewTicket={handleNavigateNewTicket}
-                  onViewTicket={(id) => setSelectedTicketId(id)}
+                  onViewTicket={(id) => { navigate(`/tickets/${encodeURIComponent(String(id))}`); }}
                 />
               )}
             </div>

@@ -1,3 +1,4 @@
+import { OPEN_STATUSES } from "./services/dashboard.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { changeTicketStatus, WorkflowError } from "./services/ticketWorkflow.js";
 import { actionsTakenRouter } from "./routes/actionsTaken.js";
@@ -572,7 +573,7 @@ app.post("/api/tickets", requireAuth, async (req: Request, res: Response) => {
 // Issue 6 — Query Paginated Tickets (My Tickets)
 // GET /api/tickets
 // ---------------------------------------------------------------------------
-const VALID_STATUSES = ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const;
+const VALID_STATUSES = ["NEW", "OPEN", "IN_PROGRESS", "WAITING_FOR_REQUESTER", "RESOLVED", "CLOSED", "REOPENED", "CANCELLED"] as const;
 const VALID_SORT_FIELDS = ["createdAt", "updatedAt", "priority", "ticketNumber", "title"] as const;
 const VALID_SORT_ORDERS = ["asc", "desc"] as const;
 const ALLOWED_PAGE_LIMITS = [5, 10, 20, 50];
@@ -604,12 +605,14 @@ app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
       if (!VALID_STATUSES.includes(statusUpper as any)) {
         return res.status(400).json({
           error: "BAD_REQUEST",
-          message: "Invalid status parameter. Allowed values: OPEN, IN_PROGRESS, RESOLVED, CLOSED, ALL",
+          message: "Invalid status parameter. Use a valid TicketStatus or ALL",
         });
       }
       statusFilter = statusUpper as (typeof VALID_STATUSES)[number];
     }
 
+    if (req.query.statusGroup !== undefined && req.query.statusGroup !== "open") return res.status(400).json({ error: "BAD_REQUEST", message: "Invalid statusGroup; only open is supported." });
+    if (req.query.statusGroup === "open" && statusFilter) return res.status(400).json({ error: "BAD_REQUEST", message: "Use status or statusGroup, not both." });
     // Priority filter
     let priorityFilter: (typeof VALID_PRIORITIES)[number] | undefined = undefined;
     if (req.query.priority && req.query.priority !== "ALL") {
@@ -665,6 +668,8 @@ app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
 
     if (statusFilter) {
       whereClause.status = statusFilter;
+    } else if (req.query.statusGroup === "open") {
+      whereClause.status = { in: OPEN_STATUSES };
     }
 
     if (priorityFilter) {
