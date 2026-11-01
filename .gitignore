@@ -16,3 +16,11 @@ server/uploads/*
 # logs & OS
 *.log
 .DS_Store
+# E2E ephemeral auth/environment and generated evidence
+.env.e2e
+playwright/.auth/
+playwright-report/
+test-results/
+artifacts/lab-04/e2e-results/
+artifacts/lab-04/e2e-report/
+artifacts/lab-04/e2e-results.json

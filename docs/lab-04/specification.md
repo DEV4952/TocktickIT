@@ -359,18 +359,18 @@ A sprint backlog item or technical increment in Sprint 4 is declared **Done** on
 
 ### Lab4.7 dashboard contract synchronization (2026-10-30)
 
-Open means NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER or REOPENED. Requester scope always comes from the signed session. Recent count window is the inclusive rolling 7 days ending at referenceTime; recentlyResolved is a current-state/updatedAt approximation, not a resolution-event metric. Recent lists are all-time latest five, ordered updatedAt DESC/id DESC, returning exactly id, ticketNumber, title, status and updatedAt. Staff counts cover the existing shared queue; assignment uses ownerId, breakdown priority uses itPriority. Administrator role totals include inactive users. No separate admin endpoint or unsupported drill-down links are promised; see api-spec.md section 4 for the implemented shape and dashboard-api-verification.md for SQL evidence and the mocked global-empty-data limitation.
+Open means NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER or REOPENED. Requester scope always comes from the signed session. Recent count window is the inclusive rolling 7 days ending at referenceTime; recentlyResolved is a current-state/updatedAt approximation, not a resolution-event metric. Recent lists are all-time latest five, ordered updatedAt DESC/id DESC, returning exactly id, ticketNumber, title, status and updatedAt. Staff counts cover the existing shared queue; assignment uses ownerId, breakdown priority uses itPriority. Administrator role totals include inactive users. No separate admin endpoint or unsupported drill-down links are promised; see api-spec.md section 4 for the implemented shape and tests.md#verification-dashboard-api for SQL evidence and the mocked global-empty-data limitation.
 
 ### Rubric Part 6?7: Actions Taken assignment/lifecycle extension (2026-10-30)
 
-User-authorized expansion included with Lab4.7. This is an additive rubric-alignment feature. The contract in actions-taken-lifecycle-verification.md was written before schema changes.
+User-authorized expansion included with Lab4.7. This is an additive rubric-alignment feature. The contract in tests.md#verification-actions-lifecycle was written before schema changes.
 
 - **FR-AT-01:** Actions have independent nullable assigneeId and immutable authenticated performedById. Only active IT_STAFF/ADMINISTRATOR users can be assigned; null is unassigned. Ticket coordination owner is unchanged.
 - **FR-AT-02:** RECORDED ? IN_PROGRESS/COMPLETED/CANCELLED; IN_PROGRESS ? COMPLETED/CANCELLED; COMPLETED and CANCELLED are terminal and immutable. Staff/Admin only; start/complete require an active assignee. Requesters read only owned-ticket actions/history.
 - **FR-AT-03:** Successful create/edit/assignment/status changes append actor-attributed before/after history atomically. No history update/delete API exists. Latest content remains editable until terminal; earlier content is preserved in history rather than overwritten there.
 - **FR-AT-04:** Lifecycle PATCH requires currentUpdatedAt; stale updates return 409. Content PATCH accepts an optional version for backward compatibility; new UI supplies it. Failed requests append no events.
 - **BR-AT-01:** Existing records retain all prior fields, receive RECORDED and null assignment, and get no invented historical events/completion times. New API records default to creator assignment.
-- **BR-AT-02:** Action completion/cancellation never changes Ticket status, requester advisory feedback or Ticket owner. Ticket workflow rules remain as documented in ticket-workflow-verification.md.
+- **BR-AT-02:** Action completion/cancellation never changes Ticket status, requester advisory feedback or Ticket owner. Ticket workflow rules remain as documented in tests.md#verification-ticket-workflow.
 - **AC-AT-01:** Staff/Admin can assign active staff, start, complete and cancel permitted actions; inactive/requester assignees are rejected.
 - **AC-AT-02:** Requesters cannot mutate actions/history; original recorder is retained on reassignment; chronological history preserves earlier values.
 - **AC-AT-03:** Concurrent lifecycle writes yield one success and one conflict, with one new event, and audit failure rolls back the action change.

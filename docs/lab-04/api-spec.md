@@ -85,7 +85,7 @@ PATCH /api/tickets/:id/actions/:actionId/status accepts { status, currentUpdated
 
 Fresh same-status/illegal transition and missing/malformed token return 400; stale/concurrent token returns 409 with no partial change/event. Cancellation can be unassigned. Starting/completing revalidates and locks the assignee account through commit. Success returns { message, action } with a newer updatedAt. No automatic Ticket status change occurs.
 
-Every successful API create/content edit/assignment/transition appends CREATED/UPDATED/ASSIGNED/STATUS_CHANGED history in the same transaction. Failed validation/conflicts append nothing; history failure rolls back mutation. The first edit of a legacy action snapshots its previous values. See actions-taken-lifecycle-verification.md for design-before-schema decisions and migration evidence.
+Every successful API create/content edit/assignment/transition appends CREATED/UPDATED/ASSIGNED/STATUS_CHANGED history in the same transaction. Failed validation/conflicts append nothing; history failure rolls back mutation. The first edit of a legacy action snapshots its previous values. See tests.md#verification-actions-lifecycle for design-before-schema decisions and migration evidence.
 
 ---
 

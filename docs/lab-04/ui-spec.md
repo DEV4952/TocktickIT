@@ -327,4 +327,195 @@ View history shows chronological actor/event/time entries and expandable before/
 
 Requester My Open Tickets uses statusGroup=open (NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER, REOPENED) and a dedicated matching queue filter option. Other metric links use their exact status. Recent ticket links use /tickets/:id for all permitted roles. Queue search/status/priority/category and staff owner filters are read from URL state; filters survive direct entry, remount and back/forward. Profile data, route selection and authorization are independent of user-controlled identity parameters.
 
-Skeletons have reserved metric/recent-section space; zero/error/empty states are distinct. Cards and Quick Actions are native links, wrapping recent cards include status text and browser-local dates, and layout uses responsive minmax grids with long-word wrapping. Rendered 375/768/1280 checks remain unverified because browser access host is unavailable; see dashboard-ui-verification.md.
+Skeletons have reserved metric/recent-section space; zero/error/empty states are distinct. Cards and Quick Actions are native links, wrapping recent cards include status text and browser-local dates, and layout uses responsive minmax grids with long-word wrapping. Rendered 375/768/1280 checks remain unverified because browser access host is unavailable; see ui-spec.md#verification-dashboard-ui.
+
+
+## Consolidated verification records
+
+Historical results below apply to the stated issue/branch/date. They do not replace the latest execution summary or establish final main-branch acceptance.
+
+
+<a id="verification-actions-ui"></a>
+
+### actions-taken-ui-verification
+
+#### Lab 4.5 Actions Taken UI verification
+
+Date: 2026-10-30 (Asia/Bangkok)
+Branch: `feat/lab4-5-actions-taken-ui`
+Base: `lab4-staging` at `57d4a1b`, including merged Lab4.3 PR #71 and Lab4.4 PR #72.
+
+##### Changes
+
+- `client/src/types.ts`: typed action records and editable input contract.
+- `client/src/api.ts`: GET, POST and PATCH helpers using existing cookie/Bearer authentication; explicit editable-field payload projection and useful 400/401/403/404 errors.
+- `client/src/components/ActionsTaken.tsx`: chronological list, loading/empty/error/retry states, read-only performer badges, and accessible create/edit modal. Integrated into the real Ticket Detail screen with its resolved numeric ticket ID.
+- `client/src/components/TicketDetailScreen.tsx`: mounts the new section without changing comments, notes, attachments or triage.
+- `client/src/index.css`: Zen Green wrapping cards and responsive, internally scrollable modal.
+- `client/tests/lab-04/ActionsTaken.test.tsx`: 37 component/API-client tests with isolated session/API/fetch mocks; no real database.
+
+##### Behavior and contract
+
+- List order is actionDateTime ascending, createdAt ascending, then ID ascending. Dates use browser-local `toLocaleString()`, consistent with existing comments. datetime-local input is converted to UTC ISO for the API.
+- Display includes description, result, performer name/role badge, follow-up status/note and attachment notes. Multiline text uses pre-wrap, long unbroken text uses overflow-wrap, and content is rendered as text.
+- Only authenticated, active IT_STAFF/ADMINISTRATOR users whose session is ready and does not require a password change see create/edit controls. Requesters receive no editable UI. No privileged controls appear during session loading.
+- Create displays the current user; edit displays the original performer. Requests include only actionDateTime, description, result, followUpRequired, followUpNote and attachmentNotes. No identity, ticket or performer mutations are submitted.
+- POST/PATCH validation follows the implemented Lab4.4 contract: description 5-3000 trimmed characters, result 3-3000, required follow-up note at least 3 trimmed characters, attachment notes at most 1000, and a valid date. Disabled follow-up sends null note.
+- Save uses a synchronous submission guard and disabled fields/buttons. Failures preserve entered values; success updates and reorders the local list without a page reload.
+- Modal uses a portal, labelled controls, initial focus, Tab/Shift+Tab trapping, Escape dismissal outside saving, body scroll lock and focus restoration. It uses the existing modal styling pattern with explicit focus management, since existing inline modals have no reusable focus-managed component.
+- UI guards supplement the existing backend authorization; no schema or backend API changes were made.
+
+##### Automated verification
+
+| Check | Result |
+| --- | --- |
+| `npm.cmd --prefix client run test -- tests/lab-04/ActionsTaken.test.tsx` | Passed 37/37 |
+| `npm.cmd --prefix client run test` | Passed 119/119 across 16 files, including frontend regression tests for Labs 1-3 |
+| `npm.cmd --prefix client run build` | Passed TypeScript checking and Vite production build |
+| `git diff --check` | Passed |
+| Separate lint | Not run: no lint script or configured lint tool in client/package.json |
+
+Tests cover list details/order, loading/empty/error/retry, read-only Requester access, Staff/Admin create/edit, payload allowlists, original performer preservation, follow-up validation, attachment notes, duplicate-submission prevention, local list updates/reordering, API failure preservation, 400/401/403/404 handling, focus/keyboard interactions, stale request isolation and integration into Ticket Detail.
+
+##### Responsive visual verification: blocked, not claimed as passed
+
+CSS is designed for 375, 768 and 1280 px: minmax grid columns, wrapping card content, mobile single-column layout, bounded modal width/height and internal scrolling. Component tests alone do not verify layout correctness.
+
+An attempt was made to inspect the actual Ticket Detail component with mock API data in a temporary local QA page, including long unbroken descriptions and attachment notes. Browser inventory returned `The browser access host is unavailable`. The native Chrome fallback was then stopped by Computer Use because it could not determine the current browser URL on Windows with enough confidence to enforce policy. No browser inputs were sent through that fallback. Temporary QA files were removed.
+
+Consequently, rendered verification and supporting screenshots at **375, 768 and 1280 px remain unverified**. AC-02 (read-only Requester UI) and AC-03 (mocked component tests) are verified; AC-01 still needs a rendered browser check. No screenshot evidence is included or claimed.
+
+Manual follow-up with the development frontend/backend running:
+
+1. Open an accessible Ticket Detail as IT Staff/Admin in browser responsive mode at each width (375, 768, 1280 px).
+2. Inspect the Actions Taken list with multiline/long text, create modal and edit modal. Check no horizontal scrolling or clipping, internal modal scrolling, labels, focus, Tab/Shift+Tab and Escape.
+3. Confirm edit shows the original performer, save errors preserve values, and successful saves reorder the list.
+4. Repeat as Requester: list only, with no Add/Edit controls.
+5. Capture list and modal screenshots at all three widths for PR evidence.
+
+The user subsequently authorized commit, push and a review PR targeting `lab4-staging`. No merge is authorized. The user opened the local application and located the Add Action control; no complete viewport-specific visual verification or screenshot evidence was reported. The responsive verification limitation above remains open.
+
+
+
+<a id="verification-dashboard-ui"></a>
+
+### dashboard-ui-verification
+
+#### Lab4.8 Dashboard UI verification
+
+Date: 2026-10-31 (Asia/Bangkok)
+Branch: `feat/lab4-8-dashboard-ui`
+Base: `lab4-staging` at `840d388` (merged PR #75, including dashboard APIs and earlier Lab4 dependencies).
+
+##### Implemented screens and files
+
+- `client/src/components/RequesterDashboard.tsx`, `StaffDashboard.tsx`, `DashboardShared.tsx`: role-appropriate metric cards, recent ticket summaries, Quick Actions and loading/error/retry/zero states with Zen Green components/tokens.
+- `client/src/navigation.ts`: internal native-link navigation and popstate-aware URL/filter hooks; Ctrl/Meta/middle-click can retain ordinary browser link behavior.
+- `client/src/components/AppShell.tsx`: shared /dashboard route, authenticated root dashboard, desktop/mobile Dashboard navigation and aria-current. Administrators reuse Staff Dashboard; userMetrics render only for Administrators.
+- `client/src/components/MyTicketsScreen.tsx`, `StaffTicketQueueScreen.tsx`: initialize/read supported filters from URL, update URL on filter changes, react to back/forward; suppress stale in-flight queue responses. Queue components remount on authenticated account/role changes.
+- `client/src/api.ts`, `types.ts`: typed dashboard API requests with existing signed-session headers/cookies and preserved HTTP errors; additive statusGroup option for requester queue requests.
+- `client/src/index.css`: wrapping metric grid, reserved loading dimensions, responsive recent-ticket cards, visible link focus and long-title/large-number handling.
+- `client/tests/lab-04/RequesterDashboard.test.tsx`, `StaffDashboard.test.tsx`, `dashboardFixtures.tsx`: API/session/fetch mocks only. Tests verify mounted destination filters, not only href generation.
+- `client/tests/setup.ts`: reset URL history after each test to isolate existing/new navigation tests.
+- Documentation: synchronized specification, UI spec, API compatibility note and relevant test traceability.
+
+##### Exact API metric mappings
+
+No dashboard response fields needed to be added. Values come directly from Lab4.7, never from the limited recent list.
+
+| Role / label | API field | Definition | Destination |
+| --- | --- | --- | --- |
+| Staff New | metrics.newCount | Current NEW, shared queue | /staff/queue?status=NEW |
+| Staff Open | metrics.openCount | Current OPEN only, shared queue | /staff/queue?status=OPEN |
+| Staff In Progress | metrics.inProgressCount | Current IN_PROGRESS | /staff/queue?status=IN_PROGRESS |
+| Staff Waiting for Requester | metrics.waitingRequesterCount | Current WAITING_FOR_REQUESTER | /staff/queue?status=WAITING_FOR_REQUESTER |
+| Staff My Assigned | metrics.myAssignedCount | ownerId equals session user, across all statuses | /staff/queue?ownerId=me |
+| Requester My Open Tickets | metrics.myOpenTickets | Session-owned NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER, REOPENED | /tickets?statusGroup=open |
+| Requester In Progress | metrics.inProgress | Session-owned IN_PROGRESS | /tickets?status=IN_PROGRESS |
+| Requester Resolved | metrics.resolved | Session-owned RESOLVED, all time | /tickets?status=RESOLVED |
+| Requester Closed | metrics.closed | Session-owned CLOSED, all time | /tickets?status=CLOSED |
+
+Staff deltas use newDelta/openDelta/inProgressDelta/waitingRequesterDelta/myAssignedDelta as returned by BR-12 creation-cohort calculations; the UI does not reinterpret them as historical status changes. User-account statistics appear only in the existing Administrator staff view. No separate Admin dashboard endpoint/screen was invented.
+
+Both recent lists render API-provided id/ticketNumber/title/status/updatedAt summaries and link to `/tickets/:id`. Ordering/limit remains the backend's updatedAt DESC/id DESC, up to five all-time recent summaries. Dates use browser-local toLocaleString as existing Ticket Detail comments do.
+
+Quick Actions:
+
+- Staff Create Ticket: /tickets/new; Search Tickets: /staff/queue; My Queue: /staff/queue?ownerId=me.
+- Requester Create Ticket: /tickets/new; View My Tickets: /tickets.
+- The generic staff navigation is labelled **Ticket Queue** because it is unfiltered; **My Queue** is reserved for the ownerId=me action.
+
+##### Routing and minimal backend compatibility change
+
+Previously AppShell navigation existed only in React state, and queues did not read URL filters. The new navigation synchronizes the rendered view with URL pathname/query state so direct entry, refresh/remount and history traversal apply the same filters. Recent-ticket Detail returns to the previous Dashboard or filtered queue. The legacy unauthenticated Lab2 requester-selector workspace remains available as before; real signed-in users start on their role dashboard at / or /dashboard.
+
+Queue URL hooks support search, status, priority, categoryId and staff ownerId. Existing sorting/pagination behavior is retained; this issue does not introduce new sort/page URL contracts. Dashboard links specify only the metric predicate, avoiding hidden default filters. Account IDs in query strings do not authorize data access.
+
+The requester API previously supported only four individual status values and no grouped-open filter. A small additive backend change was necessary for honest My Open Tickets drill-down:
+
+- GET /api/tickets?statusGroup=open uses the **same exported OPEN_STATUSES** predicate as the dashboard.
+- Requester status filters now accept all eight existing statuses.
+- Unsupported statusGroup or simultaneous status and statusGroup=open returns 400.
+- Session ownership/RBAC, dashboard responses, schema and workflow are unchanged.
+- Added two API tests: exact count/result equality and ownership under a forged requesterId; invalid/conflicting groups plus all individual statuses.
+
+##### Session, state and accessibility
+
+No privileged dashboard navigation is rendered while auth loads. Dashboard state is keyed to user ID, role and token; old data is hidden synchronously when identity changes, and cancelled request generations cannot populate another user's dashboard. Unauthorized roles receive an error without fetching the wrong endpoint. HTTP 401 prompts sign-in; 403 shows forbidden feedback; network failures offer retry. Failed/in-flight requests never masquerade as zero counts or empty lists.
+
+Cards and Quick Actions are native links with meaningful accessible names and no nested interactive controls. Metric/recent skeletons reserve space; loaded zero values remain visible. Recent ticket status text accompanies badges. Wrapping CSS supports long unbroken titles and large counts; account statistics use a wrapping definition list. These design measures are not a claim of completed rendered responsive verification.
+
+##### Actual automated results
+
+| Check | Result |
+| --- | --- |
+| RequesterDashboard.test.tsx | **12/12 passed** |
+| StaffDashboard.test.tsx, including navigation/filter integration and client contracts | **34/34 passed** |
+| New frontend tests | **46/46 passed** |
+| Entire frontend suite including Labs1–4 regressions | **215/215 passed across 20 files** |
+| Requester dashboard API with additive filter tests | **17/17 passed** |
+| Staff dashboard API regression | **12/12 passed** |
+| Selected safe backend suites including prior Actions/workflow/lifecycle | **326/326 passed across 8 files** |
+| Frontend TypeScript + Vite production build | Passed |
+| Backend TypeScript build | Passed |
+| git diff --check | Passed |
+| Separate lint | Not run: neither project has configured lint scripts |
+
+Tests cover metric values, successful zeros, recent summary links/status dates, loading/error/retry, 401/403, role/session loading/account changes, stale response isolation, long titles/large values, accessible keyboard activation, every card/Quick Action destination, My Queue ownership scope, actual queue API arguments, direct-entry/remount filters, browser back/forward in jsdom, detail/back navigation and API client authentication.
+
+Frontend tests use mocks and do not touch a database. The selected backend suites use UUID fixture creation and cleanup restricted to their own returned IDs. No reset, truncate or broad deletion of existing development data was performed. Full legacy backend suites with shared-data cleanup were not run and are not claimed as passed.
+
+##### Rendered browser verification: unavailable
+
+Browser inventory was checked and returned **The browser access host is unavailable**. Consequently, both dashboards were not inspected in a real browser at 375/768/1280 px, no real-browser metric clicks were verified, and no screenshots were captured. jsdom integration tests do verify actual destination filter arguments and history behavior, but are not browser E2E or layout proof.
+
+- AC-02: routing/filter behavior verified through component integration plus real API tests.
+- AC-03: component tests pass.
+- AC-01: rendered smoothness/no horizontal shifts remains pending manual visual QA.
+
+Manual follow-up: sign in as Requester, Staff and Administrator; open Dashboard; inspect loading/zero/error/retry, long titles and large values at each width. Click all metric cards/Quick Actions, verify queue filters/results, refresh and traverse back/forward, open recent Ticket Detail and return. Confirm My Assigned/My Queue include all currently owned statuses and Requester grouped-open includes the five documented statuses. Capture both dashboards at 375/768/1280 with readable focus/status text and no clipping/overflow. Do not change development data merely to force an empty state.
+
+##### Repeat commands (PowerShell, repository root)
+
+```powershell
+npm.cmd --prefix client run test -- tests/lab-04/RequesterDashboard.test.tsx tests/lab-04/StaffDashboard.test.tsx
+npm.cmd --prefix client run test
+npm.cmd --prefix client run build
+npm.cmd --prefix server run test -- tests/lab-04/requester-dashboard.api.test.ts tests/lab-04/staff-dashboard.api.test.ts --fileParallelism=false
+npm.cmd --prefix server run build
+```
+
+On 2026-11-01 the user authorized commit, push and a review PR from feat/lab4-8-dashboard-ui to lab4-staging. No merge is authorized. Rendered responsive/browser verification remains pending as documented above.
+
+## Selected desktop screenshots (2026-11-01)
+
+Captured from the real application using headless Chrome and UUID E2E fixtures, viewport 1280x900; PNGs are component crops, not full-screen images. Visually inspected all four images. No credentials or unrelated personal data appear. The fixed 2090 dashboard fixture dates establish deterministic all-time recent ordering; they are synthetic test values.
+
+| Screen | Selected evidence |
+| --- | --- |
+| Staff Dashboard | [Desktop](../../artifacts/lab-04/screenshots/staff-dashboard/desktop.png) |
+| Requester Dashboard | [Desktop](../../artifacts/lab-04/screenshots/requester-dashboard/desktop.png) |
+| Staff Actions Taken after create/edit | [Desktop](../../artifacts/lab-04/screenshots/actions-taken/staff-create-edit-desktop.png) |
+| Requester Actions Taken read-only | [Desktop](../../artifacts/lab-04/screenshots/actions-taken/requester-read-only-desktop.png) |
+
+These selected screenshots do not establish tablet/mobile coverage, modal validation coverage or final accessibility acceptance. Original report label: submission-screenshots.
