@@ -2,7 +2,7 @@
 
 ## Revision, environment and boundaries
 
-Audit date: 2026-11-01. Active branch: `feature/lab4-visual-qa`. Base: `e1c98ca` (merged Lab4.9 PR #77). Results apply to the uncommitted hardening working tree, **not main**. Source fingerprint: `8363411911819f415f852103ca0ef5dc5320a22d477256e8dcb84a2094d96d55` (SHA-256 across 53 application/audit/configuration files; local inventory metadata in ignored QA results).
+Audit date: 2026-11-01. Historical implementation-audit branch: `feature/lab4-visual-qa`. Base: `e1c98ca` (merged Lab4.9 PR #77). Results were recorded on the hardening working tree later committed as `57326a9` and merged by PR #78, **not on main**. Source fingerprint: `8363411911819f415f852103ca0ef5dc5320a22d477256e8dcb84a2094d96d55` (SHA-256 across 53 application/audit/configuration files; local inventory metadata in ignored QA results).
 
 Fetched remote and confirmed Labs4.3-4.9 are present in lab4-staging before creating this branch. `origin/HEAD` points to `origin/main`; `origin/master` also exists. No branch was renamed, no main branch was created, and no release merge was performed.
 
@@ -104,9 +104,9 @@ Reports, network classifications, axe findings, JSON results and temporary clust
 
 - AC-01: passed for the stated screens/viewports/browser and controlled scenarios; no unexplained runtime/console/layout errors in final runs. Does not imply all possible layouts or accessibility compliance.
 - AC-02: **pending**. Tests passed on this feature working tree; no final-main revision has been merged or tested.
-- AC-03: historical reviewer evidence and AI prompt summaries are populated accurately. **Pending**: reviewer approval of hardening and student review/personalization of My Reflection, followed by final PDF preparation.
+- AC-03: historical reviewer evidence and AI prompt summaries are populated accurately. **Pending**: review of the current documentation update, student confirmation of My Reflection, and final PDF preparation. Hardening PR #78 itself is approved and merged; see reviewer.md.
 - reviewer.md includes actual yiiipunn approvals and DEV4952 responses for PRs71-77. Those approvals apply to their historical revisions, not this branch. No reviewers were contacted and no comments/approval requests were posted.
-- ai-use.md contains ten clearly labelled prompt summaries, known tool/model limits and a reflection draft, not an invented personal statement.
+- ai-use.md contains ten clearly labelled prompt summaries, known tool/model limits and an English My Reflection section; student confirmation of personal statements remains required.
 - specification.md/api-spec.md include the authorized additive dashboard contract; tests.md/ui-spec.md point to this report and current evidence.
 
 Proposed sequence, requiring later explicit authorization: review the concrete diff/evidence; commit/push and open feature/lab4-visual-qa -> lab4-staging; obtain actual review/check approvals and merge under protections; confirm main as the intended release target (not substitute master); open/review staging -> main; authorize final merge; check out the actual merged main SHA in safe checkout/CI and repeat isolated full regression, builds, E2E and targeted visual checks before claiming AC-02. Record that SHA, checks and final review in these documents. No force-push or branch-protection bypass is proposed.
@@ -123,7 +123,7 @@ New tests cover recorder-vs-assignee isolation, admin/zero state, SQL counts/ord
 
 One initial full-backend rerun passed442/443 because two UUID categories remained from previously interrupted QA runs in the disposable cluster. Removed only verified category IDs17/45 and their exact fixture ticket/user IDs after checking the disposable marker, then reran the full suite443/443. No development cleanup, broad deletion, test skipping or assertion weakening occurred.
 
-ai-use.md now contains ten selected actual prompt summaries and a substantive Thai My Reflection draft. Student confirmation/personalization and hardening review remain pending; no personal experience or new approval is fabricated.
+ai-use.md now contains ten selected actual prompt summaries and an English My Reflection section. Student confirmation/personalization and documentation review remain pending; no personal experience or new approval is fabricated.
 
 ## Handout grading audit (2026-11-01)
 
@@ -134,13 +134,24 @@ Re-read the supplied SE+Lab+4.pdf, physical pages2-11, including section14 on pa
 | 1 Git workflow /10 | Feature branch; previous PR71-77 approval/comment links in reviewer.md; README/gitignore and directory structure exist | Commit/review/integrate current work when authorized; staging -> actual main history; final Project/Kanban all Done has not been verified |
 | 2 Spec DD /5 | Numbered FR/BR/AC, migration/design decisions, workflow/metrics/DoD; original specification commit8f5025a dated2026-10-28 precedes implementation PRs | Render/link the specification and its early Git revision in the submission; new dashboard additions are documented as authorized scope |
 | 3 Test DD/traceability /10 | Actual paths and tests: backend443, frontend220, real E2E4, visual audit3 on feature working tree; SQL/security/lifecycle/conflict coverage | Complete passing output from the actual merged main revision; reconcile historical Planned rows with final traceability/evidence rather than claiming every planned browser scenario was run |
-| 4 AI use/reflection /5 | Named Codex/GPT-6 family with exact-variant limitation;10 actual prompt summaries; Thai reflection draft | Student must review/personalize/confirm reflection and include rendered document; no invented personal experience |
+| 4 AI use/reflection /5 | Named Codex/GPT-6 family with exact-variant limitation;10 actual prompt summaries; English reflection | Student must review/personalize/confirm reflection and include rendered document; no invented personal experience |
 | 5 IT Staff Dashboard /5 | Operational cards, current-user recorder Action totals/statuses/recent links, recent Tickets, actual filters, SQL comparisons and viewport/failure checks | Select readable final metric-to-SQL and UI state evidence for PDF; no feature gap identified in the inspected approved contract |
 | 6 Actions Taken UI /10 | List/create/assign/edit/start/complete/cancel; follow-up validation, inactive-assignee/RBAC/safe-failure tests; multiple Actions on a Ticket; responsive PNGs | Select live UI evidence of assignment, start/complete/cancel, inactive rejection and safe failure. API/component tests prove tested behavior but are not screenshots of each interaction |
 | 7 Ticket workflow /5 | Backend transition matrix, advisory separation, immutable recorder/history, stable order; real resolution journey and409 feedback | Select permitted-transition/history/role visibility evidence; existing QA PNGs primarily show list/conflict, not every successful transition/history panel |
 | 8 Requester Dashboard/regression /5 | Owned metrics/recent/attention-required Tickets, real waiting-status drill-down/ownership; complete earlier-lab API/UI regression on disposable DB | Select representative authentication/My Tickets/Detail/Attachments/Comments/Staff/Internal Notes/Admin demonstration evidence; current real browser journeys do not exercise every legacy screen |
 | 9 Zen Green/responsive/accessibility /5 | ui-spec checklist and48 viewport/state PNGs covering375x812,768x1024,1440x900; real keyboard/axe/runtime/layout assertions | Render checklist and select readable final images; checks are Chrome viewport emulations, not a guarantee of complete accessibility across devices/assistive technologies |
 
-Section14 requires exactly one concise PDF, with Answer Part1 through Answer Part9 in that exact order and working links. Repository/final main remain the source of truth. A folder of screenshots or passing feature-branch tests alone does not meet this submission rule. The PDF has not been created or visually verified in this task.
+Section14 requires exactly one concise PDF, with Answer Part 1 through Answer Part 9 in that exact order and working links. Repository/final main remain the source of truth. A folder of screenshots or passing feature-branch tests alone does not meet this submission rule. The PDF has not been created or visually verified in this task.
 
 Overall: the inspected core functional scope is implemented and backed by current tests. Final submission acceptance remains pending the integration/review/student-reflection/main-test/Kanban/PDF conditions above. Some UI behaviors have automated coverage but still need selected demonstration evidence; do not equate that evidence gap with a missing implementation or silently claim it is complete.
+
+
+## Submission readiness recheck (2026-11-01)
+
+Current local branch: doc, based on merged implementation/staging870ea94. A fresh fetch showed origin/main at a3bc2f9; staging870ea94 is not an ancestor of main. README.md and reviewer.md already had local documentation edits; this recheck preserves them. No commit, push, PR or merge is performed by this check.
+
+Checked all seven Lab4 Markdown documents, README, required test/screenshot paths, the saved final JSON results, current Git status, environment ignore/tracking rules and the E2E/QA TypeScript configuration.78 existing local document links resolved;52 selected PNGs are present (48 viewport/state images plus4 earlier desktop images). Saved results show backend443/443, frontend220/220, real E2E4/4 and QA3/3, with no skipped tests in those final results. Typecheck and whitespace check were rerun; full database/browser suites were not rerun for this documentation-only inspection. server/.env is ignored and not tracked; no environment values were displayed.
+
+Corrected stale documentation: removed the nonexistent single-action GET from the authorization table in favor of actual history/status routes; documented foreign resolve-indication404 and optional error details; reconciled recorded API/UI test statuses, inactive-assignee expectations and banner terminology; identified historical verification annexes explicitly. The two-browser concurrency variant remains unexecuted and is not relabelled Passed; concurrency is covered separately by API tests and the real stale-DB browser audit.
+
+Final hand-in is still pending: (1) commit/review/merge the documentation update through staging; (2) explicitly authorize staging-to-main integration and record tests on the actual merged main SHA; (3) verify final Project/Kanban state and required approvals; (4) confirm the student reflection and choose readable SQL/UI/regression evidence; (5) produce and visually inspect the single PDF with Answer Part 1 through Answer Part 9. No final submission PDF was found inside this repository; a PDF stored elsewhere has not been inspected. No final grade or full-mark guarantee is claimed.

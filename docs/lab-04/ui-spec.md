@@ -319,7 +319,7 @@ Ticket Detail Actions Taken cards additionally show current action status and as
 
 Staff/Admin controls follow RECORDED ? IN_PROGRESS/COMPLETED/CANCELLED and IN_PROGRESS ? COMPLETED/CANCELLED. Start/Complete require assignment; inactive assignment is authoritatively rejected by the backend. Completed/cancelled cards have no Edit or transition controls. Requesters see no write controls and may read public history only for accessible tickets.
 
-View history shows chronological actor/event/time entries and expandable before/after snapshots. No update/delete history control exists. History failures support retry. Transitions disable duplicate submissions; a 409 shows a reload instruction and locks transitions until explicit Reload actions. Modal 409 keeps values visible and disables further stale saves; cancel/close then reload retrieves the latest record. Existing wrapping cards, portal modal, focus trap and body-scroll rules remain; rendered visual checks/screenshots are still pending.
+View history shows chronological actor/event/time entries and expandable before/after snapshots. No update/delete history control exists. History failures support retry. Transitions disable duplicate submissions; a 409 shows a reload instruction and locks transitions until explicit Reload actions. Modal 409 keeps values visible and disables further stale saves; cancel/close then reload retrieves the latest record. Existing wrapping cards, portal modal, focus trap and body-scroll rules remain; rendered checks and screenshots were subsequently completed in Lab4.10; see the final audit section below.
 
 ## Lab4.8 implemented navigation contract (2026-10-31)
 
@@ -327,10 +327,12 @@ View history shows chronological actor/event/time entries and expandable before/
 
 Requester My Open Tickets uses statusGroup=open (NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER, REOPENED) and a dedicated matching queue filter option. Other metric links use their exact status. Recent ticket links use /tickets/:id for all permitted roles. Queue search/status/priority/category and staff owner filters are read from URL state; filters survive direct entry, remount and back/forward. Profile data, route selection and authorization are independent of user-controlled identity parameters.
 
-Skeletons have reserved metric/recent-section space; zero/error/empty states are distinct. Cards and Quick Actions are native links, wrapping recent cards include status text and browser-local dates, and layout uses responsive minmax grids with long-word wrapping. Rendered 375/768/1280 checks remain unverified because browser access host is unavailable; see ui-spec.md#verification-dashboard-ui.
+Skeletons have reserved metric/recent-section space; zero/error/empty states are distinct. Cards and Quick Actions are native links, wrapping recent cards include status text and browser-local dates, and layout uses responsive minmax grids with long-word wrapping. Rendered checks were unavailable at the Lab4.8 snapshot; the later Lab4.10 audit covers 375x812, 768x1024 and 1440x900. See the final audit section below.
 
 
 ## Consolidated verification records
+
+These are historical per-Issue snapshots. Older pending/browser-unavailable statements below apply to those earlier runs; the Lab4.10 audit and screenshot inventory later in this document provide the current recorded coverage.
 
 Historical results below apply to the stated issue/branch/date. They do not replace the latest execution summary or establish final main-branch acceptance.
 

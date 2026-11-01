@@ -1,151 +1,201 @@
-# TokTickIT — IT Service Desk
+﻿# TokTickIT - IT Service Desk
 
-TokTickIT is an enterprise full-stack IT Service Desk and ticketing web application designed for IT service requests, ticket tracking, diagnostic attachment management, multi-role access control, and operational triage.
+TokTickIT is a full-stack IT service desk application developed for **CPE 334 Introduction to Software Engineering in the Age of AI Agents, KMUTT**. Lab 4 extends the earlier ticketing, authentication and staff workflows with Actions Taken, role dashboards, concurrency protection and final hardening.
 
-Developed as part of **CPE 334 Introduction to Software Engineering in the Age of AI Agents**, KMUTT.
+## Current Features
 
----
+- **Requester workspace:** create and track owned Tickets, manage diagnostic attachments, read Public Comments and Actions Taken, and indicate that a problem appears resolved without changing its formal status.
+- **IT Staff workspace:** shared searchable/filterable Ticket queue, claiming/reassignment, independent IT Priority, Public Comments and confidential Internal Notes.
+- **Actions Taken:** create/edit, assign active Staff/Admin users, start/complete/cancel, conditional follow-up validation, immutable authenticated recorder, optimistic concurrency and append-only change history. Requesters have owned-Ticket read access only.
+- **Ticket workflow:** backend-enforced transitions across NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER, RESOLVED, CLOSED, REOPENED and CANCELLED; stale changes require explicit refresh.
+- **Staff/Admin Dashboard:** operational Ticket metrics, recent Tickets, real queue drill-downs, Create/Search/My Queue Quick Actions and My Actions Taken totals/statuses/latest five records. Action summaries use the original recorder, not Ticket ownership or assignment.
+- **Requester Dashboard:** owned metrics/recent Tickets and Attention Required for owned WAITING_FOR_REQUESTER Tickets, with matching filtered-list navigation.
+- **Administrator workspace:** user provisioning, account updates and password reset, mandatory first-login password change, self-deactivation/demotion and last-active-admin safeguards.
+- **Zen Green UI:** responsive layouts, loading/empty/error/conflict feedback, keyboard controls and accessibility fixes verified within the documented audit scope.
 
-## Lab 3 — User Management, Authentication, RBAC & Operational Triage
-
-In Lab 3, TokTickIT transitions from simulated identities to a production-grade multi-role application featuring secure authentication, role-based access control (RBAC), shared IT staff queue management, confidential internal notes, and administrative safety safeguards.
-
-### Key Features (Lab 3)
-
-- **Secure Authentication & Session Management:**
-  - Password hashing with bcrypt, secure HTTP-only session cookies, and bearer token support.
-  - First-login mandatory password change enforcement (`mustChangePassword = true`) blocking access to normal business APIs until complexity requirements (min 8 chars, mixed case, number, symbol) are met.
-- **Role-Based Access Control (RBAC):**
-  - Explicit three-role architecture: `REQUESTER`, `IT_STAFF`, and `ADMINISTRATOR`.
-  - Server-side middleware (`requireAuth`, `requireRole`) enforcing zero data leakage.
-  - Anti-tampering protection on ticket creation, binding ticket ownership strictly to the authenticated session user.
-  - Ownership isolation preventing Requesters from accessing foreign tickets (HTTP 404).
-- **IT Staff Ticket Queue & Operational Triage:**
-  - Shared IT queue with real-time operational metrics cards (Total, Unassigned, Assigned to Me, In Progress).
-  - Multi-criteria filtering (Status, Priority, Owner, Category) with debounced search.
-  - One-click ticket claiming and staff reassignment with validation preventing assignment to non-staff.
-  - Independent IT Priority triage preserving the requester's original requested priority.
-  - Enforced status state machine preventing invalid transitions (e.g. `NEW` -> `RESOLVED` or transitions from terminal `CANCELLED`).
-- **Ticket Communications (Public Comments vs. Confidential Internal Notes):**
-  - Public comments visible to both requesters and staff.
-  - Role-restricted Internal Notes strictly inaccessible to Requesters (HTTP 403) with distinct visual confidentiality indicators.
-  - Requester "Problem Appears Resolved" indication workflow posting automated system comments.
-- **Administrator User Management & Safety Guards:**
-  - Dedicated User Management Console for provisioning and updating accounts.
-  - Self-deactivation and self-demotion safety blocks (HTTP 403).
-  - Last active administrator protection rule preventing lockout (HTTP 409).
-  - Administrative password reset flow generating initial credentials with mandatory change flag.
-- **Zen Green Responsive Polish & Tablet Optimizations:**
-  - Full WCAG AA contrast compliance (6.2:1 contrast ratio on role badges).
-  - Native **Zen Green Card View** on Tablet (iPad Mini 768px, iPad Air 820px portrait) and Mobile (< 768px), preventing table horizontal clipping and preserving immediate access to Action buttons.
-
----
-
-## Documentation Index
-
-### Lab 3 Documentation ([docs/lab-03/](docs/lab-03/))
-
-| Document | Path | Purpose |
-|---|---|---|
-| **Engineering Specification** | [`docs/lab-03/specification.md`](docs/lab-03/specification.md) | Sprint 3 goal, scope, Functional Requirements (FR-01–15), Business Rules (BR-01–15), Acceptance Criteria (AC-01–14), Authorization Matrix, Definition of Done |
-| **REST API Specification** | [`docs/lab-03/api-spec.md`](docs/lab-03/api-spec.md) | Endpoint contracts for Auth, Staff Queue, Triage, Notes, Comments, and Admin User APIs with error schemas |
-| **UI Specification** | [`docs/lab-03/ui-spec.md`](docs/lab-03/ui-spec.md) | Zen Green design tokens, screen contracts (UI-01 to UI-06), role badges, and component layouts |
-| **Development Credentials** | [`docs/lab-03/development-credentials.md`](docs/lab-03/development-credentials.md) | Seed user accounts, default passwords, and persona testing reference |
-| **Automated Testing & Traceability** | [`docs/lab-03/tests.md`](docs/lab-03/tests.md) | TDD test matrix mapping AC-01–14 to 33 API/UI test suites, execution commands, and DoD checklist |
-| **Visual QA Checklist** | [`docs/lab-03/visual-qa.md`](docs/lab-03/visual-qa.md) | Multi-viewport responsive audit (1440px, 768px iPad Mini, 820px iPad Air, 375px), WCAG AA badge contrast audit |
-| **Peer Review Record** | [`docs/lab-03/reviewer.md`](docs/lab-03/reviewer.md) | Formal peer review log for 10 authored PRs (#38, #48–#56) with review comments and partner approvals |
-| **AI Use & Reflection** | [`docs/lab-03/ai-use.md`](docs/lab-03/ai-use.md) | 10 key prompts logged and reflective engineering summary across Spec-Agent and Coding-Agent workflows |
-
-### Lab 2 Documentation ([docs/lab-02/](docs/lab-02/))
-Refer to [`docs/lab-02/`](docs/lab-02/) for earlier Sprint 2 requester ticketing deliverables.
-
----
-
-## Tech Stack
+## Technology
 
 | Layer | Technologies |
-|---|---|
-| **Frontend** | React 18, TypeScript, Vite, Bootstrap 5, Zen Green CSS Tokens |
-| **Backend** | Node.js, Express.js, TypeScript, Multer, bcryptjs, Prisma ORM |
-| **Database** | PostgreSQL 14+ |
-| **Testing** | Vitest, React Testing Library, Supertest, JSDOM (193 / 193 tests passing, 100%) |
+| --- | --- |
+| Frontend | React 18, TypeScript, Vite 6, Bootstrap 5, Zen Green CSS |
+| Backend | Node.js, Express 4, TypeScript, Prisma 6, Multer, bcryptjs |
+| Database | PostgreSQL |
+| Automated verification | Vitest, Supertest, React Testing Library, JSDOM, Playwright, axe-core |
 
----
+Dependency versions are pinned by the root, server and client lockfiles. This is a course development application; the recorded checks are not a production-readiness or complete accessibility certification.
 
-## Getting Started
+## Documentation
 
-### 1. Prerequisites
-- **Node.js:** `v18.0.0` or higher (LTS recommended)
-- **npm:** `v9.0.0` or higher
-- **PostgreSQL Database:** Running locally on port `5432`
+### Lab 4
 
----
+| Document | Contents |
+| --- | --- |
+| [specification.md](docs/lab-04/specification.md) | Scope, numbered requirements/business rules, authorization, transitions, metrics, migration decisions and Product Definition of Done |
+| [api-spec.md](docs/lab-04/api-spec.md) | Actions Taken, workflow and dashboard API contracts, validation, ownership and conflict behavior |
+| [ui-spec.md](docs/lab-04/ui-spec.md) | Screen contracts, Zen Green conventions, visual/accessibility checklist and screenshot inventory |
+| [tests.md](docs/lab-04/tests.md) | Planned tests, acceptance traceability, actual test paths, commands and recorded results |
+| [reviewer.md](docs/lab-04/reviewer.md) | Ten authored and ten partner PRs, actual review statements, replies, dates, revisions and approvals |
+| [ai-use.md](docs/lab-04/ai-use.md) | AI tools, ten selected prompt summaries and reflection |
+| [release-verification.md](docs/lab-04/release-verification.md) | Audit environment, findings/fixes, complete regression matrix, handout grading audit and remaining release conditions |
 
-### 2. Backend Setup & Database Migration
+Earlier deliverables remain available in [Lab 1](docs/lab-01/), [Lab 2](docs/lab-02/) and [Lab 3](docs/lab-03/). The seventh Lab 4 document, release-verification.md, was explicitly approved for the hardening report.
 
-```bash
-cd server
-npm install
+## Repository Layout
 
-# Configure environment variables
-cp .env.example .env
-# Ensure DATABASE_URL in .env points to your PostgreSQL instance
-
-# Run migrations and idempotent seed (Users, Roles, Categories, Systems, Tickets)
-npx prisma migrate dev
-npm run prisma:seed
-
-# Start backend dev server (port 3000)
-npm run dev
+```text
+client/                         React UI, Vite configuration and Labs 1-4 component tests
+server/src/                     Express application, routes, services and authentication
+server/prisma/                  PostgreSQL schema, additive migrations and idempotent seed
+server/tests/                   Labs 1-4 unit/API/integration tests and disposable-DB guard
+e2e/lab-04/                     Real-backend browser journeys, fixtures and visual/axe audit
+scripts/                        Seed verification, disposable QA environment and screenshot collection
+docs/lab-01/ ... docs/lab-04/     Engineering contracts, test plans and submission records
+artifacts/lab-04/screenshots/    Selected Staff/Requester/Actions Taken evidence
 ```
 
----
+## Local Setup (Windows / PowerShell)
 
-### 3. Frontend Setup
+Commands below start in the repository root unless a directory change is shown. Node.js **20+** is required by the installed Playwright package; verification used Node 24.14.0 and npm 11.9.0. An existing local PostgreSQL database and its credentials are required for development. The disposable regression helper separately expects PostgreSQL binaries, with a default PostgreSQL 18 installation path.
 
-```bash
-cd client
-npm install
-
-# Configure environment variables
-cp .env.example .env
-
-# Start frontend dev server (port 5173)
-npm run dev
-```
-
----
-
-## Running Automated Tests
-
-Lab4 hardening verified 443 backend tests and 220 frontend tests on the feature branch; this is not final-main release acceptance. Current results and limitations are in [tests.md](docs/lab-04/tests.md#release-verification). Browser evidence and accessibility findings are in [ui-spec.md](docs/lab-04/ui-spec.md#lab410-visual-accessibility-audit).
-
-### Safe full backend regression (Windows/PowerShell)
-
-Legacy Labs2-3 tests modify fixed seed accounts and delete fixture data. They are blocked on development/production databases. Use a disposable PostgreSQL cluster; the helper requires locally installed PostgreSQL binaries (default PostgreSQL18 path, overridable with -PostgresBin).
+### 1. Install dependencies and configure the development database
 
 ```powershell
-# Repository root; install root/server/client dependencies first.
+npm.cmd ci --include=dev
+npm.cmd --prefix server ci --include=dev
+npm.cmd --prefix client ci --include=dev
+
+# Preserve an existing local configuration.
+if (!(Test-Path -LiteralPath server/.env)) {
+    Copy-Item -LiteralPath server/.env.example -Destination server/.env
+}
+```
+
+Edit `server/.env` so DATABASE_URL points to the intended local development database. [server/.env.example](server/.env.example) contains an example, not proof that the database/user already exist. Do not commit the real environment file.
+
+### 2. Apply existing migrations, generate the client and seed
+
+Review the SQL under [server/prisma/migrations](server/prisma/migrations/) before applying it, particularly when reusing earlier-lab data.
+
+```powershell
+Push-Location server
+npx.cmd prisma validate
+npx.cmd prisma migrate deploy
+npx.cmd prisma migrate status
+npx.cmd prisma generate
+npm.cmd run prisma:seed
+Pop-Location
+
+# Read-only check of seeded Ticket -> Actions Taken examples and relations:
+npm.cmd run check:actions
+```
+
+The seed is idempotent and includes Tickets with zero, one and multiple Actions Taken, all eight Ticket statuses, the four priorities and assigned/unassigned examples. It preserves existing credentials, account state and Ticket workflow changes. Repeating the seed therefore does not restore manually changed passwords or statuses.
+
+These commands apply committed migrations without a database reset. If authoring a new migration requires migrate dev and it fails with P3014, the database role lacks shadow-database permissions; the existing Lab 4 migrations were applied with migrate deploy. Do not resolve that error by resetting earlier-lab data.
+
+### 3. Start the API and web UI in separate terminals
+
+**Terminal A - backend**
+
+```powershell
+npm.cmd --prefix server run dev
+```
+
+**Terminal B - frontend**
+
+```powershell
+npm.cmd --prefix client run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173). API health is available at [http://localhost:3000/api/health](http://localhost:3000/api/health). The frontend proxies /api to port3000 by default. For another backend port, set PORT in its terminal and VITE_API_PROXY_TARGET in the frontend terminal before starting the corresponding process.
+
+If tsx/vite is not recognized, check that dependency installation completed with development dependencies included. If npm ci reports EPERM on esbuild.exe, stop the corresponding running dev server before reinstalling.
+
+### Development demo accounts
+
+The initial password for newly seeded demo accounts is **Password123!**. These are synthetic local-development accounts; existing accounts retain any password/state already changed.
+
+| Role | Example account |
+| --- | --- |
+| Requester | alex.rivera@toktick.it |
+| IT Staff | michael.brown@toktick.it |
+| Administrator | admin@toktick.it |
+
+See [seed.ts](server/prisma/seed.ts) and the [earlier development account reference](docs/lab-03/development-credentials.md) for additional personas, including inactive and mandatory-password-change cases.
+
+## Automated Verification
+
+### Recorded results
+
+The following were verified on the Lab 4 feature implementation later committed as `57326a9` and merged into lab4-staging by PR #78. They are **not final-main test results**. Documentation-only edits on branch doc do not imply a new test run.
+
+| Check | Recorded result |
+| --- | --- |
+| Backend, Labs 1-4 | 443/443 tests, 20 files |
+| Frontend, Labs 1-4 | 220/220 tests, 20 files |
+| Real-backend Lab 4 E2E | 4/4 journeys across three specs |
+| Visual / keyboard / axe audit | 3/3 viewports: 375x812, 768x1024, 1440x900 |
+| Builds and E2E/QA typecheck | Passed |
+
+The audit retained 48 viewport/state screenshots in addition to four earlier desktop images. Earlier failed/interrupted debug runs and their corrections are disclosed in [release-verification.md](docs/lab-04/release-verification.md). No lint script is currently configured. Chrome viewport/axe checks do not establish full cross-browser, physical-device or assistive-technology coverage.
+
+### 1. Full backend regression on a disposable database
+
+Legacy Labs 2-3 tests modify fixed seed accounts and delete test data. Their setup is blocked unless the disposable target, explicit opt-in and database marker match. Do not run them against development.
+
+```powershell
+# Creates/starts only the workspace QA cluster, migrates/seeds it and runs backend tests.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lab4-test-environment.ps1 -Action Server
 ```
 
-The helper creates/reuses only the verified workspace QA cluster, bound to 127.0.0.1:55439, migrates and seeds lab4_qa_test, then runs all backend tests. It checks the actual data_directory; the Vitest guard checks URL, explicit opt-in and database marker before importing legacy suites. It never resets/truncates the development database. Generated QA data stays ignored under artifacts/lab-04/e2e-results/. Do not expose this trust-authentication QA cluster on a network.
+The helper uses `127.0.0.1:55439/lab4_qa_test` and verifies the actual PostgreSQL data_directory. Its default binaries are `C:\Program Files\PostgreSQL\18\bin`; use `-PostgresBin` to supply another installation path. `-Action Start` prepares the environment without running tests. Generated QA database files stay ignored under artifacts/lab-04/e2e-results/. Local trust authentication is restricted to this disposable loopback cluster.
 
-### Frontend, real browser E2E and hardening audit
+### 2. Frontend regression and browser suites
+
+Run after preparing the disposable environment above. Avoid other database-writing tests or manual edits while browser checks compare global Staff metrics.
 
 ```powershell
 npm.cmd --prefix client run test
+
 $env:E2E_DATABASE_URL = 'postgresql://lab4qa@127.0.0.1:55439/lab4_qa_test'
 $env:E2E_BROWSER_CHANNEL = 'chrome'
 $env:E2E_RUN_LABEL = 'local-e2e'
 npm.cmd run test:e2e:lab4
-$env:E2E_RUN_LABEL = 'local-qa'
+
+$env:E2E_RUN_LABEL = 'qa-submission'
 npm.cmd run test:qa:lab4
+node scripts/collect-lab4-screenshots.cjs qa-submission
+
 npm.cmd run typecheck:e2e:lab4
 npm.cmd --prefix server run build
 npm.cmd --prefix client run build
-# Stop only the workspace disposable QA server when finished:
+
+# Stop only the workspace disposable PostgreSQL cluster when finished.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lab4-test-environment.ps1 -Action Stop
 ```
 
-The three Lab4.9 specs stay separate from the Lab4.10 audit. QA covers 375x812, 768x1024 and 1440x900 with real keyboard and axe checks; its explicitly injected service failures are visual safe-failure tests, not mocked evidence of backend correctness. Use installed Chrome, or install Playwright Chromium and omit E2E_BROWSER_CHANNEL. Do not run other DB-writing suites concurrently with browser checks of global queue counts.
+The example uses installed Chrome. To use Playwright Chromium instead, run `npx.cmd playwright install chromium` and remove E2E_BROWSER_CHANNEL from the terminal environment. The browser scripts own API3109/web5189 and refuse to reuse occupied endpoints. Their ports can be overridden with E2E_API_PORT/E2E_WEB_PORT. [.env.e2e.example](.env.e2e.example) documents optional ignored local configuration.
+
+The original E2E script runs only actions-taken-flow.spec.ts, ticket-resolution.spec.ts and dashboards.spec.ts against real APIs. `test:e2e:lab4:headed` runs those journeys with a visible browser. `test:qa:lab4` runs the separate release-audit.spec.ts, including explicitly injected dashboard503 responses and a real stale409; these are labelled fault scenarios, not hidden runtime failures.
+
+Reports are generated under `artifacts/lab-04/e2e-report/<label>/` and `artifacts/lab-04/e2e-results/<label>/`. For example:
+
+```powershell
+npx.cmd playwright show-report artifacts/lab-04/e2e-report/qa-submission
+```
+
+The screenshot collector accepts only a fully passing three-viewport audit. If a run is forcibly interrupted, inspect any leftover UUID fixtures in the disposable environment and clean only verified fixture IDs; do not clear development data or relax category-count tests. Runtime reports, traces, authentication states and local environment files remain excluded from Git.
+
+## Suggested Demonstration
+
+1. Sign in as Requester and inspect Dashboard metrics and Attention Required; create/open a Ticket and use its Public Comments/attachments.
+2. Sign in separately as Staff, open the Ticket Queue and claim/assign a Ticket. Add/edit an Action with follow-up notes, reassign it, then exercise permitted Action transitions and history.
+3. Compare Staff My Actions Taken with the original recorder. Requester views of the same Ticket remain read-only for Actions Taken.
+4. Submit Requester advisory resolution feedback and verify that formal Ticket status stays unchanged. Staff then follows permitted resolution/closure transitions. Inspect stale-update feedback and explicit reload behavior.
+5. Inspect Administrator user-management safeguards and the three viewport evidence sets in [screenshots](artifacts/lab-04/screenshots/).
+
+## Branch and Submission Status
+
+Lab 4 implementation PRs [#69-#78](docs/lab-04/reviewer.md) are merged into lab4-staging. The current doc branch is for documentation updates. Feature/documentation PRs target lab4-staging; release integration into main requires explicit authorization and normal review/protection checks. Do not substitute master or infer final release completion from staging merges.
+
+Before final submission, record tests on the actual merged main revision, confirm the student's reflection, verify final review and Project/Kanban evidence, and assemble the single readable PDF with `Answer Part 1` through `Answer Part 9` and working links. See the [handout grading audit](docs/lab-04/release-verification.md) for completed work and pending conditions.
